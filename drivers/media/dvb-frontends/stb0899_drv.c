@@ -306,19 +306,20 @@ u32 _stb0899_read_s2reg(struct stb0899_state *state,
 		.len	= 6
 	};
 
-	struct i2c_msg msg_1 = {
-		.addr	= state->config->demod_address,
-		.flags	= 0,
-		.buf	= buf_1,
-		.len	= 2
+	struct i2c_msg msg[] = {
+		{
+			.addr	= state->config->demod_address,
+			.flags	= 0,
+			.buf	= buf_1,
+			.len	= 2
+		}, {
+			.addr	= state->config->demod_address,
+			.flags	= I2C_M_RD,
+			.buf	= buf,
+			.len	= 4
+		}
 	};
 
-	struct i2c_msg msg_r = {
-		.addr	= state->config->demod_address,
-		.flags	= I2C_M_RD,
-		.buf	= buf,
-		.len	= 4
-	};
 
 	tmpaddr = stb0899_reg_offset & 0xff00;
 	if (!(stb0899_reg_offset & 0x8))
@@ -327,6 +328,7 @@ u32 _stb0899_read_s2reg(struct stb0899_state *state,
 	buf_1[0] = GETBYTE(tmpaddr, BYTE1);
 	buf_1[1] = GETBYTE(tmpaddr, BYTE0);
 
+	/* Write address	*/
 	status = i2c_transfer(state->i2c, &msg_0, 1);
 	if (status < 1) {
 		if (status != -ERESTARTSYS)
@@ -337,28 +339,16 @@ u32 _stb0899_read_s2reg(struct stb0899_state *state,
 	}
 
 	/* Dummy	*/
-	status = i2c_transfer(state->i2c, &msg_1, 1);
-	if (status < 1)
-		goto err;
-
-	status = i2c_transfer(state->i2c, &msg_r, 1);
-	if (status < 1)
+	status = i2c_transfer(state->i2c, msg, 2);
+	if (status < 2)
 		goto err;
 
 	buf_1[0] = GETBYTE(stb0899_reg_offset, BYTE1);
 	buf_1[1] = GETBYTE(stb0899_reg_offset, BYTE0);
 
 	/* Actual	*/
-	status = i2c_transfer(state->i2c, &msg_1, 1);
-	if (status < 1) {
-		if (status != -ERESTARTSYS)
-			printk(KERN_ERR "%s ERR(2), Device=[0x%04x], Base address=[0x%08x], Offset=[0x%04x], Status=%d\n",
-			       __func__, stb0899_i2cdev, stb0899_base_addr, stb0899_reg_offset, status);
-		goto err;
-	}
-
-	status = i2c_transfer(state->i2c, &msg_r, 1);
-	if (status < 1) {
+	status = i2c_transfer(state->i2c, msg, 2);
+	if (status < 2) {
 		if (status != -ERESTARTSYS)
 			printk(KERN_ERR "%s ERR(3), Device=[0x%04x], Base address=[0x%08x], Offset=[0x%04x], Status=%d\n",
 			       __func__, stb0899_i2cdev, stb0899_base_addr, stb0899_reg_offset, status);
