@@ -32,6 +32,10 @@
 
 	sudo dpkg -i ../linux-*deb
 
+# Install the firmware
+
+    sudo cp -Rv firmware/* /lib/firmware
+
 # reboot
 
 # Good to go, in the future if you need to upgrade 
