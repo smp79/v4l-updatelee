@@ -106,6 +106,10 @@
 #define   CTRL1_AWB_GAIN     0x04
 #define   CTRL1_LENC         0x02
 #define   CTRL1_PRE          0x01
+/*      REG 0xC7 (unknown name): affects Auto White Balance (AWB)
+ *	  AWB_OFF            0x40
+ *	  AWB_SIMPLE         0x10
+ *	  AWB_ON             0x00	(Advanced AWB ?) */
 #define R_DVP_SP    0xD3 /* DVP output speed control */
 #define   R_DVP_SP_AUTO_MODE 0x80
 #define   R_DVP_SP_DVP_MASK  0x3F /* DVP PCLK = sysclk (48)/[6:0] (YUV0);
@@ -199,7 +203,7 @@
 #define   COM7_ZOOM_EN         0x04 /* Enable Zoom mode */
 #define   COM7_COLOR_BAR_TEST  0x02 /* Enable Color Bar Test Pattern */
 #define COM8        0x13 /* Common control 8 */
-#define   COM8_DEF             0xC0 /* Banding filter ON/OFF */
+#define   COM8_DEF             0xC0
 #define   COM8_BNDF_EN         0x20 /* Banding filter ON/OFF */
 #define   COM8_AGC_EN          0x04 /* AGC Auto/Manual control selection */
 #define   COM8_AEC_EN          0x01 /* Auto/Manual Exposure control */
@@ -248,8 +252,19 @@
 #define ZOOMS       0x49 /* Zoom: Vertical start point */
 #define COM22       0x4B /* Flash light control */
 #define COM25       0x4E /* For Banding operations */
+#define   COM25_50HZ_BANDING_AEC_MSBS_MASK      0xC0 /* 50Hz Bd. AEC 2 MSBs */
+#define   COM25_60HZ_BANDING_AEC_MSBS_MASK      0x30 /* 60Hz Bd. AEC 2 MSBs */
+#define   COM25_50HZ_BANDING_AEC_MSBS_SET(x)    VAL_SET(x, 0x3, 8, 6)
+#define   COM25_60HZ_BANDING_AEC_MSBS_SET(x)    VAL_SET(x, 0x3, 8, 4)
 #define BD50        0x4F /* 50Hz Banding AEC 8 LSBs */
+#define   BD50_50HZ_BANDING_AEC_LSBS_SET(x)     VAL_SET(x, 0xFF, 0, 0)
 #define BD60        0x50 /* 60Hz Banding AEC 8 LSBs */
+#define   BD60_60HZ_BANDING_AEC_LSBS_SET(x)     VAL_SET(x, 0xFF, 0, 0)
+#define REG5A       0x5A /* 50/60Hz Banding Maximum AEC Step */
+#define   BD50_MAX_AEC_STEP_MASK         0xF0 /* 50Hz Banding Max. AEC Step */
+#define   BD60_MAX_AEC_STEP_MASK         0x0F /* 60Hz Banding Max. AEC Step */
+#define   BD50_MAX_AEC_STEP_SET(x)       VAL_SET((x - 1), 0x0F, 0, 4)
+#define   BD60_MAX_AEC_STEP_SET(x)       VAL_SET((x - 1), 0x0F, 0, 0)
 #define REG5D       0x5D /* AVGsel[7:0],   16-zone average weight option */
 #define REG5E       0x5E /* AVGsel[15:8],  16-zone average weight option */
 #define REG5F       0x5F /* AVGsel[23:16], 16-zone average weight option */
@@ -306,11 +321,11 @@ static const struct regval_list ov2640_init_regs[] = {
 	{ 0x2e,   0xdf },
 	{ BANK_SEL, BANK_SEL_SENS },
 	{ 0x3c,   0x32 },
-	{ CLKRC, CLKRC_DIV_SET(1) },
-	{ COM2, COM2_OCAP_Nx_SET(3) },
-	{ REG04, REG04_DEF | REG04_HREF_EN },
-	{ COM8,  COM8_DEF | COM8_BNDF_EN | COM8_AGC_EN | COM8_AEC_EN },
-	{ COM9, COM9_AGC_GAIN_8x | 0x08},
+	{ CLKRC,  CLKRC_DIV_SET(1) },
+	{ COM2,   COM2_OCAP_Nx_SET(3) },
+	{ REG04,  REG04_DEF | REG04_HREF_EN },
+	{ COM8,   COM8_DEF | COM8_BNDF_EN | COM8_AGC_EN | COM8_AEC_EN },
+	{ COM9,   COM9_AGC_GAIN_8x | 0x08},
 	{ 0x2c,   0x0c },
 	{ 0x33,   0x78 },
 	{ 0x3a,   0x33 },
@@ -355,25 +370,28 @@ static const struct regval_list ov2640_init_regs[] = {
 	{ 0x71,   0x94 },
 	{ 0x73,   0xc1 },
 	{ 0x3d,   0x34 },
-	{ COM7, COM7_RES_UXGA | COM7_ZOOM_EN },
-	{ 0x5a,   0x57 },
-	{ BD50,   0xbb },
-	{ BD60,   0x9c },
-	{ BANK_SEL, BANK_SEL_DSP },
+	{ COM7,   COM7_RES_UXGA | COM7_ZOOM_EN },
+	{ REG5A,  BD50_MAX_AEC_STEP_SET(6)
+		   | BD60_MAX_AEC_STEP_SET(8) },		/* 0x57 */
+	{ COM25,  COM25_50HZ_BANDING_AEC_MSBS_SET(0x0bb)
+		   | COM25_60HZ_BANDING_AEC_MSBS_SET(0x09c) },	/* 0x00 */
+	{ BD50,   BD50_50HZ_BANDING_AEC_LSBS_SET(0x0bb) },	/* 0xbb */
+	{ BD60,   BD60_60HZ_BANDING_AEC_LSBS_SET(0x09c) },	/* 0x9c */
+	{ BANK_SEL,  BANK_SEL_DSP },
 	{ 0xe5,   0x7f },
-	{ MC_BIST, MC_BIST_RESET | MC_BIST_BOOT_ROM_SEL },
+	{ MC_BIST,  MC_BIST_RESET | MC_BIST_BOOT_ROM_SEL },
 	{ 0x41,   0x24 },
-	{ RESET, RESET_JPEG | RESET_DVP },
+	{ RESET,  RESET_JPEG | RESET_DVP },
 	{ 0x76,   0xff },
 	{ 0x33,   0xa0 },
 	{ 0x42,   0x20 },
 	{ 0x43,   0x18 },
 	{ 0x4c,   0x00 },
-	{ CTRL3, CTRL3_BPC_EN | CTRL3_WPC_EN | 0x10 },
+	{ CTRL3,  CTRL3_BPC_EN | CTRL3_WPC_EN | 0x10 },
 	{ 0x88,   0x3f },
 	{ 0xd7,   0x03 },
 	{ 0xd9,   0x10 },
-	{ R_DVP_SP , R_DVP_SP_AUTO_MODE | 0x2 },
+	{ R_DVP_SP,  R_DVP_SP_AUTO_MODE | 0x2 },
 	{ 0xc8,   0x08 },
 	{ 0xc9,   0x80 },
 	{ BPADDR, 0x00 },
@@ -435,7 +453,7 @@ static const struct regval_list ov2640_init_regs[] = {
 	{ 0xc5,   0x11 },
 	{ 0xc6,   0x51 },
 	{ 0xbf,   0x80 },
-	{ 0xc7,   0x10 },
+	{ 0xc7,   0x10 },	/* simple AWB */
 	{ 0xb6,   0x66 },
 	{ 0xb8,   0xA5 },
 	{ 0xb7,   0x64 },
@@ -482,6 +500,9 @@ static const struct regval_list ov2640_init_regs[] = {
 static const struct regval_list ov2640_size_change_preamble_regs[] = {
 	{ BANK_SEL, BANK_SEL_DSP },
 	{ RESET, RESET_DVP },
+	{ SIZEL, SIZEL_HSIZE8_11_SET(UXGA_WIDTH) |
+		 SIZEL_HSIZE8_SET(UXGA_WIDTH) |
+		 SIZEL_VSIZE8_SET(UXGA_HEIGHT) },
 	{ HSIZE8, HSIZE8_SET(UXGA_WIDTH) },
 	{ VSIZE8, VSIZE8_SET(UXGA_HEIGHT) },
 	{ CTRL2, CTRL2_DCW_EN | CTRL2_SDE_EN |
@@ -613,6 +634,8 @@ static const struct regval_list ov2640_rgb565_le_regs[] = {
 static u32 ov2640_codes[] = {
 	MEDIA_BUS_FMT_YUYV8_2X8,
 	MEDIA_BUS_FMT_UYVY8_2X8,
+	MEDIA_BUS_FMT_YVYU8_2X8,
+	MEDIA_BUS_FMT_VYUY8_2X8,
 	MEDIA_BUS_FMT_RGB565_2X8_BE,
 	MEDIA_BUS_FMT_RGB565_2X8_LE,
 };
@@ -695,8 +718,10 @@ static int ov2640_s_ctrl(struct v4l2_ctrl *ctrl)
 
 	switch (ctrl->id) {
 	case V4L2_CID_VFLIP:
-		val = ctrl->val ? REG04_VFLIP_IMG : 0x00;
-		return ov2640_mask_set(client, REG04, REG04_VFLIP_IMG, val);
+		val = ctrl->val ? REG04_VFLIP_IMG | REG04_VREF_EN : 0x00;
+		return ov2640_mask_set(client, REG04,
+				       REG04_VFLIP_IMG | REG04_VREF_EN, val);
+		/* NOTE: REG04_VREF_EN: 1 line shift / even/odd line swap */
 	case V4L2_CID_HFLIP:
 		val = ctrl->val ? REG04_HFLIP_IMG : 0x00;
 		return ov2640_mask_set(client, REG04, REG04_HFLIP_IMG, val);
@@ -740,35 +765,33 @@ static int ov2640_s_register(struct v4l2_subdev *sd,
 
 static int ov2640_s_power(struct v4l2_subdev *sd, int on)
 {
+#ifdef CONFIG_GPIOLIB
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct ov2640_priv *priv = to_ov2640(client);
 
-	gpiod_direction_output(priv->pwdn_gpio, !on);
+	if (priv->pwdn_gpio)
+		gpiod_direction_output(priv->pwdn_gpio, !on);
 	if (on && priv->resetb_gpio) {
 		/* Active the resetb pin to perform a reset pulse */
 		gpiod_direction_output(priv->resetb_gpio, 1);
 		usleep_range(3000, 5000);
-		gpiod_direction_output(priv->resetb_gpio, 0);
+		gpiod_set_value(priv->resetb_gpio, 0);
 	}
+#endif
 	return 0;
 }
 
 /* Select the nearest higher resolution for capture */
-static const struct ov2640_win_size *ov2640_select_win(u32 *width, u32 *height)
+static const struct ov2640_win_size *ov2640_select_win(u32 width, u32 height)
 {
 	int i, default_size = ARRAY_SIZE(ov2640_supported_win_sizes) - 1;
 
 	for (i = 0; i < ARRAY_SIZE(ov2640_supported_win_sizes); i++) {
-		if (ov2640_supported_win_sizes[i].width  >= *width &&
-		    ov2640_supported_win_sizes[i].height >= *height) {
-			*width = ov2640_supported_win_sizes[i].width;
-			*height = ov2640_supported_win_sizes[i].height;
+		if (ov2640_supported_win_sizes[i].width  >= width &&
+		    ov2640_supported_win_sizes[i].height >= height)
 			return &ov2640_supported_win_sizes[i];
-		}
 	}
 
-	*width = ov2640_supported_win_sizes[default_size].width;
-	*height = ov2640_supported_win_sizes[default_size].height;
 	return &ov2640_supported_win_sizes[default_size];
 }
 
@@ -777,6 +800,7 @@ static int ov2640_set_params(struct i2c_client *client,
 {
 	struct ov2640_priv       *priv = to_ov2640(client);
 	const struct regval_list *selected_cfmt_regs;
+	u8 val;
 	int ret;
 
 	/* select win */
@@ -800,6 +824,14 @@ static int ov2640_set_params(struct i2c_client *client,
 	case MEDIA_BUS_FMT_UYVY8_2X8:
 	default:
 		dev_dbg(&client->dev, "%s: Selected cfmt UYVY", __func__);
+		selected_cfmt_regs = ov2640_uyvy_regs;
+		break;
+	case MEDIA_BUS_FMT_YVYU8_2X8:
+		dev_dbg(&client->dev, "%s: Selected cfmt YVYU", __func__);
+		selected_cfmt_regs = ov2640_yuyv_regs;
+		break;
+	case MEDIA_BUS_FMT_VYUY8_2X8:
+		dev_dbg(&client->dev, "%s: Selected cfmt VYUY", __func__);
 		selected_cfmt_regs = ov2640_uyvy_regs;
 		break;
 	}
@@ -834,6 +866,11 @@ static int ov2640_set_params(struct i2c_client *client,
 	ret = ov2640_write_array(client, selected_cfmt_regs);
 	if (ret < 0)
 		goto err;
+	val = (code == MEDIA_BUS_FMT_YVYU8_2X8)
+	      || (code == MEDIA_BUS_FMT_VYUY8_2X8) ? CTRL0_VFIRST : 0x00;
+	ret = ov2640_mask_set(client, CTRL0, CTRL0_VFIRST, val);
+	if (ret < 0)
+		goto err;
 
 	priv->cfmt_code = code;
 
@@ -859,8 +896,7 @@ static int ov2640_get_fmt(struct v4l2_subdev *sd,
 		return -EINVAL;
 
 	if (!priv->win) {
-		u32 width = SVGA_WIDTH, height = SVGA_HEIGHT;
-		priv->win = ov2640_select_win(&width, &height);
+		priv->win = ov2640_select_win(SVGA_WIDTH, SVGA_HEIGHT);
 		priv->cfmt_code = MEDIA_BUS_FMT_UYVY8_2X8;
 	}
 
@@ -885,7 +921,9 @@ static int ov2640_set_fmt(struct v4l2_subdev *sd,
 		return -EINVAL;
 
 	/* select suitable win */
-	win = ov2640_select_win(&mf->width, &mf->height);
+	win = ov2640_select_win(mf->width, mf->height);
+	mf->width	= win->width;
+	mf->height	= win->height;
 
 	mf->field	= V4L2_FIELD_NONE;
 	mf->colorspace	= V4L2_COLORSPACE_SRGB;
@@ -895,6 +933,8 @@ static int ov2640_set_fmt(struct v4l2_subdev *sd,
 	case MEDIA_BUS_FMT_RGB565_2X8_LE:
 	case MEDIA_BUS_FMT_YUYV8_2X8:
 	case MEDIA_BUS_FMT_UYVY8_2X8:
+	case MEDIA_BUS_FMT_YVYU8_2X8:
+	case MEDIA_BUS_FMT_VYUY8_2X8:
 		break;
 	default:
 		mf->code = MEDIA_BUS_FMT_UYVY8_2X8;
@@ -1008,21 +1048,35 @@ static const struct v4l2_subdev_ops ov2640_subdev_ops = {
 static int ov2640_probe_dt(struct i2c_client *client,
 		struct ov2640_priv *priv)
 {
+	int ret;
+
 	/* Request the reset GPIO deasserted */
 	priv->resetb_gpio = devm_gpiod_get_optional(&client->dev, "resetb",
 			GPIOD_OUT_LOW);
+
 	if (!priv->resetb_gpio)
 		dev_dbg(&client->dev, "resetb gpio is not assigned!\n");
-	else if (IS_ERR(priv->resetb_gpio))
-		return PTR_ERR(priv->resetb_gpio);
+
+	ret = PTR_ERR_OR_ZERO(priv->resetb_gpio);
+	if (ret && ret != -ENOSYS) {
+		dev_dbg(&client->dev,
+			"Error %d while getting resetb gpio\n", ret);
+		return ret;
+	}
 
 	/* Request the power down GPIO asserted */
 	priv->pwdn_gpio = devm_gpiod_get_optional(&client->dev, "pwdn",
 			GPIOD_OUT_HIGH);
+
 	if (!priv->pwdn_gpio)
 		dev_dbg(&client->dev, "pwdn gpio is not assigned!\n");
-	else if (IS_ERR(priv->pwdn_gpio))
-		return PTR_ERR(priv->pwdn_gpio);
+
+	ret = PTR_ERR_OR_ZERO(priv->pwdn_gpio);
+	if (ret && ret != -ENOSYS) {
+		dev_dbg(&client->dev,
+			"Error %d while getting pwdn gpio\n", ret);
+		return ret;
+	}
 
 	return 0;
 }
