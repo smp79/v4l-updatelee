@@ -184,17 +184,17 @@ static struct stv090x_config stv0900_config = {
 	.ts2_mode       = STV090x_TSMODE_SERIAL_CONTINUOUS,
 	
 	.repeater_level         = STV090x_RPTLEVEL_16,
-	.adc1_range				= STV090x_ADC_2Vpp,
-	.tuner_bbgain			= 8,
+	.adc1_range		= STV090x_ADC_2Vpp,
+	.tuner_bbgain		= 8,
 
 	.tuner_get_frequency    = stb6100_get_frequency,
 	.tuner_set_frequency    = stb6100_set_frequency,
 	.tuner_set_bandwidth    = stb6100_set_bandwidth,
 	.tuner_get_bandwidth    = stb6100_get_bandwidth,
-	.name					= "STV090x TBS 5925",
-	.tun1_iqswap			= 1,
-	.tun2_iqswap			= 1,
-	.set_lock_led			= tbs5925_led_ctrl,
+	.name			= "STV090x TBS 5925",
+	.tun1_iqswap		= 1,
+	.tun2_iqswap		= 1,
+	.set_lock_led		= tbs5925_led_ctrl,
 };
 
 static struct stb6100_config stb6100_config = {

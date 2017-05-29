@@ -57,18 +57,11 @@ static irqreturn_t tbsecp3_irq_handler(int irq, void *dev_id)
 		/* dma */
 		for (i = 0; i < dev->info->adapters; i++) {
 			in = dev->adapter[i].cfg->ts_in;
-			//printk("i=%d, in=%d", i, in);
-			if (stat & TBSECP3_DMA_IF(in)) {
-				if (dev->adapter[i].dma.cnt < 2)
-					dev->adapter[i].dma.cnt++;
-				else
-					tasklet_schedule(&dev->adapter[i].tasklet);
-				//printk(" X");
-			}
-			//printk(" | ");
+			if (stat & TBSECP3_DMA_IF(in))
+				tasklet_schedule(&dev->adapter[i].tasklet);
 		}
-		//printk("\n");
 	}
+
 	if (stat & 0x0000000f) {
 		/* i2c */
 		for (i = 0; i < 4; i++) {
@@ -188,6 +181,8 @@ static int tbsecp3_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 		dev_err(&pdev->dev, "32-bit PCI DMA not supported\n");
 		goto err0;
 	}
+	
+	pci_set_master(pdev);
 
 	dev = kzalloc(sizeof(struct tbsecp3_dev), GFP_KERNEL);
 	if (!dev) {

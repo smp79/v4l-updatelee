@@ -179,7 +179,7 @@ static void tbs5927_led_ctrl(struct dvb_frontend *fe, int offon)
 }
 
 static struct stv0910_cfg tbs5927_stv0910_cfg = {
-	.name     = "STV0910 TBS 6903",
+	.name     = "STV0910 TBS 5927",
 	.adr      = 0x68,
 	.parallel = 1,
 	.rptlvl   = 3,

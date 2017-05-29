@@ -1160,7 +1160,6 @@ static int dvb_init(struct cx231xx *dev)
 			   0x60, tuner_i2c,
 			   &pv_tda18271_config);
 		break;
-
 	case CX231XX_BOARD_EVROMEDIA_FULL_HYBRID_FULLHD:
 	{
 		struct si2157_config si2157_config = {};

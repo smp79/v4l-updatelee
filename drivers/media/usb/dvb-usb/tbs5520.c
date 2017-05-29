@@ -284,6 +284,7 @@ static int tbs5520_frontend_attach(struct dvb_usb_adapter *d)
 	tbs5520_op_rw(d->dev->udev, 0x8a, 0, 0,
 		buf, 2, tbs5520_WRITE_MSG);
 
+	strlcpy(d->fe_adap->fe->ops.info.name,d->dev->props.devices[0].name,52);
 	return 0;
 err:
 	printk("TBS5520: frontend attach failed\n");
@@ -475,7 +476,7 @@ static struct dvb_usb_device_properties tbs5520_properties = {
 	}},
 	.num_device_descs = 1,
 	.devices = {
-		{"TBS 5520 USB2.0", {&tbs5520_table[0], NULL}, {NULL}, },
+		{"TurboSight TBS 5520 DVB-S/S2/T/T2/C/ISDB-T", {&tbs5520_table[0], NULL}, {NULL}, },
 	}
 };
 
