@@ -2214,6 +2214,37 @@ static void lgdt3306a_DumpRegs(struct lgdt3306a_state *state)
 }
 #endif /* DBG_DUMP */
 
+static int lgdt3306a_read_reg2(struct lgdt3306a_state *state, unsigned int reg, u8* out, u8 len)
+{
+        int ret;
+
+        u8 b0[] = { reg >> 8, reg & 0xff };
+        struct i2c_msg msg[] = {
+                { .addr = state->cfg->i2c_addr, .flags       = 0,            .buf = b0,      .len = 2 },
+                { .addr = state->cfg->i2c_addr, .flags       = I2C_M_RD,     .buf = out,     .len = len }
+        };
+
+        ret = i2c_transfer(state->i2c_adap, msg, 2);
+        if (ret != 2)
+                printk("%s: i2c error %d, reg[0x%02x]\n", __func__, ret, reg);
+        return 0;
+}
+
+static int lgdt3306a_get_constellation_samples(struct dvb_frontend *fe, struct dvb_fe_constellation_samples *s)
+{
+        struct lgdt3306a_state *state = fe->demodulator_priv;
+        u32 x;
+        u8 buf[2];
+
+        for (x = 0 ; x < s->num ; x++)
+        {
+                lgdt3306a_read_reg2(state, 0x00ee, buf, 2);
+                s->samples[x].imaginary= buf[0]; //real and imaginary are swapped
+                s->samples[x].real = buf[1];
+        }
+        return 0;
+}
+
 static const struct dvb_frontend_ops lgdt3306a_ops = {
 	.delsys = { SYS_DVBC_ANNEX_B, SYS_ATSC },
 	.info = {
@@ -2224,7 +2255,8 @@ static const struct dvb_frontend_ops lgdt3306a_ops = {
 		.caps = FE_CAN_8VSB | FE_CAN_QAM_64 | FE_CAN_QAM_256 | FE_HAS_EXTENDED_CAPS
 	},
 	.extended_info = {
-		.extended_caps          = FE_CAN_SPECTRUMSCAN
+		.extended_caps          = FE_CAN_SPECTRUMSCAN |
+					  FE_CAN_IQ
 	},
 	.i2c_gate_ctrl        = lgdt3306a_i2c_gate_ctrl,
 	.init                 = lgdt3306a_init,
@@ -2246,6 +2278,7 @@ static const struct dvb_frontend_ops lgdt3306a_ops = {
 	.ts_bus_ctrl          = lgdt3306a_ts_bus_ctrl,
 	.search               = lgdt3306a_search,
 	.get_spectrum_scan    = lgdt3306a_get_spectrum_scan,
+        .get_constellation_samples      = lgdt3306a_get_constellation_samples,
 };
 
 MODULE_DESCRIPTION("LG Electronics LGDT3306A ATSC/QAM-B Demodulator Driver");
