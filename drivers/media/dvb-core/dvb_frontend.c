@@ -1937,26 +1937,27 @@ static int dvb_frontend_ioctl_get_spectrum_scan(struct file *file,
 	struct dvb_device *dvbdev = file->private_data;
 	struct dvb_frontend *fe = dvbdev->priv;
 
-	struct dvb_fe_spectrum_scan *s_user = NULL;
+	struct dvb_fe_spectrum_scan *s_user = parg;
 	struct dvb_fe_spectrum_scan s_kernel;
 
 	int err = -EOPNOTSUPP;
 
 	if (fe->ops.get_spectrum_scan)
 	{
-		s_user = (struct dvb_fe_spectrum_scan __user *)parg;
 		// make sure samples are within range
 		if ((s_user->num_freq == 0) || (s_user->num_freq > DTV_MAX_SPECTRUM_SCAN_STEPS))
 			return -EINVAL;
 
 		// create kernel memory structure
+                s_kernel.type = NULL;
                 s_kernel.type = kmalloc(sizeof(__u32), GFP_KERNEL);
-                s_kernel.freq = s_user->freq;
+		s_kernel.freq = memdup_user(s_user->freq, s_user->num_freq * sizeof(__u32));
 		s_kernel.num_freq = s_user->num_freq;
-		s_kernel.rf_level = kmalloc(s_user->num_freq * sizeof(__u16), GFP_KERNEL);
+		s_kernel.rf_level = NULL;
+		s_kernel.rf_level = kmalloc(s_user->num_freq * sizeof(__s16), GFP_KERNEL);
 
-		if (!s_kernel.rf_level) {
-				return -ENOMEM;
+		if (!s_kernel.rf_level || !s_kernel.type) {
+			return -ENOMEM;
 		}
 
 		// call user function
@@ -1971,6 +1972,7 @@ static int dvb_frontend_ioctl_get_spectrum_scan(struct file *file,
                 }
 
 		// free kernel allocated memory
+		kfree(s_kernel.type);
 		kfree(s_kernel.rf_level);
 	}
 
@@ -1983,15 +1985,13 @@ static int dvb_frontend_ioctl_get_constellation_samples(struct file *file,
 	struct dvb_device *dvbdev = file->private_data;
 	struct dvb_frontend *fe = dvbdev->priv;
 
-	struct dvb_fe_constellation_samples *s_user = NULL;
+	struct dvb_fe_constellation_samples *s_user = parg;
 	struct dvb_fe_constellation_samples s_kernel;
 
 	int err = -EOPNOTSUPP;
 
 	if (fe->ops.get_constellation_samples)
 	{
-		s_user = (struct dvb_fe_constellation_samples __user *)parg;
-
 		// make sure samples are within range
 		if ((s_user->num == 0) || (s_user->num > DTV_MAX_CONSTELLATION_SAMPLES))
 			return -EINVAL;
@@ -2000,7 +2000,7 @@ static int dvb_frontend_ioctl_get_constellation_samples(struct file *file,
 		s_kernel.num = s_user->num;
 		s_kernel.options = s_user->options;
 		s_kernel.samples = kmalloc(s_user->num * sizeof(struct dvb_fe_constellation_sample), GFP_KERNEL);
-		
+
 		if (!s_kernel.samples) {
 			return -ENOMEM;
 		}
