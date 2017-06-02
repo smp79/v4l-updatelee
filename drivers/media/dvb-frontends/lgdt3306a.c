@@ -1330,9 +1330,12 @@ static int lgdt3306a_pre_monitoring(struct lgdt3306a_state *state)
 	dbg_info("snrRef=%d mainStrong=%d aiccrejStatus=%d currChDiffACQ=0x%x\n",
 		snrRef, mainStrong, aiccrejStatus, currChDiffACQ);
 
-#if 0
+#if 1
 	/* Dynamic ghost exists */
 	if ((mainStrong == 0) && (currChDiffACQ > 0x70))
+		dbg_info("Dynamic Multipath: snrRef=%d mainStrong=%d aiccrejStatus=%d currChDiffACQ=0x%x\n",
+			snrRef, mainStrong, aiccrejStatus, currChDiffACQ);
+
 #endif
 	if (mainStrong == 0) {
 		ret = lgdt3306a_read_reg(state, 0x2135, &val);
@@ -1357,6 +1360,8 @@ static int lgdt3306a_pre_monitoring(struct lgdt3306a_state *state)
 		if (ret)
 			return ret;
 	} else { /* Weak ghost or static channel */
+		dbg_info("Static Multipath: snrRef=%d mainStrong=%d aiccrejStatus=%d currChDiffACQ=0x%x\n",
+			snrRef, mainStrong, aiccrejStatus, currChDiffACQ);
 		ret = lgdt3306a_read_reg(state, 0x2135, &val);
 		if (ret)
 			return ret;
@@ -1713,10 +1718,8 @@ static int lgdt3306a_read_ber(struct dvb_frontend *fe, u32 *ber)
 #if 1
 	/* FGR - FIXME - I don't know what value is expected by dvb_core
 	 * what is the scale of the value?? */
-	tmp =              read_reg(state, 0x00fc); /* NBERVALUE[24-31] */
-	tmp = (tmp << 8) | read_reg(state, 0x00fd); /* NBERVALUE[16-23] */
-	tmp = (tmp << 8) | read_reg(state, 0x00fe); /* NBERVALUE[8-15] */
-	tmp = (tmp << 8) | read_reg(state, 0x00ff); /* NBERVALUE[0-7] */
+        tmp =              read_reg(state, 0x00f8); /* VABER[15:8] */
+        tmp = (tmp << 8) | read_reg(state, 0x00f9); /* VABER[7:0]  */
 	*ber = tmp;
 	dbg_info("ber=%u\n", tmp);
 #endif
@@ -2052,7 +2055,7 @@ static const short regtab[] = {
 	0x00a2, /* SAMFREQOFFSET[15:8] */
 	0x00a3, /* SAMFREQOFFSET[7:0] */
 	0x00a6, /* SYNCLOCK SYNCLOCKH */
-#if 0 /* covered elsewhere */
+#if 1 /* covered elsewhere */
 	0x00e8, /* CONSTPWR[15:8] */
 	0x00e9, /* CONSTPWR[7:0] */
 	0x00ea, /* BMSE[15:8] */
