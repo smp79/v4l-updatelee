@@ -40,7 +40,7 @@ static int si2157_cmd_execute(struct i2c_client *client, struct si2157_cmd *cmd)
 
 	if (cmd->rlen) {
 		/* wait cmd execution terminate */
-		#define TIMEOUT 80
+		#define TIMEOUT 500
 		timeout = jiffies + msecs_to_jiffies(TIMEOUT);
 		while (!time_after(jiffies, timeout)) {
 			ret = i2c_master_recv(client, cmd->args, cmd->rlen);
@@ -56,10 +56,6 @@ static int si2157_cmd_execute(struct i2c_client *client, struct si2157_cmd *cmd)
 				break;
 		}
 
-		dev_dbg(&client->dev, "cmd execution took %d ms\n",
-				jiffies_to_msecs(jiffies) -
-				(jiffies_to_msecs(timeout) - TIMEOUT));
-
 		if (!((cmd->args[0] >> 7) & 0x01)) {
 			ret = -ETIMEDOUT;
 			goto err_mutex_unlock;
@@ -71,7 +67,8 @@ static int si2157_cmd_execute(struct i2c_client *client, struct si2157_cmd *cmd)
 
 err_mutex_unlock:
 	mutex_unlock(&dev->i2c_mutex);
-	dev_dbg(&client->dev, "failed=%d\n", ret);
+	dprintk("failed=%d", ret);
+	dprintk("args=%*ph", cmd->wlen, cmd->args);
 	return ret;
 }
 
@@ -86,7 +83,7 @@ static int si2157_init(struct dvb_frontend *fe)
 	const char *fw_name;
 	unsigned int uitmp, chip_id;
 
-	dev_dbg(&client->dev, "\n");
+	dprintk("");
 
 	/* Returned IF frequency is garbage when firmware is not running */
 	memcpy(cmd.args, "\x15\x00\x06\x07", 4);
@@ -97,7 +94,7 @@ static int si2157_init(struct dvb_frontend *fe)
 		goto err;
 
 	uitmp = cmd.args[2] << 0 | cmd.args[3] << 8;
-	dev_dbg(&client->dev, "if_frequency kHz=%u\n", uitmp);
+	dprintk("if_frequency kHz=%u", uitmp);
 
 	if (uitmp == dev->if_frequency / 1000)
 		goto warm;
@@ -159,15 +156,14 @@ static int si2157_init(struct dvb_frontend *fe)
 		fw_name = NULL;
 		break;
 	default:
-		dev_err(&client->dev, "unknown chip version Si21%d-%c%c%c\n",
+		dprintk("unknown chip version Si21%d-%c%c%c\n",
 				cmd.args[2], cmd.args[1],
 				cmd.args[3], cmd.args[4]);
 		ret = -EINVAL;
 		goto err;
 	}
 
-	dev_info(&client->dev, "found a 'Silicon Labs Si21%d-%c%c%c'\n",
-			cmd.args[2], cmd.args[1], cmd.args[3], cmd.args[4]);
+	dprintk("found a 'Silicon Labs Si21%d-%c%c%c'", cmd.args[2], cmd.args[1], cmd.args[3], cmd.args[4]);
 
 	if (fw_name == NULL)
 		goto skip_fw_download;
@@ -175,26 +171,25 @@ static int si2157_init(struct dvb_frontend *fe)
 	/* request the firmware, this will block and timeout */
 	ret = request_firmware(&fw, fw_name, &client->dev);
 	if (ret) {
-		dev_err(&client->dev, "firmware file '%s' not found\n",
+		dprintk("firmware file '%s' not found\n",
 				fw_name);
 		goto err;
 	}
 
 	/* firmware should be n chunks of 17 bytes */
 	if (fw->size % 17 != 0) {
-		dev_err(&client->dev, "firmware file '%s' is invalid\n",
+		dprintk("firmware file '%s' is invalid\n",
 				fw_name);
 		ret = -EINVAL;
 		goto err_release_firmware;
 	}
 
-	dev_info(&client->dev, "downloading firmware from file '%s'\n",
-			fw_name);
+	dprintk("downloading firmware from file '%s'", fw_name);
 
 	for (remaining = fw->size; remaining > 0; remaining -= 17) {
 		len = fw->data[fw->size - remaining];
 		if (len > SI2157_ARGLEN) {
-			dev_err(&client->dev, "Bad firmware length\n");
+			dprintk("Bad firmware length\n");
 			ret = -EINVAL;
 			goto err_release_firmware;
 		}
@@ -203,7 +198,7 @@ static int si2157_init(struct dvb_frontend *fe)
 		cmd.rlen = 1;
 		ret = si2157_cmd_execute(client, &cmd);
 		if (ret) {
-			dev_err(&client->dev, "firmware download failed %d\n",
+			dprintk("firmware download failed %d\n",
 					ret);
 			goto err_release_firmware;
 		}
@@ -228,8 +223,7 @@ skip_fw_download:
 	if (ret)
 		goto err;
 
-	dev_info(&client->dev, "firmware version: %c.%c.%d\n",
-			cmd.args[6], cmd.args[7], cmd.args[8]);
+	dprintk("firmware version: %c.%c.%d", cmd.args[6], cmd.args[7], cmd.args[8]);
 warm:
 	/* init statistics in order signal app which are supported */
 	c->strength.len = 1;
@@ -242,7 +236,7 @@ warm:
 err_release_firmware:
 	release_firmware(fw);
 err:
-	dev_dbg(&client->dev, "failed=%d\n", ret);
+	dprintk("failed=%d", ret);
 	return ret;
 }
 
@@ -253,7 +247,7 @@ static int si2157_sleep(struct dvb_frontend *fe)
 	int ret;
 	struct si2157_cmd cmd;
 
-	dev_dbg(&client->dev, "\n");
+	dprintk("");
 
 	dev->active = false;
 
@@ -270,7 +264,7 @@ static int si2157_sleep(struct dvb_frontend *fe)
 
 	return 0;
 err:
-	dev_dbg(&client->dev, "failed=%d\n", ret);
+	dprintk("failed=%d", ret);
 	return ret;
 }
 
@@ -284,9 +278,7 @@ static int si2157_set_params(struct dvb_frontend *fe)
 	u8 bandwidth, delivery_system;
 	u32 if_frequency = 5000000;
 
-	dev_dbg(&client->dev,
-			"delivery_system=%d frequency=%u bandwidth_hz=%u\n",
-			c->delivery_system, c->frequency, c->bandwidth_hz);
+	dprintk("delivery_system=%d frequency=%u bandwidth_hz=%u", c->delivery_system, c->frequency, c->bandwidth_hz);
 
 	if (!dev->active) {
 		ret = -EAGAIN;
@@ -378,7 +370,7 @@ static int si2157_set_params(struct dvb_frontend *fe)
 
 	return 0;
 err:
-	dev_dbg(&client->dev, "failed=%d\n", ret);
+	dprintk("failed=%d", ret);
 	return ret;
 }
 
@@ -403,7 +395,7 @@ static int si2157_get_rf_strength(struct dvb_frontend *fe,
 	cmd.rlen = 12;
 	ret = si2157_cmd_execute(client, &cmd);
 	if (ret) {
-		dev_dbg(&client->dev, "failed=%d\n", ret);
+		dprintk("failed=%d", ret);
 		return -1;
 	}
 
@@ -435,7 +427,7 @@ static void si2157_stat_work(struct work_struct *work)
 	struct si2157_cmd cmd;
 	int ret;
 
-	dev_dbg(&client->dev, "\n");
+	dprintk("");
 
 	memcpy(cmd.args, "\x42\x00", 2);
 	cmd.wlen = 2;
@@ -451,7 +443,7 @@ static void si2157_stat_work(struct work_struct *work)
 	return;
 err:
 	c->strength.stat[0].scale = FE_SCALE_NOT_AVAILABLE;
-	dev_dbg(&client->dev, "failed=%d\n", ret);
+	dprintk("failed=%d", ret);
 }
 
 static int si2157_probe(struct i2c_client *client,
@@ -466,7 +458,7 @@ static int si2157_probe(struct i2c_client *client,
 	dev = kzalloc(sizeof(*dev), GFP_KERNEL);
 	if (!dev) {
 		ret = -ENOMEM;
-		dev_err(&client->dev, "kzalloc() failed\n");
+		dprintk("kzalloc() failed");
 		goto err;
 	}
 
@@ -521,7 +513,7 @@ static int si2157_probe(struct i2c_client *client,
 	}
 #endif
 
-	dev_info(&client->dev, "Silicon Labs %s successfully attached\n",
+	dprintk("Silicon Labs %s successfully attached",
 			dev->chiptype == SI2157_CHIPTYPE_SI2141 ?  "Si2141" :
 			dev->chiptype == SI2157_CHIPTYPE_SI2146 ?
 			"Si2146" : "Si2147/2148/2157/2158");
@@ -531,7 +523,7 @@ static int si2157_probe(struct i2c_client *client,
 err_kfree:
 	kfree(dev);
 err:
-	dev_dbg(&client->dev, "failed=%d\n", ret);
+	dprintk("failed=%d", ret);
 	return ret;
 }
 
@@ -540,7 +532,7 @@ static int si2157_remove(struct i2c_client *client)
 	struct si2157_dev *dev = i2c_get_clientdata(client);
 	struct dvb_frontend *fe = dev->fe;
 
-	dev_dbg(&client->dev, "\n");
+	dprintk("");
 
 	/* stop statistics polling */
 	cancel_delayed_work_sync(&dev->stat_work);

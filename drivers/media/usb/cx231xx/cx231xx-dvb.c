@@ -755,14 +755,6 @@ static void unregister_dvb(struct cx231xx_dvb *dvb)
 	}
 	dvb_unregister_frontend(dvb->frontend);
 	dvb_frontend_detach(dvb->frontend);
-
-	client = dvb->i2c_client_demod;
-	/* remove I2C demod */
-	if (client) {
-		module_put(client->dev.driver->owner);
-		i2c_unregister_device(client);
-	}
-
 	dvb_unregister_adapter(&dvb->adapter);
 }
 

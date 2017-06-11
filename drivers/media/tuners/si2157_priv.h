@@ -21,6 +21,8 @@
 #include <media/v4l2-mc.h>
 #include "si2157.h"
 
+#define dprintk(fmt, arg...)	printk(KERN_INFO pr_fmt("%s: " fmt "\n"),  __func__, ##arg)
+
 /* state struct */
 struct si2157_dev {
 	struct mutex i2c_mutex;
