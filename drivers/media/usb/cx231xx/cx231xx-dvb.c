@@ -61,27 +61,6 @@ DVB_DEFINE_MOD_OPT_ADAPTER_NR(adapter_nr);
 #define CX231XX_DVB_MAX_PACKETSIZE 564
 #define CX231XX_DVB_MAX_PACKETS 64
 
-struct cx231xx_dvb {
-	struct dvb_frontend *frontend;
-
-	/* feed count management */
-	struct mutex lock;
-	int nfeeds;
-	u8 count;
-
-	/* general boilerplate stuff */
-	struct dvb_adapter adapter;
-	struct dvb_demux demux;
-	struct dmxdev dmxdev;
-	struct dmx_frontend fe_hw;
-	struct dmx_frontend fe_mem;
-	struct dvb_net net;
-	struct i2c_client *i2c_client_demod;
-	struct i2c_client *i2c_client_tuner;
-
-	void *adap_priv;
-};
-
 static struct s5h1432_config dvico_s5h1432_config = {
 	.output_mode   = S5H1432_SERIAL_OUTPUT,
 	.gpio          = S5H1432_GPIO_ON,
@@ -1408,7 +1387,7 @@ static int dvb_init(struct cx231xx *dev)
 		/* attach demodulator chip */
 		mn88473_config.i2c_wr_max = 16;
 		mn88473_config.xtal = 25000000;
-		mn88473_config.fe = &dev->dvb->frontend;
+		mn88473_config.fe = &dev->dvb[0]->frontend;
 
 		strlcpy(info.type, "mn88473", sizeof(info.type));
 		info.addr = dev->board.demod_addr;
@@ -1434,7 +1413,7 @@ static int dvb_init(struct cx231xx *dev)
 		dvb->frontend->callback = cx231xx_tuner_callback;
 
 		/* attach tuner chip */
-		dvb_attach(r820t_attach, dev->dvb->frontend,
+		dvb_attach(r820t_attach, dev->dvb[0]->frontend,
 			   tuner_i2c,
 			   &astrometa_t2hybrid_r820t_config);
 		break;
@@ -1457,7 +1436,7 @@ static int dvb_init(struct cx231xx *dev)
 
 	if (result < 0)
 		goto out_free;
-
+	}
 
 	dev_info(dev->dev, "Successfully loaded cx231xx-dvb\n");
 
