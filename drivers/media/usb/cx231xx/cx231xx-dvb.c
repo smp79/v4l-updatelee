@@ -37,6 +37,8 @@
 #include "mb86a20s.h"
 #include "si2157.h"
 #include "lgdt3306a.h"
+#include "r820t.h"
+#include "mn88473.h"
 #include "tda18212.h"
 #include "cxd2820r.h"
 #include "si2168.h"
@@ -58,6 +60,27 @@ DVB_DEFINE_MOD_OPT_ADAPTER_NR(adapter_nr);
 #define CX231XX_DVB_NUM_BUFS 5
 #define CX231XX_DVB_MAX_PACKETSIZE 564
 #define CX231XX_DVB_MAX_PACKETS 64
+
+struct cx231xx_dvb {
+	struct dvb_frontend *frontend;
+
+	/* feed count management */
+	struct mutex lock;
+	int nfeeds;
+	u8 count;
+
+	/* general boilerplate stuff */
+	struct dvb_adapter adapter;
+	struct dvb_demux demux;
+	struct dmxdev dmxdev;
+	struct dmx_frontend fe_hw;
+	struct dmx_frontend fe_mem;
+	struct dvb_net net;
+	struct i2c_client *i2c_client_demod;
+	struct i2c_client *i2c_client_tuner;
+
+	void *adap_priv;
+};
 
 static struct s5h1432_config dvico_s5h1432_config = {
 	.output_mode   = S5H1432_SERIAL_OUTPUT,
@@ -151,6 +174,13 @@ static struct lgdt3306a_config hauppauge_955q_lgdt3306a_config = {
 	.tpclk_edge         = LGDT3306A_TPCLK_RISING_EDGE,
 	.tpvalid_polarity   = LGDT3306A_TP_VALID_HIGH,
 	.xtalMHz            = 25,
+};
+
+static struct r820t_config astrometa_t2hybrid_r820t_config = {
+	.i2c_addr		= 0x3a, /* 0x74 >> 1 */
+	.xtal			= 16000000,
+	.rafael_chip		= CHIP_R828D,
+	.max_i2c_msg_len	= 2,
 };
 
 static struct cxd2820r_config cxd2820r_config0 = {
@@ -1369,6 +1399,46 @@ static int dvb_init(struct cx231xx *dev)
 
 		break;
 	}
+	case CX231XX_BOARD_ASTROMETA_T2HYBRID:
+	{
+		struct i2c_client *client;
+		struct i2c_board_info info = {};
+		struct mn88473_config mn88473_config = {};
+
+		/* attach demodulator chip */
+		mn88473_config.i2c_wr_max = 16;
+		mn88473_config.xtal = 25000000;
+		mn88473_config.fe = &dev->dvb->frontend;
+
+		strlcpy(info.type, "mn88473", sizeof(info.type));
+		info.addr = dev->board.demod_addr;
+		info.platform_data = &mn88473_config;
+
+		request_module(info.type);
+		client = i2c_new_device(demod_i2c, &info);
+
+		if (client == NULL || client->dev.driver == NULL) {
+			result = -ENODEV;
+			goto out_free;
+		}
+
+		if (!try_module_get(client->dev.driver->owner)) {
+			i2c_unregister_device(client);
+			result = -ENODEV;
+			goto out_free;
+		}
+
+		dvb->i2c_client_demod = client;
+
+		/* define general-purpose callback pointer */
+		dvb->frontend->callback = cx231xx_tuner_callback;
+
+		/* attach tuner chip */
+		dvb_attach(r820t_attach, dev->dvb->frontend,
+			   tuner_i2c,
+			   &astrometa_t2hybrid_r820t_config);
+		break;
+	}
 	default:
 		dev_err(dev->dev,
 			"%s/2: The frontend of your DVB/ATSC card isn't supported yet\n",
@@ -1385,10 +1455,9 @@ static int dvb_init(struct cx231xx *dev)
 	/* register everything */
 	result = register_dvb(dvb, THIS_MODULE, dev, dev->dev);
 
-	mutex_unlock(&dev->lock);
 	if (result < 0)
 		goto out_free;
-	}
+
 
 	dev_info(dev->dev, "Successfully loaded cx231xx-dvb\n");
 

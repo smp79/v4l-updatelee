@@ -79,9 +79,10 @@
 #define CX231XX_BOARD_HAUPPAUGE_955Q 21
 #define CX231XX_BOARD_TERRATEC_GRABBY 22
 #define CX231XX_BOARD_EVROMEDIA_FULL_HYBRID_FULLHD 23
-#define CX231XX_BOARD_TBS_5280 24
-#define CX231XX_BOARD_TBS_5281 25
-#define CX231XX_BOARD_TBS_5990 26
+#define CX231XX_BOARD_ASTROMETA_T2HYBRID 24
+#define CX231XX_BOARD_TBS_5280 25
+#define CX231XX_BOARD_TBS_5281 26
+#define CX231XX_BOARD_TBS_5990 27
 
 /* Limits minimum and default number of buffers */
 #define CX231XX_MIN_BUF                 4
@@ -589,27 +590,6 @@ struct cx231xx_tsport {
 	/* Allow a single tsport to have multiple frontends */
 	u32                        num_frontends;
 	void                       *port_priv;
-};
-
-struct cx231xx_dvb {
-	struct dvb_frontend *frontend;
-
-	/* feed count management */
-	struct mutex lock;
-	int nfeeds;
-	u8 count;
-
-	/* general boilerplate stuff */
-	struct dvb_adapter adapter;
-	struct dvb_demux demux;
-	struct dmxdev dmxdev;
-	struct dmx_frontend fe_hw;
-	struct dmx_frontend fe_mem;
-	struct dvb_net net;
-	struct i2c_client *i2c_client_demod;
-	struct i2c_client *i2c_client_tuner;
-
-	void *adap_priv;
 };
 
 /* main device struct */

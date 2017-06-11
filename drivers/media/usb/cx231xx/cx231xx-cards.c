@@ -40,7 +40,7 @@ static int tuner = -1;
 module_param(tuner, int, 0444);
 MODULE_PARM_DESC(tuner, "tuner type");
 
-static int transfer_mode = 1;
+static int transfer_mode = 0;
 module_param(transfer_mode, int, 0444);
 MODULE_PARM_DESC(transfer_mode, "transfer mode (1-ISO or 0-BULK)");
 
@@ -881,6 +881,34 @@ struct cx231xx_board cx231xx_boards[] = {
 			.gpio = NULL,
 		} },
 	},
+	[CX231XX_BOARD_ASTROMETA_T2HYBRID] = {
+		.name = "Astrometa T2hybrid",
+		.tuner_type = TUNER_ABSENT,
+		.has_dvb = 1,
+		.output_mode = OUT_MODE_VIP11,
+		.agc_analog_digital_select_gpio = 0x01,
+		.ctl_pin_status_mask = 0xffffffc4,
+		.demod_addr = 0x18, /* 0x30 >> 1 */
+		.demod_i2c_master = { I2C_1_MUX_1 },
+		.gpio_pin_status_mask = 0xa,
+		.norm = V4L2_STD_NTSC,
+		.tuner_addr = 0x3a, /* 0x74 >> 1 */
+		.tuner_i2c_master = I2C_1_MUX_3,
+		.tuner_scl_gpio = 0x1a,
+		.tuner_sda_gpio = 0x1b,
+		.tuner_sif_gpio = 0x05,
+		.input = {{
+				.type = CX231XX_VMUX_TELEVISION,
+				.vmux = CX231XX_VIN_1_1,
+				.amux = CX231XX_AMUX_VIDEO,
+			}, {
+				.type = CX231XX_VMUX_COMPOSITE1,
+				.vmux = CX231XX_VIN_2_1,
+				.amux = CX231XX_AMUX_LINE_IN,
+			},
+		},
+	},
+
 	[CX231XX_BOARD_TBS_5280] = {
 		.name = "TurboSight TBS 5280",
 		.tuner_type = TUNER_ABSENT,
@@ -1067,6 +1095,8 @@ struct usb_device_id cx231xx_id_table[] = {
 	 .driver_info = CX231XX_BOARD_TERRATEC_GRABBY},
 	{USB_DEVICE(0x1b80, 0xd3b2),
 	.driver_info = CX231XX_BOARD_EVROMEDIA_FULL_HYBRID_FULLHD},
+	{USB_DEVICE(0x15f4, 0x0135),
+	.driver_info = CX231XX_BOARD_ASTROMETA_T2HYBRID},
 	{USB_DEVICE(0x734c, 0x5280),
 	 .driver_info = CX231XX_BOARD_TBS_5280},
 	{USB_DEVICE(0x734c, 0x5281),
@@ -1148,6 +1178,11 @@ void cx231xx_pre_card_setup(struct cx231xx *dev)
 {
 	dev_info(dev->dev, "Identified as %s (card=%d)\n",
 		dev->board.name, dev->model);
+
+	if (CX231XX_BOARD_ASTROMETA_T2HYBRID == dev->model) {
+		/* turn on demodulator chip */
+		cx231xx_set_gpio_value(dev, 0x03, 0x01);
+	}
 
 	/* set the direction for GPIO pins */
 	if (dev->board.tuner_gpio) {
@@ -1522,7 +1557,7 @@ static void request_module_async(struct work_struct *work)
 		request_module("cx231xx-alsa");
 
 	if (dev->board.has_dvb)
-		request_module("cx231xx-dvb-ci");
+		request_module("cx231xx-dvb");
 
 }
 
