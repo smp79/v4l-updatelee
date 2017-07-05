@@ -98,16 +98,13 @@ static void rain_process_msg(struct rain *rain)
 
 	switch (stat) {
 	case 1:
-		cec_transmit_done(rain->adap, CEC_TX_STATUS_OK,
-				  0, 0, 0, 0);
+		cec_transmit_attempt_done(rain->adap, CEC_TX_STATUS_OK);
 		break;
 	case 2:
-		cec_transmit_done(rain->adap, CEC_TX_STATUS_NACK,
-				  0, 1, 0, 0);
+		cec_transmit_attempt_done(rain->adap, CEC_TX_STATUS_NACK);
 		break;
 	default:
-		cec_transmit_done(rain->adap, CEC_TX_STATUS_LOW_DRIVE,
-				  0, 0, 0, 1);
+		cec_transmit_attempt_done(rain->adap, CEC_TX_STATUS_LOW_DRIVE);
 		break;
 	}
 }
@@ -119,21 +116,19 @@ static void rain_irq_work_handler(struct work_struct *work)
 
 	while (true) {
 		unsigned long flags;
-		bool exit_loop = false;
 		char data;
 
 		spin_lock_irqsave(&rain->buf_lock, flags);
-		if (rain->buf_len) {
-			data = rain->buf[rain->buf_rd_idx];
-			rain->buf_len--;
-			rain->buf_rd_idx = (rain->buf_rd_idx + 1) & 0xff;
-		} else {
-			exit_loop = true;
-		}
-		spin_unlock_irqrestore(&rain->buf_lock, flags);
-
-		if (exit_loop)
+		if (!rain->buf_len) {
+			spin_unlock_irqrestore(&rain->buf_lock, flags);
 			break;
+		}
+
+		data = rain->buf[rain->buf_rd_idx];
+		rain->buf_len--;
+		rain->buf_rd_idx = (rain->buf_rd_idx + 1) & 0xff;
+
+		spin_unlock_irqrestore(&rain->buf_lock, flags);
 
 		if (!rain->cmd_started && data != '?')
 			continue;

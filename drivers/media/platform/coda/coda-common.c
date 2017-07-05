@@ -1163,6 +1163,9 @@ static void coda_pic_run_work(struct work_struct *work)
 		ctx->hold = true;
 
 		coda_hw_reset(ctx);
+
+		if (ctx->ops->run_timeout)
+			ctx->ops->run_timeout(ctx);
 	} else if (!ctx->aborting) {
 		ctx->ops->finish_run(ctx);
 	}
