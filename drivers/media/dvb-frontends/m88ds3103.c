@@ -827,6 +827,7 @@ static int m88ds3103_get_frontend(struct dvb_frontend *fe,
 		}
 
 		c->modulation = QPSK;
+		c->rolloff = ROLLOFF_35;
 
 		break;
 	case SYS_DVBS2:
