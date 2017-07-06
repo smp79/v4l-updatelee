@@ -31,6 +31,11 @@
 #define SI2168_D60_FIRMWARE "dvb-demod-si2168-d60-01.fw"
 #define SI2168_B40_FIRMWARE_FALLBACK "dvb-demod-si2168-02.fw"
 
+enum si2168_algo {
+	SI2168_NOTUNE,
+	SI2168_TUNE,
+};
+
 /* state struct */
 struct si2168_dev {
 	struct mutex i2c_mutex;
@@ -55,6 +60,8 @@ struct si2168_dev {
 	bool fef_inv;
 	int agc_pin;
 	bool agc_inv;
+
+	enum si2168_algo algo;
 };
 
 /* firmware command struct */

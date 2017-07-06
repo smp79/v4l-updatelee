@@ -90,6 +90,11 @@ static int si2168_read_status(struct dvb_frontend *fe, enum fe_status *status)
 
 	*status = 0;
 
+	if (dev->algo == SI2168_NOTUNE) {
+		*status = FE_TIMEDOUT;
+		return 0;
+	}
+
 	if (!dev->active) {
 		ret = -EAGAIN;
 		goto err;
@@ -282,6 +287,36 @@ err:
 	return ret;
 }
 
+static int si2168_set_property(struct dvb_frontend *fe, struct dtv_property *tvp)
+{
+	struct i2c_client *client = fe->demodulator_priv;
+	struct si2168_dev *dev = i2c_get_clientdata(client);
+
+	if (tvp->cmd == DTV_TUNE) {
+		dprintk("DTV_TUNE");
+		dev->algo = SI2168_TUNE;
+	}
+
+	return 0;
+}
+
+static int si2168_get_property(struct dvb_frontend *fe, struct dtv_property *tvp)
+{
+	return 0;
+}
+
+static enum dvbfe_algo si2168_get_frontend_algo(struct dvb_frontend *fe)
+{
+	struct i2c_client *client = fe->demodulator_priv;
+	struct si2168_dev *dev = i2c_get_clientdata(client);
+
+	if (dev->algo == SI2168_NOTUNE) {
+		return DVBFE_ALGO_NOTUNE;
+	} else {
+		return DVBFE_ALGO_CUSTOM;
+	}
+}
+
 static int si2168_set_frontend(struct dvb_frontend *fe)
 {
 	struct i2c_client *client = fe->demodulator_priv;
@@ -291,15 +326,17 @@ static int si2168_set_frontend(struct dvb_frontend *fe)
 	struct si2168_cmd cmd;
 	u8 bandwidth, delivery_system;
 
-	dprintk("delivery_system=%u modulation=%u frequency=%u bandwidth_hz=%u symbol_rate=%u inversion=%u stream_id=%u",
+	dprintk("delivery_system=%u modulation=%u frequency=%u bandwidth_hz=%u symbol_rate=%u stream_id=%u",
 			c->delivery_system, c->modulation, c->frequency,
-			c->bandwidth_hz, c->symbol_rate, c->inversion,
+			c->bandwidth_hz, c->symbol_rate,
 			c->stream_id);
 
 	if (!dev->active) {
 		ret = -EAGAIN;
 		goto err;
 	}
+
+	dev->algo = SI2168_TUNE;
 
 	switch (c->delivery_system) {
 	case SYS_DVBC_ANNEX_B:
@@ -500,6 +537,95 @@ err:
 	return ret;
 }
 
+static int si2168_search(struct dvb_frontend *fe)
+{
+	struct i2c_client *client = fe->demodulator_priv;
+	struct si2168_dev *dev = i2c_get_clientdata(client);
+	enum fe_status status = 0;
+	int ret, i;
+
+	dprintk("");
+
+	dev->algo = SI2168_TUNE;
+
+	/* set frontend */
+	ret = si2168_set_frontend(fe);
+	if (ret)
+		goto error;
+
+	/* wait frontend lock */
+	for (i = 0; i < 10; i++) {
+		dprintk("loop=%d", i);
+		msleep(100);
+		ret = si2168_read_status(fe, &status);
+		if (ret)
+			goto error;
+
+		if (status & FE_HAS_LOCK)
+			break;
+		if (status & FE_TIMEDOUT) {
+			dev->algo = SI2168_NOTUNE;
+			return DVBFE_ALGO_SEARCH_FAILED;
+		}
+	}
+
+	/* check if we have a valid signal */
+	if (status & FE_HAS_LOCK) {
+		dprintk("DVBFE_ALGO_SEARCH_SUCCESS");
+		return DVBFE_ALGO_SEARCH_SUCCESS;
+	} else {
+		dprintk("DVBFE_ALGO_SEARCH_FAILED");
+		dev->algo = SI2168_NOTUNE;
+		return DVBFE_ALGO_SEARCH_FAILED;
+	}
+
+error:
+	dprintk("ERROR");
+	dev->algo = SI2168_NOTUNE;
+	return DVBFE_ALGO_SEARCH_ERROR;
+}
+
+static int si2168_get_spectrum_scan(struct dvb_frontend *fe, struct dvb_fe_spectrum_scan *s)
+{
+	struct i2c_client *client = fe->demodulator_priv;
+	struct si2168_dev *dev = i2c_get_clientdata(client);
+	struct dtv_frontend_properties *p = &fe->dtv_property_cache;
+	int x, ret;
+
+	if (!dev->active) {
+		ret = -EAGAIN;
+		return ret;
+	}
+
+	p->frequency		= 0;
+	p->bandwidth_hz		= 1000000;
+	p->delivery_system	= SYS_DVBT;
+	p->modulation		= QAM_16;
+
+	*s->type = SC_DBM;
+
+	dev->algo = SI2168_NOTUNE;
+
+	if (fe->ops.tuner_ops.set_params) {
+		for (x = 0; x < s->num_freq; x++)
+		{
+			p->frequency = *(s->freq + x);
+
+			if (fe->ops.tuner_ops.set_params) {
+				ret = fe->ops.tuner_ops.set_params(fe);
+				if (fe->ops.i2c_gate_ctrl)
+					fe->ops.i2c_gate_ctrl(fe, 0);
+			}
+
+			msleep(50);
+
+			ret = fe->ops.tuner_ops.get_rf_strength(fe, (s->rf_level + x));
+			dprintk("freq: %d strength: %d", p->frequency, *(s->rf_level + x));
+		}
+	}
+	return 0;
+}
+
 static int si2168_init(struct dvb_frontend *fe)
 {
 	struct i2c_client *client = fe->demodulator_priv;
@@ -514,6 +640,8 @@ static int si2168_init(struct dvb_frontend *fe)
 	if (dev->active)
 		return 0;	
 
+	dev->algo = SI2168_NOTUNE;
+
 	/* initialize */
 	memcpy(cmd.args, "\xc0\x12\x00\x0c\x00\x0d\x16\x00\x00\x00\x00\x00\x00", 13);
 	cmd.wlen = 13;
@@ -521,6 +649,8 @@ static int si2168_init(struct dvb_frontend *fe)
 	ret = si2168_cmd_execute(client, &cmd);
 	if (ret)
 		goto err;
+
+	msleep(100);
 
 	if (dev->warm) {
 		/* resume */
@@ -720,6 +850,7 @@ static int si2168_sleep(struct dvb_frontend *fe)
 
 	dprintk("");
 
+	dev->algo = SI2168_NOTUNE;
 	dev->active = false;
 
 	/* Firmware B 4.0-11 or later loses warm state during sleep */
@@ -813,17 +944,26 @@ static const struct dvb_frontend_ops si2168_ops = {
 			FE_CAN_HIERARCHY_AUTO |
 			FE_CAN_MUTE_TS |
 			FE_CAN_2G_MODULATION |
-			FE_CAN_MULTISTREAM
+		FE_CAN_MULTISTREAM |
+		FE_HAS_EXTENDED_CAPS
+	},
+	.extended_info = {
+		.extended_caps          = FE_CAN_SPECTRUMSCAN
 	},
 
 	.get_tune_settings = si2168_get_tune_settings,
 
-	.init = si2168_init,
-	.sleep = si2168_sleep,
+	.init			= si2168_init,
+	.sleep			= si2168_sleep,
 
-	.set_frontend = si2168_set_frontend,
+	.set_property		= si2168_set_property,
+	.get_property		= si2168_get_property,
+	.set_frontend		= si2168_set_frontend,
+	.get_frontend_algo	= si2168_get_frontend_algo,
+	.search			= si2168_search,
+	.get_spectrum_scan	= si2168_get_spectrum_scan,
 
-	.read_status = si2168_read_status,
+	.read_status		= si2168_read_status,
 	.read_signal_strength	= si2168_read_signal_strength,
 	.read_snr		= si2168_read_snr,
 	.read_ber		= si2168_read_ber,
