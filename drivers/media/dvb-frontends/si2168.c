@@ -90,11 +90,6 @@ static int si2168_read_status(struct dvb_frontend *fe, enum fe_status *status)
 
 	*status = 0;
 
-	if (dev->algo == SI2168_NOTUNE) {
-		*status = FE_TIMEDOUT;
-		return 0;
-	}
-
 	if (!dev->active) {
 		ret = -EAGAIN;
 		goto err;
@@ -637,9 +632,6 @@ static int si2168_init(struct dvb_frontend *fe)
 
 	dprintk("");
 	
-	if (dev->active)
-		return 0;	
-
 	dev->algo = SI2168_NOTUNE;
 
 	/* initialize */
@@ -649,8 +641,6 @@ static int si2168_init(struct dvb_frontend *fe)
 	ret = si2168_cmd_execute(client, &cmd);
 	if (ret)
 		goto err;
-
-	msleep(100);
 
 	if (dev->warm) {
 		/* resume */
