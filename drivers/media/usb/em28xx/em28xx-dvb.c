@@ -339,7 +339,7 @@ static struct lgdt3305_config em2874_lgdt3305_nogate_dev = {
 	.tpvalid_polarity   = LGDT3305_TP_VALID_HIGH,
 	.vsb_if_khz         = 3600,
 	.qam_if_khz         = 3600,
-	.name				= "Kworld 435v3",
+	.name		    = "Kworld 435v3",
 };
 
 static struct s921_config sharp_isdbt = {
@@ -360,7 +360,7 @@ static struct s5h1409_config em28xx_s5h1409_with_xc3028 = {
 	.inversion     = S5H1409_INVERSION_OFF,
 	.status_mode   = S5H1409_DEMODLOCKING,
 	.mpeg_timing   = S5H1409_MPEGTIMING_CONTINOUS_NONINVERTING_CLOCK,
-	.name		   = "inDtube / Kworld 330U",
+	.name	       = "inDtube / Kworld 330U",
 };
 
 static struct tda18271_std_map kworld_a340_std_map = {

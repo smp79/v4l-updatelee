@@ -33,6 +33,14 @@ struct ecp3_info
 	__u8 reg;
 	__u32 data;
 };
+
+struct mcu24cxx_info
+{
+	__u32 bassaddr;
+	__u8 reg;
+	__u32 data;
+};
+
 enum fe_type {
 	FE_QPSK,
 	FE_QAM,
@@ -142,6 +150,7 @@ enum fe_sec_mini_cmd {
  *			to reset DiSEqC, tone and parameters
  */
 enum fe_status {
+	FE_NONE			= 0x00,
 	FE_HAS_SIGNAL		= 0x01,
 	FE_HAS_CARRIER		= 0x02,
 	FE_HAS_VITERBI		= 0x04,
@@ -673,5 +682,7 @@ struct dvb_fe_spectrum_scan {
 #define FE_ECP3FW_READ    _IOR('o', 90, struct ecp3_info)
 #define FE_ECP3FW_WRITE   _IOW('o', 91, struct ecp3_info)
 
+#define FE_24CXX_READ    _IOR('o', 92, struct mcu24cxx_info)
+#define FE_24CXX_WRITE   _IOW('o', 93, struct mcu24cxx_info)
 
 #endif /*_DVBFRONTEND_H_*/

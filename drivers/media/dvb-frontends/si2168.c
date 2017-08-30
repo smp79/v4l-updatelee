@@ -145,7 +145,7 @@ static int si2168_read_status(struct dvb_frontend *fe, enum fe_status *status)
 	if (*status & FE_HAS_LOCK) {
 		c->cnr.len = 1;
 		c->cnr.stat[0].scale = FE_SCALE_DECIBEL;
-		c->cnr.stat[0].svalue = cmd.args[3] * 1000 / 4;
+		c->cnr.stat[0].svalue = cmd.args[3] * 250;
 	} else {
 		c->cnr.len = 1;
 		c->cnr.stat[0].scale = FE_SCALE_NOT_AVAILABLE;
@@ -766,10 +766,11 @@ static int si2168_init(struct dvb_frontend *fe)
 	cmd.wlen = 2;
 	cmd.rlen = 12;
 	cmd.args[1] = (dev->fef_inv & 1) << 3 | (dev->fef_pin & 7);
+	dev_dbg(&client->dev, "args=%*ph\n", cmd.wlen, cmd.args);
 	
 	ret = si2168_cmd_execute(client, &cmd);
 	if (ret) {
-		dprintk("err set fef pip");
+		dev_err(&client->dev, "err set fef pip\n");
 	}
 
 	/* MP DEFAULTS */
@@ -791,10 +792,11 @@ static int si2168_init(struct dvb_frontend *fe)
 		cmd.args[4] = dev->fef_inv ? 3 : 2;
 		break;
 	}
+	dev_dbg(&client->dev, "args=%*ph\n", cmd.wlen, cmd.args);
 	
 	ret = si2168_cmd_execute(client, &cmd);
 	if (ret) {
-		dprintk("err set mp defaults");
+		dev_err(&client->dev, "err set mp defaults\n");
 	}
 
 	/* AGC */
@@ -802,10 +804,11 @@ static int si2168_init(struct dvb_frontend *fe)
 	cmd.wlen = 6;
 	cmd.rlen = 3;
 	cmd.args[1] |= (dev->agc_inv & 1) << 7 | (dev->agc_pin & 7) << 4;
+	dev_dbg(&client->dev, "args=%*ph\n", cmd.wlen, cmd.args);
 
 	ret = si2168_cmd_execute(client, &cmd);
 	if (ret) {
-		dprintk("err set ter agc");
+		dev_err(&client->dev, "err set ter agc\n");
 	}
 
 	/* set ts mode */

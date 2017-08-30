@@ -70,4 +70,15 @@
 #define ASI_STATUS  	0x00
 #define ASI_SPI_RD_32   0x04
 
+//-------------24cXX --------------------------------------------------------
+#define BASE_ADDRESS_24CXX  	0x4000
+#define CMD_24CXX	      0*4   //write only
+#define DATA0_24CXX       1*4   //W/R
+#define DATA1_24CXX       2*4   //W/R
+#define CS_RELEASE        3*4   //write only
+
+#define STATUS_MAC16_24CXX	 0*4   //read only
+#define MAC32_24CXX	 		 3*4   //read only
+//---------------------------------------------------------------------
+
 #endif

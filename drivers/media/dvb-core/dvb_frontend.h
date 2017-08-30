@@ -485,6 +485,9 @@ struct dvb_frontend_ops {
 
 	void(*spi_read)( struct dvb_frontend *fe,struct ecp3_info *ecp3inf);
 	void(*spi_write)( struct dvb_frontend *fe,struct ecp3_info *ecp3inf);
+
+	void(*mcu_read)( struct dvb_frontend *fe,struct mcu24cxx_info *mcu24cxxinf);
+	void(*mcu_write)( struct dvb_frontend *fe,struct mcu24cxx_info *mcu24cxxinf);
 };
 
 #ifdef __DVB_CORE__

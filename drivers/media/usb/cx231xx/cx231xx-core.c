@@ -1763,6 +1763,7 @@ int cx231xx_dev_init(struct cx231xx *dev)
 	dev->i2c_bus[0].i2c_period = I2C_SPEED_100K;	/* 100 KHz */
 	dev->i2c_bus[0].i2c_nostop = 0;
 	dev->i2c_bus[0].i2c_reserve = 0;
+	dev->i2c_bus[0].i2c_rc = -ENODEV;
 
 	/* External Master 2 Bus */
 	dev->i2c_bus[1].nr = 1;
@@ -1770,6 +1771,7 @@ int cx231xx_dev_init(struct cx231xx *dev)
 	dev->i2c_bus[1].i2c_period = I2C_SPEED_100K;	/* 100 KHz */
 	dev->i2c_bus[1].i2c_nostop = 0;
 	dev->i2c_bus[1].i2c_reserve = 0;
+	dev->i2c_bus[1].i2c_rc = -ENODEV;
 
 	/* Internal Master 3 Bus */
 	dev->i2c_bus[2].nr = 2;
@@ -1777,6 +1779,7 @@ int cx231xx_dev_init(struct cx231xx *dev)
 	dev->i2c_bus[2].i2c_period = I2C_SPEED_100K;	/* 100kHz */
 	dev->i2c_bus[2].i2c_nostop = 0;
 	dev->i2c_bus[2].i2c_reserve = 0;
+	dev->i2c_bus[2].i2c_rc = -ENODEV;
 
 	/* register I2C buses */
 	errCode = cx231xx_i2c_register(&dev->i2c_bus[0]);

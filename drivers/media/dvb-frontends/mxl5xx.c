@@ -57,7 +57,7 @@
 static int mode = 0;
 module_param(mode, int, 0444);
 MODULE_PARM_DESC(mode,
-		"Multi-switch mode: 0=quattro/quad 1=normal direct connection");
+		"Multi-switch mode: 0=quattro/quad 1=normal direct connection 2 = Unicable mode(using the input 3 for 6909)");
 
 LIST_HEAD(mxllist);
 
@@ -360,7 +360,7 @@ static int send_master_cmd(struct dvb_frontend *fe,
 	for( i =0;i < cmd->msg_len;i++)
 		diseqcMsgPtr.bufMsg[i] = cmd->msg[i];
 
-	if(!mode){
+	if(mode == 1){
 		state->diseqcsign= true;
 		memcpy(&state->diseqcMsg,&diseqcMsgPtr,sizeof(MXL_HYDRA_DISEQC_TX_MSG_T));
 	  return 0;
@@ -389,7 +389,7 @@ static int send_burst(struct dvb_frontend *fe,
 	diseqcMsgPtr.nbyte	= 0;
 	diseqcMsgPtr.toneBurst = burst == SEC_MINI_B ? MXL_HYDRA_DISEQC_TONE_SB : MXL_HYDRA_DISEQC_TONE_SA;
 
-	if(!mode){
+	if(mode == 1){
 		state->diseqcsign= true;
 		memcpy(&state->diseqcMsg,&diseqcMsgPtr,sizeof(MXL_HYDRA_DISEQC_TX_MSG_T));
 	  return 0;
@@ -446,7 +446,7 @@ static int set_parameters(struct dvb_frontend *fe)
 	if (p->symbol_rate < 1000000 || p->symbol_rate > 45000000)
 		return -EINVAL;
 
-	if(!mode)
+	if(mode == 1)
 		 senddiseqcAbortTune(fe);
 	
 	//CfgDemodAbortTune(state);
@@ -800,6 +800,8 @@ static int set_voltage(struct dvb_frontend *fe, enum fe_sec_voltage voltage)
 	struct mxl5xx_cfg *cfg = state->base->cfg;
 
 	switch (mode) {
+	case 2:
+			break;
 	case 1:
 		cfg->set_voltage(i2c, voltage, state->rf_in);
 		break;
@@ -821,6 +823,8 @@ static int set_tone(struct dvb_frontend *fe, enum fe_sec_tone_mode tone)
 	struct mxl *state = fe->demodulator_priv;
 
 	switch (mode) {
+	case 2:
+			break;
 	case 1:
 		set_input_tone(fe, tone, state->rf_in);
 		break;
@@ -1440,6 +1444,7 @@ static int init_multisw(struct mxl *state)
 		set_input_tone(fe, SEC_TONE_ON, 0);
 		break;
 	case 1:
+	case 2:
 		break;
 	}
 
@@ -1540,7 +1545,7 @@ struct dvb_frontend *mxl5xx_attach(struct i2c_adapter *i2c,
 
 	state->demod = demod;
 	state->rf_in = 0;
-	if(mode)
+	if(mode == 1)
 	{ 
 	   if((demod ==0)||(demod ==1))
 			state->rf_in = 3;

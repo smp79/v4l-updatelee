@@ -749,7 +749,9 @@ static void unregister_dvb(struct cx231xx_dvb *dvb)
 	dvb->demux.dmx.remove_frontend(&dvb->demux.dmx, &dvb->fe_hw);
 	dvb_dmxdev_release(&dvb->dmxdev);
 	dvb_dmx_release(&dvb->demux);
-
+	dvb_unregister_frontend(dvb->frontend);
+	dvb_frontend_detach(dvb->frontend);
+	dvb_unregister_adapter(&dvb->adapter);
 	/* remove I2C tuner */
 	client = dvb->i2c_client_tuner;
 	if (client) {
@@ -762,9 +764,6 @@ static void unregister_dvb(struct cx231xx_dvb *dvb)
 		module_put(client->dev.driver->owner);
 		i2c_unregister_device(client);
 	}
-	dvb_unregister_frontend(dvb->frontend);
-	dvb_frontend_detach(dvb->frontend);
-	dvb_unregister_adapter(&dvb->adapter);
 }
 
 static int tbs_cx_mac(struct i2c_adapter *i2c_adap, u8 count, u8 *mac)
@@ -1009,7 +1008,6 @@ static int dvb_init(struct cx231xx *dev)
 
 		/* attach demod */
 		memset(&si2165_pdata, 0, sizeof(si2165_pdata));
-
 		si2165_pdata.fe = &dev->dvb[i]->frontend;
 		si2165_pdata.chip_mode = SI2165_MODE_PLL_EXT,
 		si2165_pdata.ref_freq_Hz = 24000000,
@@ -1020,7 +1018,6 @@ static int dvb_init(struct cx231xx *dev)
 		info.platform_data = &si2165_pdata;
 		request_module(info.type);
 		client = i2c_new_device(demod_i2c, &info);
-
 		if (client == NULL || client->dev.driver == NULL || dev->dvb[i]->frontend == NULL) {
 			dev_err(dev->dev,
 				"Failed to attach SI2165 front end\n");
@@ -1161,6 +1158,7 @@ static int dvb_init(struct cx231xx *dev)
 			   0x60, tuner_i2c,
 			   &pv_tda18271_config);
 		break;
+
 	case CX231XX_BOARD_EVROMEDIA_FULL_HYBRID_FULLHD:
 	{
 		struct si2157_config si2157_config = {};
