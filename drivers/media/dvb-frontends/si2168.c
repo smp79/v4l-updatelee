@@ -137,14 +137,9 @@ static int si2168_read_status(struct dvb_frontend *fe, enum fe_status *status)
 
 	dev->fe_status = *status;
 
-	if (*status & FE_HAS_LOCK) {
-		c->cnr.len = 1;
-		c->cnr.stat[0].scale = FE_SCALE_DECIBEL;
-		c->cnr.stat[0].svalue = cmd.args[3] * 250;
-	} else {
-		c->cnr.len = 1;
-		c->cnr.stat[0].scale = FE_SCALE_NOT_AVAILABLE;
-	}
+	c->cnr.len = 1;
+	c->cnr.stat[0].scale = FE_SCALE_DECIBEL;
+	c->cnr.stat[0].svalue = cmd.args[3] * 250;
 
 	/* BER */
 	if (*status & FE_HAS_VITERBI) {
@@ -914,7 +909,7 @@ err:
 }
 
 static const struct dvb_frontend_ops si2168_ops = {
-	.delsys = {SYS_DVBT, SYS_DVBT2, SYS_DVBC_ANNEX_A, SYS_DVBC_ANNEX_B},
+	.delsys = {SYS_DVBC_ANNEX_A, SYS_DVBC_ANNEX_B, SYS_DVBT2, SYS_DVBT},
 	.info = {
 		.name = "Silicon Labs Si2168",
 		.symbol_rate_min = 1000000,
