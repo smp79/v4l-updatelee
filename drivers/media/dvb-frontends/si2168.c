@@ -135,6 +135,8 @@ static int si2168_read_status(struct dvb_frontend *fe, enum fe_status *status)
 		break;
 	}
 
+	if (dev->algo == SI2168_NOTUNE)
+		*status |= FE_TIMEDOUT;
 	dev->fe_status = *status;
 
 	c->cnr.len = 1;
