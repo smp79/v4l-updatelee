@@ -2,11 +2,11 @@
 
 .. _dvb_frontend:
 
-################
-DVB Frontend API
-################
+#######################
+Digital TV Frontend API
+#######################
 
-The DVB frontend API was designed to support three groups of delivery
+The Digital TV frontend API was designed to support three groups of delivery
 systems: Terrestrial, cable and Satellite. Currently, the following
 delivery systems are supported:
 
@@ -17,7 +17,7 @@ delivery systems are supported:
 
 -  Satellite systems: DVB-S, DVB-S2, DVB Turbo, ISDB-S, DSS
 
-The DVB frontend controls several sub-devices including:
+The Digital TV frontend controls several sub-devices including:
 
 -  Tuner
 
@@ -54,4 +54,3 @@ Data types and ioctl definitions can be accessed by including
     dvb-fe-read-status
     dvbproperty
     frontend_fcalls
-    frontend_legacy_dvbv3_api
