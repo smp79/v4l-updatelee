@@ -74,7 +74,7 @@
  *  recognizes the new device ID and glues it to the real serial driver code.
  *
  * USEFUL DOCS:
- *  EzUSB Technical Reference Manual: <http://www.cypress.com/>
+ *  EzUSB Technical Reference Manual: <http://www.anchorchips.com>
  *  8051 manuals: everywhere, but try www.dalsemi.com because the EzUSB is
  *   basically the Dallas enhanced 8051 code. Remember that the EzUSB IO ports
  *   use totally different registers!
@@ -285,7 +285,12 @@ clear_rx_ring_loop:
 	mov dptr,OUTC
 	movx @dptr, a
 	;; setup the serial port. 9600 8N1.
-	mov a,#01010011		; mode 1, enable rx, clear int
+	;; Original source had:
+	;;mov a,#01010011		; mode 1, enable rx, clear int
+	;; This was presumably meant to be a binary constant, but it's
+	;; really decimal and out of 8-bit range.  as31 used to treat
+	;; it as 0 and that seems to have worked, so carry on with 0.
+	mov a,#0
 	mov SCON, a
 	;;  using timer2, in 16-bit baud-rate-generator mode
 	;;   (xtal 12MHz, internal fosc 24MHz)
