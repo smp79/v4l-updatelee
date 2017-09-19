@@ -1428,21 +1428,15 @@ static enum lgdt3306a_neverlock_status
 lgdt3306a_neverlock_poll(struct lgdt3306a_state *state)
 {
 	enum lgdt3306a_neverlock_status NLLockStatus = LG3306_NL_FAIL;
-	int	i;
+	int i;
 
 	for (i = 0; i < 5; i++) {
 		msleep(30);
 
 		NLLockStatus = lgdt3306a_check_neverlock_status(state);
 
-		if (NLLockStatus == LG3306_NL_LOCK) {
+		if (NLLockStatus == LG3306_NL_LOCK)
 			dbg_info("NL_LOCK(%d)\n", i);
-			return NLLockStatus;
-		}
-		if (NLLockStatus == LG3306_NL_FAIL) {
-			state->algo = LG3306_NOTUNE;
-			return NLLockStatus;
-		}
 	}
 	dbg_info("NLLockStatus=%d\n", NLLockStatus);
 	return NLLockStatus;
@@ -1634,7 +1628,6 @@ static int lgdt3306a_read_status(struct dvb_frontend *fe,
 	} else {
 		dbg_info("FE_TIMEDOUT\n");
 		*status |= FE_TIMEDOUT;
-		state->algo = LG3306_NOTUNE;
 	}
 	return ret;
 }
@@ -1785,19 +1778,12 @@ static int lgdt3306a_search(struct dvb_frontend *fe)
 		goto error;
 
 	/* wait frontend lock */
-	for (i = 20; i > 0; i--) {
+	for (i = 10; i > 0; i--) {
 		dbg_info(": loop=%d\n", i);
-		msleep(50);
-		ret = lgdt3306a_read_status(fe, &status);
-		if (ret)
-			goto error;
+		lgdt3306a_read_status(fe, &status);
 
 		if (status & FE_HAS_LOCK)
 			break;
-		if (status & FE_TIMEDOUT) {
-			state->algo = LG3306_NOTUNE;
-			return DVBFE_ALGO_SEARCH_FAILED;
-		}
 	}
 
 	/* check if we have a valid signal */
