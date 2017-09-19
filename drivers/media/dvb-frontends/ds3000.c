@@ -836,7 +836,7 @@ struct dvb_frontend *ds3000_attach(const struct ds3000_config *config,
 				    struct i2c_adapter *i2c)
 {
 	struct ds3000_state *state = NULL;
-	int ret;
+	int ret, ver;
 
 	dprintk("%s\n", __func__);
 
@@ -853,8 +853,9 @@ struct dvb_frontend *ds3000_attach(const struct ds3000_config *config,
 
 	/* check if the demod is present */
 	ret = ds3000_readreg(state, 0x00) & 0xfe;
-	if (ret != 0xe0) {
-		printk(KERN_ERR "Invalid probe, probably not a DS3000\n");
+        ver = ds3000_readreg(state, 0x01);
+        if (ret != 0xe0 || ver != 0xc0) {
+                printk(KERN_ERR "Invalid probe, probably not a DS300x\n");
 		goto error3;
 	}
 
