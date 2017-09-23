@@ -34,7 +34,8 @@
 
 # Install the firmware
 
-    sudo cp -Rv firmware/* /lib/firmware
+	cd firmware
+	sudo make install
 
 # reboot
 
