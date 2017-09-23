@@ -229,7 +229,7 @@ warm:
 	c->strength.len = 1;
 	c->strength.stat[0].scale = FE_SCALE_NOT_AVAILABLE;
 	/* start statistics polling */
-	schedule_delayed_work(&dev->stat_work, msecs_to_jiffies(1000));
+//	schedule_delayed_work(&dev->stat_work, msecs_to_jiffies(1000));
 
 	dev->active = true;
 	return 0;
@@ -252,7 +252,7 @@ static int si2157_sleep(struct dvb_frontend *fe)
 	dev->active = false;
 
 	/* stop statistics polling */
-	cancel_delayed_work_sync(&dev->stat_work);
+//	cancel_delayed_work_sync(&dev->stat_work);
 
 	/* standby */
 	memcpy(cmd.args, "\x16\x00", 2);
@@ -469,7 +469,7 @@ static int si2157_probe(struct i2c_client *client,
 	dev->chiptype = (u8)id->driver_data;
 	dev->if_frequency = 5000000; /* default value of property 0x0706 */
 	mutex_init(&dev->i2c_mutex);
-	INIT_DELAYED_WORK(&dev->stat_work, si2157_stat_work);
+//	INIT_DELAYED_WORK(&dev->stat_work, si2157_stat_work);
 
 	/* check if the tuner is there */
 	cmd.wlen = 0;
@@ -528,7 +528,7 @@ static int si2157_remove(struct i2c_client *client)
 	dprintk("");
 
 	/* stop statistics polling */
-	cancel_delayed_work_sync(&dev->stat_work);
+//	cancel_delayed_work_sync(&dev->stat_work);
 
 #ifdef CONFIG_MEDIA_CONTROLLER_DVB
 	if (dev->mdev)
