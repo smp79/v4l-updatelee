@@ -278,7 +278,7 @@ static int si2157_set_params(struct dvb_frontend *fe)
 	u8 bandwidth, delivery_system;
 	u32 if_frequency = 5000000;
 
-	dprintk("delivery_system=%d frequency=%u bandwidth_hz=%u", c->delivery_system, c->frequency, c->bandwidth_hz);
+//	dprintk("delivery_system=%d frequency=%u bandwidth_hz=%u", c->delivery_system, c->frequency, c->bandwidth_hz);
 
 	if (!dev->active) {
 		ret = -EAGAIN;

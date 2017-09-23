@@ -1913,20 +1913,10 @@ static int lgdt3306a_get_spectrum_scan(struct dvb_frontend *fe, struct dvb_fe_sp
 		{
 			p->frequency = *(s->freq + x);
 
-			if (fe->ops.tuner_ops.set_params) {
-				ret = fe->ops.tuner_ops.set_params(fe);
-				if (fe->ops.i2c_gate_ctrl)
-					fe->ops.i2c_gate_ctrl(fe, 0);
-				if (lg_chkerr(ret))
-					goto fail;
-				state->current_frequency = p->frequency;
-			}
+			ret = fe->ops.tuner_ops.set_params(fe);
+			state->current_frequency = p->frequency;
 
-			ret = lgdt3306a_soft_reset(state);
-			if (lg_chkerr(ret))
-				goto fail;
-
-			msleep(10);
+			msleep(20);
 
 			ret = fe->ops.tuner_ops.get_rf_strength(fe, (s->rf_level + x));
 			if (lg_chkerr(ret))

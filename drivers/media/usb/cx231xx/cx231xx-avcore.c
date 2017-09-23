@@ -1211,8 +1211,8 @@ int cx231xx_set_audio_decoder_input(struct cx231xx *dev,
 			/* This is just a casual suggestion to people adding
 			   new boards in case they use a tuner type we don't
 			   currently know about */
-			dev_info(dev->dev,
-				 "Unknown tuner type configuring SIF");
+//			dev_info(dev->dev,
+//				 "Unknown tuner type configuring SIF");
 			break;
 		}
 		break;
