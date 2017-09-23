@@ -1330,11 +1330,8 @@ static int lgdt3306a_pre_monitoring(struct lgdt3306a_state *state)
 	dbg_info("snrRef=%d mainStrong=%d aiccrejStatus=%d currChDiffACQ=0x%x\n",
 		snrRef, mainStrong, aiccrejStatus, currChDiffACQ);
 
-#if 1
 	/* Dynamic ghost exists */
-	if ((mainStrong == 0) && (currChDiffACQ > 0x70))
-#endif
-	if (mainStrong == 0) {
+	if ((mainStrong == 0) && (currChDiffACQ > 0x70)) {
 		ret = lgdt3306a_read_reg(state, 0x2135, &val);
 		if (ret)
 			return ret;
