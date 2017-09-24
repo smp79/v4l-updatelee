@@ -11,7 +11,7 @@
 
 #include <linux/version.h>
 #include "tbs5927.h"
-#include "stv0910.h"
+#include "stv091x.h"
 #include "stv6120.h"
 
 #define TBS5927_READ_MSG 0
@@ -178,8 +178,8 @@ static void tbs5927_led_ctrl(struct dvb_frontend *fe, int offon)
 	i2c_transfer(&udev_adap->dev->i2c_adap, &msg, 1);
 }
 
-static struct stv0910_cfg tbs5927_stv0910_cfg = {
-	.name     = "STV0910 TBS 5927",
+static struct stv091x_cfg tbs5927_stv091x_cfg = {
+	.name     = "STV091X TBS 5927",
 	.adr      = 0x68,
 	.parallel = 1,
 	.rptlvl   = 3,
@@ -279,8 +279,8 @@ static int tbs5927_frontend_attach(struct dvb_usb_adapter *d)
 	tbs5927_op_rw(d->dev->udev, 0x8a, 0, 0,
 			buf, 2, TBS5927_WRITE_MSG);
 
-	d->fe_adap->fe = dvb_attach(stv0910_attach, &d->dev->i2c_adap,
-			&tbs5927_stv0910_cfg, 1);
+	d->fe_adap->fe = dvb_attach(stv091x_attach, &d->dev->i2c_adap,
+			&tbs5927_stv091x_cfg, 1);
 
 	d->fe_adap->fe->ops.i2c_gate_ctrl(d->fe_adap->fe, true);
 	ctl = dvb_attach(stv6120_attach, d->fe_adap->fe, &tbs5927_stv6120_0_cfg, &d->dev->i2c_adap);
@@ -304,10 +304,10 @@ static int tbs5927_frontend_attach(struct dvb_usb_adapter *d)
 		return 0;
 	}
 
-	tbs5927_stv0910_cfg.tuner_set_mode      = ctl->tuner_set_mode;
-	tbs5927_stv0910_cfg.tuner_set_params    = ctl->tuner_set_params;
-	tbs5927_stv0910_cfg.tuner_set_frequency = ctl->tuner_set_frequency;
-	tbs5927_stv0910_cfg.tuner_set_bandwidth = ctl->tuner_set_bandwidth;
+	tbs5927_stv091x_cfg.tuner_set_mode      = ctl->tuner_set_mode;
+	tbs5927_stv091x_cfg.tuner_set_params    = ctl->tuner_set_params;
+	tbs5927_stv091x_cfg.tuner_set_frequency = ctl->tuner_set_frequency;
+	tbs5927_stv091x_cfg.tuner_set_bandwidth = ctl->tuner_set_bandwidth;
 
 	return -EIO;
 }

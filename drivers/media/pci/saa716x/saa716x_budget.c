@@ -36,6 +36,7 @@
 #include "mb86a16.h"
 #include "stv6110x.h"
 #include "stv090x.h"
+#include "stv091x.h"
 #include "tas2101.h"
 #include "av201x.h"
 #include "cx24117.h"
@@ -50,7 +51,6 @@
 #include "si2157.h"
 
 #include "stv6120.h"
-#include "stv0910.h"
 #include "tbsci-i2c.h"
 #include "tbs-ci.h"
 
@@ -2655,8 +2655,8 @@ static struct saa716x_config saa716x_tbs6991se_config = {
 #define SAA716x_MODEL_TBS6983	"TurboSight TBS 6983 "
 #define SAA716x_DEV_TBS6983	"DVB-S/S2"
 
-static struct stv0910_cfg tbs6983_stv0910_config = {
-       .name     = "STV0910 TBS 6983",
+static struct stv091x_cfg tbs6983_stv091x_config = {
+       .name     = "STV091X TBS 6983",
        .adr      = 0x68,
        .parallel = 1,
        .rptlvl   = 4,
@@ -2733,9 +2733,9 @@ static int saa716x_tbs6983_frontend_attach(struct saa716x_adapter *adapter, int 
 		msleep(100);
 	}
 
-       adapter->fe = dvb_attach(stv0910_attach,
+       adapter->fe = dvb_attach(stv091x_attach,
 				&dev->i2c[1].i2c_adapter,
-                                &tbs6983_stv0910_config,
+				&tbs6983_stv091x_config,
                                 count);
 
 	if (adapter->fe == NULL) {
@@ -2754,10 +2754,10 @@ static int saa716x_tbs6983_frontend_attach(struct saa716x_adapter *adapter, int 
 	if (ctl == NULL)
 		goto err;
 
-	tbs6983_stv0910_config.tuner_set_mode      = ctl->tuner_set_mode;
-	tbs6983_stv0910_config.tuner_set_params    = ctl->tuner_set_params;
-	tbs6983_stv0910_config.tuner_set_frequency = ctl->tuner_set_frequency;
-	tbs6983_stv0910_config.tuner_set_bandwidth = ctl->tuner_set_bandwidth;
+	tbs6983_stv091x_config.tuner_set_mode      = ctl->tuner_set_mode;
+	tbs6983_stv091x_config.tuner_set_params    = ctl->tuner_set_params;
+	tbs6983_stv091x_config.tuner_set_frequency = ctl->tuner_set_frequency;
+	tbs6983_stv091x_config.tuner_set_bandwidth = ctl->tuner_set_bandwidth;
 
 	if (adapter->fe->ops.init)
 		adapter->fe->ops.init(adapter->fe);

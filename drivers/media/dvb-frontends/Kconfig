@@ -173,7 +173,7 @@ config DVB_STB6000
 	tristate "ST STB6000 silicon tuner"
 	depends on DVB_CORE && I2C
 	default m if !MEDIA_SUBDRV_AUTOSELECT
-	  help
+	help
 	  A DVB-S silicon tuner module. Say Y when you want to support this tuner.
 
 config DVB_STV0299
@@ -187,7 +187,7 @@ config DVB_STV6110
 	tristate "ST STV6110 silicon tuner"
 	depends on DVB_CORE && I2C
 	default m if !MEDIA_SUBDRV_AUTOSELECT
-	  help
+	help
 	  A DVB-S silicon tuner module. Say Y when you want to support this tuner.
 
 config DVB_STV0900
@@ -927,7 +927,7 @@ config DVB_HELENE
 	depends on DVB_CORE && I2C
 	default m if !MEDIA_SUBDRV_AUTOSELECT
 	help
-	Say Y when you want to support this frontend.
+	  Say Y when you want to support this frontend.
 
 config DVB_TAS2101
 	tristate "Tmax TAS2101 based"
@@ -943,8 +943,8 @@ config DVB_TAS2971
 	help
 	Say Y when you want to support this frontend.
 
-config DVB_MXL5XX
-	tristate "MaxLinear MXL5XX based"
+config DVB_MXL58X
+	tristate "MaxLinear MXL58X based"
 	depends on DVB_CORE && I2C
 	default m if !MEDIA_SUBDRV_AUTOSELECT
 	help
@@ -959,8 +959,8 @@ config DVB_SI2183
 	  Say Y when you want to support this frontend.
 comment "Tools to develop new frontends"
 
-config DVB_STV0910
-	tristate "STV0910 based"
+config DVB_STV091X
+	tristate "STV091x based"
 	depends on DVB_CORE && I2C
 	default m if !MEDIA_SUBDRV_AUTOSELECT
 	help

@@ -23,11 +23,11 @@
 #include "si2168.h"
 #include "si2157.h"
 
-#include "mxl5xx.h"
+#include "mxl58x.h"
 
 #include "si2183.h"
 
-#include "stv0910.h"
+#include "stv091x.h"
 #include "stv6120.h"
 
 #include "mn88436.h"
@@ -444,7 +444,7 @@ static void RF_switch(struct i2c_adapter *i2c,u8 rf_in,u8 flag)//flag : 0: dvbs/
 
 }
 
-static struct mxl5xx_cfg tbs6909_mxl5xx_cfg = {
+static struct mxl58x_cfg tbs6909_mxl58x_cfg = {
 	.adr		= 0x60,
 	.type		= 0x01,
 	.clk		= 24000000,
@@ -454,8 +454,8 @@ static struct mxl5xx_cfg tbs6909_mxl5xx_cfg = {
 	.set_voltage	= max_set_voltage,
 };
 
-static struct stv0910_cfg tbs6903_stv0910_cfg = {
-	.name     = "STV0910 TBS 6903",
+static struct stv091x_cfg tbs6903_stv091x_cfg = {
+	.name     = "STV091X TBS 6903",
 	.adr      = 0x68,
 	.parallel = 1,
 	.rptlvl   = 3,
@@ -1045,8 +1045,8 @@ static int tbsecp3_frontend_attach(struct tbsecp3_adapter *adapter)
 	case 0x6903:
 	case 0x6905:
 	case 0x6908:
-		adapter->fe = dvb_attach(stv0910_attach, i2c,
-				&tbs6903_stv0910_cfg, adapter->nr & 1);
+		adapter->fe = dvb_attach(stv091x_attach, i2c,
+				&tbs6903_stv091x_cfg, adapter->nr & 1);
 		if (adapter->fe == NULL)
 			goto frontend_atach_fail;
 
@@ -1067,10 +1067,10 @@ static int tbsecp3_frontend_attach(struct tbsecp3_adapter *adapter)
 			goto frontend_atach_fail;
 		}
 
-		tbs6903_stv0910_cfg.tuner_set_mode      = ctl->tuner_set_mode;
-		tbs6903_stv0910_cfg.tuner_set_params    = ctl->tuner_set_params;
-		tbs6903_stv0910_cfg.tuner_set_frequency = ctl->tuner_set_frequency;
-		tbs6903_stv0910_cfg.tuner_set_bandwidth = ctl->tuner_set_bandwidth;
+		tbs6903_stv091x_cfg.tuner_set_mode      = ctl->tuner_set_mode;
+		tbs6903_stv091x_cfg.tuner_set_params    = ctl->tuner_set_params;
+		tbs6903_stv091x_cfg.tuner_set_frequency = ctl->tuner_set_frequency;
+		tbs6903_stv091x_cfg.tuner_set_bandwidth = ctl->tuner_set_bandwidth;
 
 		if (tbsecp3_attach_sec(adapter, adapter->fe) == NULL) {
 			dev_warn(&dev->pci_dev->dev,
@@ -1143,8 +1143,8 @@ static int tbsecp3_frontend_attach(struct tbsecp3_adapter *adapter)
 		printk("RD 0x24 = %x\n", tmp);
 */
 
-		adapter->fe = dvb_attach(mxl5xx_attach, i2c,
-				&tbs6909_mxl5xx_cfg, adapter->nr);
+		adapter->fe = dvb_attach(mxl58x_attach, i2c,
+				&tbs6909_mxl58x_cfg, adapter->nr);
 		if (adapter->fe == NULL)
 			goto frontend_atach_fail;
 

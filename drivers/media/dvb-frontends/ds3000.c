@@ -277,10 +277,8 @@ static int ds3000_writeFW(struct ds3000_state *state, int reg,
 	u8 *buf;
 
 	buf = kmalloc(33, GFP_KERNEL);
-	if (buf == NULL) {
-		printk(KERN_ERR "Unable to kmalloc\n");
+	if (!buf)
 		return -ENOMEM;
-	}
 
 	*(buf) = reg;
 
@@ -835,17 +833,15 @@ static const struct dvb_frontend_ops ds3000_ops;
 struct dvb_frontend *ds3000_attach(const struct ds3000_config *config,
 				    struct i2c_adapter *i2c)
 {
-	struct ds3000_state *state = NULL;
+	struct ds3000_state *state;
 	int ret, ver;
 
 	dprintk("%s\n", __func__);
 
 	/* allocate memory for the internal state */
-	state = kzalloc(sizeof(struct ds3000_state), GFP_KERNEL);
-	if (state == NULL) {
-		printk(KERN_ERR "Unable to kmalloc\n");
-		goto error2;
-	}
+	state = kzalloc(sizeof(*state), GFP_KERNEL);
+	if (!state)
+		return NULL;
 
 	state->config = config;
 	state->i2c = i2c;
@@ -855,8 +851,9 @@ struct dvb_frontend *ds3000_attach(const struct ds3000_config *config,
 	ret = ds3000_readreg(state, 0x00) & 0xfe;
         ver = ds3000_readreg(state, 0x01);
         if (ret != 0xe0 || ver != 0xc0) {
+		kfree(state);
                 printk(KERN_ERR "Invalid probe, probably not a DS300x\n");
-		goto error3;
+		return NULL;
 	}
 
 	printk(KERN_INFO "DS3000 chip version: %d.%d attached.\n",
@@ -874,11 +871,6 @@ struct dvb_frontend *ds3000_attach(const struct ds3000_config *config,
 	 */
 	ds3000_set_voltage(&state->frontend, SEC_VOLTAGE_OFF);
 	return &state->frontend;
-
-error3:
-	kfree(state);
-error2:
-	return NULL;
 }
 EXPORT_SYMBOL(ds3000_attach);
 
