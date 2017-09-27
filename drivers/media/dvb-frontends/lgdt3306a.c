@@ -35,7 +35,7 @@ MODULE_PARM_DESC(debug, "set debug level (info=1, reg=2 (or-able))");
 #define DBG_DUMP 4 /* FGR - comment out to remove dump code */
 
 #define lg_debug(fmt, arg...) \
-	printk(KERN_DEBUG pr_fmt(fmt), ## arg)
+	printk(KERN_INFO pr_fmt("%s: " fmt),  __func__, ##arg)
 
 #define dbg_info(fmt, arg...)					\
 	do {							\
@@ -793,6 +793,8 @@ static int lgdt3306a_sleep(struct lgdt3306a_state *state)
 	int ret;
 
 	dbg_info("\n");
+	state->algo = LG3306_NOTUNE;
+
 	state->current_frequency = -1; /* force re-tune, when we wake */
 
 	ret = lgdt3306a_mpeg_tristate(state, 1); /* disable data bus */
@@ -819,8 +821,8 @@ static int lgdt3306a_init(struct dvb_frontend *fe)
 	u8 val;
 	int ret;
 
-	state->algo = LG3306_NOTUNE;
 	dbg_info("\n");
+	state->algo = LG3306_NOTUNE;
 
 	/* 1. Normal operation mode */
 	ret = lgdt3306a_set_reg_bit(state, 0x0001, 0, 1); /* SIMFASTENB=0x01 */
@@ -1387,8 +1389,6 @@ lgdt3306a_sync_lock_poll(struct lgdt3306a_state *state)
 	int	i;
 
 	for (i = 0; i < 2; i++)	{
-		msleep(30);
-
 		syncLockStatus = lgdt3306a_check_lock_status(state,
 							     LG3306_SYNC_LOCK);
 
@@ -1396,6 +1396,8 @@ lgdt3306a_sync_lock_poll(struct lgdt3306a_state *state)
 			dbg_info("locked(%d)\n", i);
 			return LG3306_LOCK;
 		}
+
+		msleep(30);
 	}
 	dbg_info("not locked\n");
 	return LG3306_UNLOCK;
@@ -1408,8 +1410,6 @@ lgdt3306a_fec_lock_poll(struct lgdt3306a_state *state)
 	int	i;
 
 	for (i = 0; i < 2; i++)	{
-		msleep(30);
-
 		FECLockStatus = lgdt3306a_check_lock_status(state,
 							    LG3306_FEC_LOCK);
 
@@ -1417,6 +1417,8 @@ lgdt3306a_fec_lock_poll(struct lgdt3306a_state *state)
 			dbg_info("locked(%d)\n", i);
 			return FECLockStatus;
 		}
+
+		msleep(30);
 	}
 	dbg_info("not locked\n");
 	return FECLockStatus;
@@ -1428,15 +1430,18 @@ lgdt3306a_neverlock_poll(struct lgdt3306a_state *state)
 	enum lgdt3306a_neverlock_status NLLockStatus = LG3306_NL_FAIL;
 	int i;
 
-	for (i = 0; i < 5; i++) {
-		msleep(30);
-
+	for (i = 0; i < 3; i++) {
 		NLLockStatus = lgdt3306a_check_neverlock_status(state);
 
-		if (NLLockStatus == LG3306_NL_LOCK)
+		if (NLLockStatus == LG3306_NL_LOCK) {
 			dbg_info("NL_LOCK(%d)\n", i);
+			return NLLockStatus;
+		}
+
+		msleep(30);
 	}
 	dbg_info("NLLockStatus=%d\n", NLLockStatus);
+
 	return NLLockStatus;
 }
 
@@ -1538,7 +1543,6 @@ lgdt3306a_vsb_lock_poll(struct lgdt3306a_state *state)
 			return LG3306_UNLOCK;
 		}
 
-		msleep(20);
 		ret = lgdt3306a_pre_monitoring(state);
 		if (ret)
 			break;
@@ -1549,6 +1553,8 @@ lgdt3306a_vsb_lock_poll(struct lgdt3306a_state *state)
 
 		if ((snr >= 1500) && (packet_error < 0xff))
 			return LG3306_LOCK;
+
+		msleep(20);
 	}
 
 	dbg_info("not locked!\n");
@@ -1568,14 +1574,14 @@ lgdt3306a_qam_lock_poll(struct lgdt3306a_state *state)
 			return LG3306_UNLOCK;
 		}
 
-		msleep(20);
-
 		packet_error = lgdt3306a_get_packet_error(state);
 		snr = lgdt3306a_calculate_snr_x100(state);
 		dbg_info("cnt=%d errors=%d snr=%d\n", cnt, packet_error, snr);
 
 		if ((snr >= 1500) && (packet_error < 0xff))
 			return LG3306_LOCK;
+
+		msleep(20);
 	}
 
 	dbg_info("not locked!\n");
@@ -1623,10 +1629,10 @@ static int lgdt3306a_read_status(struct dvb_frontend *fe,
 		default:
 			ret = -EINVAL;
 		}
-	} else {
-		dbg_info("FE_TIMEDOUT\n");
-		*status |= FE_TIMEDOUT;
 	}
+	if (state->algo == LG3306_NOTUNE)
+		*status |= FE_TIMEDOUT;
+
 	return ret;
 }
 
@@ -1774,12 +1780,18 @@ static int lgdt3306a_search(struct dvb_frontend *fe)
 		goto error;
 
 	/* wait frontend lock */
-	for (i = 10; i > 0; i--) {
-        dbg_info(": loop=%d\n", i);
-        lgdt3306a_read_status(fe, &status);
+	for (i = 0; i < 5; i++) {
+		dbg_info("loop=%d\n", i);
+
+		// no msleep() required as this function is so bloated already
+		lgdt3306a_read_status(fe, &status);
 
 		if (status & FE_HAS_LOCK)
 			break;
+		if (status & FE_TIMEDOUT) {
+			state->algo = LG3306_NOTUNE;
+			return DVBFE_ALGO_SEARCH_FAILED;
+		}
 	}
 
 	/* check if we have a valid signal */
@@ -1884,7 +1896,7 @@ static int lgdt3306a_get_spectrum_scan(struct dvb_frontend *fe, struct dvb_fe_sp
 	u8 val;
 
 	p->frequency		= 0;
-	p->bandwidth_hz		= 1000000;
+	p->bandwidth_hz		= 0;
 	p->delivery_system	= SYS_ATSC;
 	p->modulation		= VSB_8;
 
@@ -1917,8 +1929,6 @@ static int lgdt3306a_get_spectrum_scan(struct dvb_frontend *fe, struct dvb_fe_sp
 			msleep(20);
 
 			ret = fe->ops.tuner_ops.get_rf_strength(fe, (s->rf_level + x));
-			if (lg_chkerr(ret))
-				goto fail;
 		}
 	}
 	return 0;

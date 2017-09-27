@@ -140,6 +140,7 @@ static int si2168_read_status(struct dvb_frontend *fe, enum fe_status *status)
 		*status |= FE_TIMEDOUT;
 	dev->fe_status = *status;
 
+// TODO pretty sure we can remove this if() and have it check SNR all the time
 	if (*status & FE_HAS_LOCK) {
 		c->cnr.len = 1;
 		c->cnr.stat[0].scale = FE_SCALE_DECIBEL;
@@ -594,7 +595,7 @@ static int si2168_get_spectrum_scan(struct dvb_frontend *fe, struct dvb_fe_spect
 	}
 
 	p->frequency		= 0;
-	p->bandwidth_hz		= 1000000;
+	p->bandwidth_hz		= 0;
 	p->delivery_system	= SYS_DVBT;
 	p->modulation		= QAM_16;
 
@@ -607,13 +608,9 @@ static int si2168_get_spectrum_scan(struct dvb_frontend *fe, struct dvb_fe_spect
 		{
 			p->frequency = *(s->freq + x);
 
-			if (fe->ops.tuner_ops.set_params) {
-				ret = fe->ops.tuner_ops.set_params(fe);
-				if (fe->ops.i2c_gate_ctrl)
-					fe->ops.i2c_gate_ctrl(fe, 0);
-			}
+			ret = fe->ops.tuner_ops.set_params(fe);
 
-			msleep(50);
+			msleep(20);
 
 			ret = fe->ops.tuner_ops.get_rf_strength(fe, (s->rf_level + x));
 			dprintk("freq: %d strength: %d", p->frequency, *(s->rf_level + x));
