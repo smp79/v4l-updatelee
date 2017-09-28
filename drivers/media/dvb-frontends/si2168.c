@@ -610,7 +610,7 @@ static int si2168_get_spectrum_scan(struct dvb_frontend *fe, struct dvb_fe_spect
 
 			ret = fe->ops.tuner_ops.set_params(fe);
 
-			msleep(20);
+			msleep(50);
 
 			ret = fe->ops.tuner_ops.get_rf_strength(fe, (s->rf_level + x));
 			dprintk("freq: %d strength: %d", p->frequency, *(s->rf_level + x));
