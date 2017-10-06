@@ -1424,7 +1424,8 @@ static struct dvb_frontend_ops stv091x_ops = {
 	.extended_info = {
 		.extended_caps          = FE_CAN_SPECTRUMSCAN |
 					  FE_CAN_IQ |
-					  FE_CAN_BLINDSEARCH
+					  FE_CAN_BLINDSEARCH |
+					  FE_CAN_MODCOD
 	},
 	.init				= stv091x_init,
 	.sleep				= stv091x_sleep,

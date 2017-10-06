@@ -5502,7 +5502,8 @@ static const struct dvb_frontend_ops stv090x_ops = {
 	.extended_info = {
 		.extended_caps          = FE_CAN_SPECTRUMSCAN |
 					  FE_CAN_IQ |
-					  FE_CAN_BLINDSEARCH
+					  FE_CAN_BLINDSEARCH |
+					  FE_CAN_MODCOD
 	},
 	.data_format                    = FE_DFMT_TS_PACKET,
 
