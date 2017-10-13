@@ -55,7 +55,7 @@ static int mxl603_ctrl_programRegisters(struct i2c_client *client, PMXL603_REG_C
 		// Check if partial bits of register were updated
 		if (ctrlRegInfoPtr[i].mask != 0xFF)  
 		{
-			ret = reg_read(dev->client,ctrlRegInfoPtr[i].regAddr, (int)&tmp);
+			ret = reg_read(dev->client,ctrlRegInfoPtr[i].regAddr, &tmp);
 			if (ret) break;;
 		}
 
@@ -79,7 +79,7 @@ static int mxl603_init(struct dvb_frontend *fe)
 
 	int ret;
 	u8 readData;
-	u8 dfeRegData;
+//	u8 dfeRegData;
 	u8 control = 0;
 	u16 ifFcw;
 	MXL603_REG_CTRL_INFO_T MxL603_OverwriteDefaults[] = 
@@ -219,13 +219,7 @@ static int mxl603_set_params(struct dvb_frontend *fe)
 	u32 freq = 0;
 	u8 tmp;
 	
-	pr_info("delivery_system=%d frequency=%d\n",
-			c->delivery_system, c->frequency);
-	if (!dev->active) {
-		ret = -EAGAIN;
-		goto err;
-	}
-	MXL603_REG_CTRL_INFO_T MxL603_DigitalDvbc[] = 
+	MXL603_REG_CTRL_INFO_T MxL603_DigitalDvbc[] =
 	{
 	  {0x0C, 0xFF, 0x00},
 	  {0x13, 0xFF, 0x04},
@@ -255,8 +249,8 @@ static int mxl603_set_params(struct dvb_frontend *fe)
 	  {0xDC, 0xFF, 0x1C},
 	  {0,	 0,    0}
 	};
-	
-	 MXL603_REG_CTRL_INFO_T MxL603_DigitalIsdbtAtsc[] = 
+
+	 MXL603_REG_CTRL_INFO_T MxL603_DigitalIsdbtAtsc[] =
 	{
 	  {0x0C, 0xFF, 0x00},
 	  {0x13, 0xFF, 0x04},
@@ -283,6 +277,13 @@ static int mxl603_set_params(struct dvb_frontend *fe)
 	  {0xD9, 0xFF, 0x04},
 	  {0,	 0,    0}
 	};
+
+	 pr_info("delivery_system=%d frequency=%d\n",
+			c->delivery_system, c->frequency);
+	if (!dev->active) {
+		ret = -EAGAIN;
+		goto err;
+	}
 
 	switch (c->delivery_system) {
 	case SYS_ATSC:

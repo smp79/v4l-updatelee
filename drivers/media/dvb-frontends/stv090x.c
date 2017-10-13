@@ -2788,8 +2788,6 @@ static enum stv090x_signal_state stv090x_get_sig_params(struct stv090x_state *st
 
 	return STV090x_OUTOFRANGE;
 
-err_gateoff:
-	stv090x_i2c_gate_ctrl(state, 0);
 err:
 	dprintk(FE_ERROR, 1, "I/O error");
 	return -1;
@@ -3304,51 +3302,6 @@ err:
 	return -1;
 }
 
-/* Set data output format of Transport Stream Merger.
- * This function configures the packet delineator and the stream merger units
- * of the STV0900 for frame (Base-band frame) or packet (Transport Stream) output.
- */
-static int stv090x_set_dfmt(struct dvb_frontend *fe,  enum fe_data_format dfmt)
-{
-	struct stv090x_state *state = fe->demodulator_priv;
-	u32 reg;
-
-	fe->ops.data_format = dfmt;
-	switch(dfmt) // Px_PDELCTRL2: Packet delineator additional configuration
-	{
-		case FE_DFMT_TS_PACKET:
-			dprintk(FE_INFO, 1, "%s: FE_DFMT_TS_PACKET", __func__);
-			reg = STV090x_READ_DEMOD(state, PDELCTRL2);
-			STV090x_SETFIELD_Px(reg, FRAME_MODE_FIELD, 0);
-			if (STV090x_WRITE_DEMOD(state, PDELCTRL2, reg) < 0)
-				goto err;
-			break;
-		case FE_DFMT_BB_FRAME:
-			dprintk(FE_INFO, 1, "%s: FE_DFMT_BB_FRAME", __func__);
-			reg = STV090x_READ_DEMOD(state, PDELCTRL2);
-			STV090x_SETFIELD_Px(reg, FRAME_MODE_FIELD, 1);
-			if (STV090x_WRITE_DEMOD(state, PDELCTRL2, reg) < 0)
-				goto err;
-			break;
-		default:
-			dprintk(FE_ERROR, 1, "Invalid data format %d", dfmt);
-			goto err;
-	}
-
-	reg = STV090x_READ_DEMOD(state, TSCFGH);
-	STV090x_SETFIELD_Px(reg, RST_HWARE_FIELD, 1); /* merger reset */
-	if (STV090x_WRITE_DEMOD(state, TSCFGH, reg) < 0)
-		goto err;
-	STV090x_SETFIELD_Px(reg, RST_HWARE_FIELD, 0); /* release merger reset */
-	if (STV090x_WRITE_DEMOD(state, TSCFGH, reg) < 0)
-		goto err;
-
-	return 0;
-err:
-	dprintk(FE_ERROR, 1, "Failed to set FE data format");
-	return -1;
-}
-
 static enum stv090x_signal_state stv090x_algo(struct stv090x_state *state)
 {
 	struct dvb_frontend *fe = &state->frontend;
@@ -3708,9 +3661,6 @@ static enum dvbfe_search stv090x_search(struct dvb_frontend *fe)
 	if (props->frequency == 0)
 		return DVBFE_ALGO_SEARCH_INVALID;
 
-	if (stv090x_set_dfmt(fe, frontend_ops->data_format) != 0)
-		return DVBFE_ALGO_SEARCH_ERROR;
-
 	state->delsys = props->delivery_system;
 	state->frequency = props->frequency;
 	state->srate = props->symbol_rate;
@@ -3772,6 +3722,7 @@ static enum dvbfe_search stv090x_search(struct dvb_frontend *fe)
 		return DVBFE_ALGO_SEARCH_FAILED;
 	}
 
+	state->algo = STV090x_NOTUNE;
 	return DVBFE_ALGO_SEARCH_ERROR;
 }
 
@@ -4093,6 +4044,14 @@ err:
 	return -1;
 }
 
+static int stv090x_dtv_tune(struct dvb_frontend *fe)
+{
+	struct stv090x_state *state = fe->demodulator_priv;
+
+	state->algo = STV090x_BLIND_SEARCH;
+
+	return 0;
+}
 
 static enum dvbfe_algo stv090x_frontend_algo(struct dvb_frontend *fe)
 {
@@ -4102,30 +4061,6 @@ static enum dvbfe_algo stv090x_frontend_algo(struct dvb_frontend *fe)
 	} else {
 		return DVBFE_ALGO_CUSTOM;
 	}
-}
-
-static int stv090x_set_property(struct dvb_frontend *fe,
-				struct dtv_property *tvp)
-{
-	struct stv090x_state *state = fe->demodulator_priv;
-	struct dtv_frontend_properties *props = &fe->dtv_property_cache;
-	if (tvp->cmd == DTV_TUNE) {
-		if (props->enable_modcod == 0x0fffffff) {
-			dprintk(FE_DEBUG, 1, "mod %08x state->algo = STV090x_BLIND_SEARCH", props->enable_modcod);
-			state->algo = STV090x_BLIND_SEARCH;
-		} else {
-			dprintk(FE_DEBUG, 1, "mod %08x state->algo = STV090x_COLD_SEARCH", props->enable_modcod);
-			state->algo = STV090x_COLD_SEARCH;
-		}
-	}
-	
-	return 0;
-}
-
-static int stv090x_get_property(struct dvb_frontend *fe,
-				struct dtv_property *tvp)
-{
-	return 0;
 }
 
 static int stv090x_set_frontend(struct dvb_frontend *fe)
@@ -5505,7 +5440,6 @@ static const struct dvb_frontend_ops stv090x_ops = {
 					  FE_CAN_BLINDSEARCH |
 					  FE_CAN_MODCOD
 	},
-	.data_format                    = FE_DFMT_TS_PACKET,
 
 	.release			= stv090x_release,
 	.init				= stv090x_init,
@@ -5517,10 +5451,8 @@ static const struct dvb_frontend_ops stv090x_ops = {
 	.diseqc_send_burst		= stv090x_send_diseqc_burst,
 	.diseqc_recv_slave_reply	= stv090x_recv_slave_reply,
 	.set_tone			= stv090x_set_tone,
-	.set_property			= stv090x_set_property,
-	.get_property			= stv090x_get_property,
 	.set_frontend			= stv090x_set_frontend,
-
+	.dtv_tune			= stv090x_dtv_tune,
 	.search				= stv090x_search,
 	.read_status			= stv090x_read_status,
 	.read_ber			= stv090x_read_ber,
@@ -5529,8 +5461,6 @@ static const struct dvb_frontend_ops stv090x_ops = {
 	.read_ucblocks			= stv090x_read_ucblocks,
 	.get_constellation_samples	= stv090x_get_consellation_samples,
 	.get_spectrum_scan		= stv090x_get_spectrum_scan,
-
-	.set_dfmt			= stv090x_set_dfmt,
 };
 
 

@@ -722,8 +722,8 @@ static int register_dvb(struct cx231xx_dvb *dvb,
 
 	return 0;
 
-fail_create_graph:
-	dvb_net_release(&dvb->net);
+//fail_create_graph:
+//	dvb_net_release(&dvb->net);
 fail_fe_conn:
 	dvb->demux.dmx.remove_frontend(&dvb->demux.dmx, &dvb->fe_mem);
 fail_fe_mem:

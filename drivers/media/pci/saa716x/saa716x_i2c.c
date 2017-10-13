@@ -27,24 +27,6 @@
 #define SAA716x_I2C_RXBUSY	(I2C_RECEIVE		| \
 				 I2C_RECEIVE_CLEAR)
 
-static const char* state[] = {
-	"Idle",
-	"DoneStop",
-	"Busy",
-	"TOscl",
-	"TOarb",
-	"DoneWrite",
-	"DoneRead",
-	"DoneWriteTO",
-	"DoneReadTO",
-	"NoDevice",
-	"NoACK",
-	"BUSErr",
-	"ArbLost",
-	"SEQErr",
-	"STErr"
-};
-
 int saa716x_i2c_irqevent(struct saa716x_dev *saa716x, u8 bus)
 {
 	u32 stat, mask;

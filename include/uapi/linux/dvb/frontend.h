@@ -41,13 +41,6 @@ struct mcu24cxx_info
 	__u32 data;
 };
 
-enum fe_type {
-	FE_QPSK,
-	FE_QAM,
-	FE_OFDM,
-	FE_ATSC
-};
-
 enum fe_extended_caps {
 	FE_EXTENDED_CAPS_IS_STUPID = 0x00,
 	FE_CAN_SPECTRUMSCAN        = 0x01,
@@ -121,15 +114,55 @@ enum fe_caps {
 	FE_CAN_HIERARCHY_AUTO		= 0x100000,
 	FE_CAN_8VSB			= 0x200000,
 	FE_CAN_16VSB			= 0x400000,
-	FE_HAS_EXTENDED_CAPS		= 0x800000,   /* We need more bitspace for newer APIs, indicate this. */
-	FE_CAN_MULTISTREAM		= 0x4000000,  /* frontend supports multistream filtering */
-	FE_CAN_TURBO_FEC		= 0x8000000,  /* frontend supports "turbo fec modulation" */
-	FE_CAN_2G_MODULATION		= 0x10000000, /* frontend supports "2nd generation modulation" (DVB-S2) */
-	FE_NEEDS_BENDING		= 0x20000000, /* not supported anymore, don't use (frontend requires frequency bending) */
-	FE_CAN_RECOVER			= 0x40000000, /* frontend can recover from a cable unplug automatically */
-	FE_CAN_MUTE_TS			= 0x80000000  /* frontend can stop spurious TS data output */
+	FE_HAS_EXTENDED_CAPS		= 0x800000,
+	FE_CAN_MULTISTREAM		= 0x4000000,
+	FE_CAN_TURBO_FEC		= 0x8000000,
+	FE_CAN_2G_MODULATION		= 0x10000000,
+	FE_NEEDS_BENDING		= 0x20000000,
+	FE_CAN_RECOVER			= 0x40000000,
+	FE_CAN_MUTE_TS			= 0x80000000
 };
 
+/*
+ * DEPRECATED: Should be kept just due to backward compatibility.
+ */
+enum fe_type {
+	FE_QPSK,
+	FE_QAM,
+	FE_OFDM,
+	FE_ATSC
+};
+
+/**
+ * struct dvb_frontend_info - Frontend properties and capabilities
+ *
+ * @name:			Name of the frontend
+ * @type:			**DEPRECATED**.
+ *				Should not be used on modern programs,
+ *				as a frontend may have more than one type.
+ *				In order to get the support types of a given
+ *				frontend, use :c:type:`DTV_ENUM_DELSYS`
+ *				instead.
+ * @frequency_min:		Minimal frequency supported by the frontend.
+ * @frequency_max:		Minimal frequency supported by the frontend.
+ * @frequency_stepsize:		All frequencies are multiple of this value.
+ * @frequency_tolerance:	Frequency tolerance.
+ * @symbol_rate_min:		Minimal symbol rate, in bauds
+ *				(for Cable/Satellite systems).
+ * @symbol_rate_max:		Maximal symbol rate, in bauds
+ *				(for Cable/Satellite systems).
+ * @symbol_rate_tolerance:	Maximal symbol rate tolerance, in ppm
+ *				(for Cable/Satellite systems).
+ * @notifier_delay:		**DEPRECATED**. Not used by any driver.
+ * @caps:			Capabilities supported by the frontend,
+ *				as specified in &enum fe_caps.
+ *
+ * .. note:
+ *
+ *    #. The frequencies are specified in Hz for Terrestrial and Cable
+ *       systems.
+ *    #. The frequencies are specified in kHz for Satellite systems.
+ */
 struct dvb_frontend_info {
 	char       name[128];
 	enum fe_type type;	/* DEPRECATED. Use DTV_ENUM_DELSYS instead */
@@ -652,14 +685,6 @@ enum fe_delivery_system {
 #define SYS_DVBC_ANNEX_AC	SYS_DVBC_ANNEX_A
 #define SYS_DMBTH		SYS_DTMB /* DMB-TH is legacy name, use DTMB */
 
-/*
- * Format of data transferred from DVB adapter (frontend) to host. Add a comment to this line
-*/
-enum fe_data_format {
-	FE_DFMT_TS_PACKET,
-	FE_DFMT_BB_FRAME
-};
-
 /* ATSC-MH specific parameters */
 
 /**
@@ -843,7 +868,7 @@ struct dtv_fe_stats {
  * @cmd:	Digital TV command.
  * @reserved:	Not used.
  * @u:		Union with the values for the command.
- * @result:	Result of the command set (currently unused).
+ * @result:	Unused
  *
  * The @u union may have either one of the values below:
  *
@@ -950,10 +975,7 @@ struct dvb_fe_spectrum_scan {
 
 #define DTV_MAX_SPECTRUM_SCAN_STEPS     2000
 #define FE_GET_SPECTRUM_SCAN            _IOW('o', 85, struct dvb_fe_spectrum_scan)
-
 #define FE_GET_EXTENDED_INFO		_IOR('o', 86, struct dvb_frontend_extended_info)
-
-#define FE_SET_DFMT			_IO('o', 87) // fe_data_format
 
 #if defined(__DVB_CORE__) || !defined(__KERNEL__)
 
@@ -1050,8 +1072,6 @@ struct dvb_frontend_event {
 
 #define FE_SET_FRONTEND		   _IOW('o', 76, struct dvb_frontend_parameters)
 #define FE_GET_FRONTEND		   _IOR('o', 77, struct dvb_frontend_parameters)
-#define FE_SET_FRONTEND_TUNE_MODE  _IO('o', 81) /* unsigned int */
-#define FE_GET_EVENT		   _IOR('o', 78, struct dvb_frontend_event)
 
 #define FE_ECP3FW_READ    _IOR('o', 90, struct ecp3_info)
 #define FE_ECP3FW_WRITE   _IOW('o', 91, struct ecp3_info)

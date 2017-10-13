@@ -99,7 +99,6 @@ struct dmx_ts_feed {
 		   u16 pid,
 		   int type,
 		   enum dmx_ts_pes pes_type,
-		   size_t circular_buffer_size,
 		   ktime_t timeout);
 	int (*start_filtering)(struct dmx_ts_feed *feed);
 	int (*stop_filtering)(struct dmx_ts_feed *feed);
@@ -177,7 +176,6 @@ struct dmx_section_feed {
 	/* public: */
 	int (*set)(struct dmx_section_feed *feed,
 		   u16 pid,
-		   size_t circular_buffer_size,
 		   int check_crc);
 	int (*allocate_filter)(struct dmx_section_feed *feed,
 			       struct dmx_section_filter **filter);
@@ -186,42 +184,6 @@ struct dmx_section_feed {
 	int (*start_filtering)(struct dmx_section_feed *feed);
 	int (*stop_filtering)(struct dmx_section_feed *feed);
 };
-
-/*--------------------------------------------------------------------------*/
-/* Base-band frame reception */
-/*--------------------------------------------------------------------------*/
-
-/// @brief Deliver full BBFrames (incl. header) to demux feed (default)
-#define BB_FRAME	0x01
-/// @brief Deliver Packetized Generic Stream to demux feed
-#define BB_PACK_GS	0x00
-/// @brief Deliver Continues Generic Stream to demux feed
-#define BB_CONT_GS	0x40		
-/// @brief Deliver Transport Stream (if stream is using TS-Compatibility mode) to demux feed
-#define BB_TS		0xc0
-
-#define BB_ISI_ALL	DMX_ISI_ALL
-#define BB_ISI_SIS	DMX_ISI_SIS
-
-struct dmx_bb_feed {
-	int is_filtering; /* Set to non-zero when filtering in progress */
-	struct dmx_demux *parent; /* Back-pointer */
-	void *priv; /* Pointer to private data of the API client */
-	int (*set) (struct dmx_bb_feed *feed, int isi, int type, 
-		size_t circular_buffer_size, struct timespec timeout);
-	int (*start_filtering) (struct dmx_bb_feed* feed);
-	int (*stop_filtering) (struct dmx_bb_feed* feed);
-};
-
-/*--------------------------------------------------------------------------*/
-/* Callback functions */
-/*--------------------------------------------------------------------------*/
-
-typedef int (*dmx_ts_cb) ( const u8 * buffer1,
-			   size_t buffer1_length,
-			   const u8 * buffer2,
-			   size_t buffer2_length,
-			   struct dmx_ts_feed* source);
 
 /**
  * typedef dmx_ts_cb - DVB demux TS filter callback function prototype
@@ -238,8 +200,7 @@ typedef int (*dmx_ts_cb) ( const u8 * buffer1,
  * the &dmx_demux.
  * Any TS packets that match the filter settings are copied to a circular
  * buffer. The filtered TS packets are delivered to the client using this
- * callback function. The size of the circular buffer is controlled by the
- * circular_buffer_size parameter of the &dmx_ts_feed.@set function.
+ * callback function.
  * It is expected that the @buffer1 and @buffer2 callback parameters point to
  * addresses within the circular buffer, but other implementations are also
  * possible. Note that the called party should not try to free the memory
@@ -280,6 +241,11 @@ typedef int (*dmx_ts_cb) ( const u8 * buffer1,
  *
  * - -EOVERFLOW, on buffer overflow.
  */
+typedef int (*dmx_ts_cb)(const u8 *buffer1,
+			 size_t buffer1_length,
+			 const u8 *buffer2,
+			 size_t buffer2_length,
+			 struct dmx_ts_feed *source);
 
 /**
  * typedef dmx_section_cb - DVB demux TS filter callback function prototype
@@ -322,8 +288,9 @@ typedef int (*dmx_section_cb)(const u8 *buffer1,
 			      size_t buffer2_len,
 			      struct dmx_section_filter *source);
 
-typedef void (*dmx_bb_cb)(const u8 *buffer, size_t len, size_t upl, 
-	struct dmx_bb_feed* source);
+/*
+ * DVB Front-End
+ */
 
 /**
  * enum dmx_frontend_source - Used to identify the type of frontend
@@ -597,11 +564,6 @@ struct dmx_demux {
 				     dmx_section_cb callback);
 	int (*release_section_feed)(struct dmx_demux *demux,
 				    struct dmx_section_feed *feed);
-	int (*allocate_bb_feed) (struct dmx_demux* demux,
-				 struct dmx_bb_feed** feed,
-				 dmx_bb_cb callback);
-	int (*release_bb_feed) (struct dmx_demux* demux,
-				struct dmx_bb_feed* feed);
 	int (*add_frontend)(struct dmx_demux *demux,
 			    struct dmx_frontend *frontend);
 	int (*remove_frontend)(struct dmx_demux *demux,

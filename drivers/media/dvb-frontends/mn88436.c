@@ -1104,7 +1104,7 @@ static int  log10_easy( u32  cnr )
 static int DMD_send_registers(struct i2c_client *client,u8*regset)
 {
 	struct mn88436_dev*dev = i2c_get_clientdata(client);
-	int ret;
+	int ret = 0;
 	u32 i;
 	for(i=0;;)
 	{
@@ -1151,16 +1151,14 @@ static int mn88436_read_status(struct dvb_frontend *fe,enum fe_status *status)
 	int ret;
 	int utemp;
 	int i =0;
-	for(i=0;i<50;i++)
-	{
-	ret = regmap_read(dev->regmap[0],DMD_MAIN_STSMON1,&utemp);
-	if(utemp&0x1){
-		*status = FE_HAS_VITERBI | FE_HAS_SYNC | FE_HAS_LOCK;
-		break;
+	for (i=0;i<50;i++) {
+		ret = regmap_read(dev->regmap[0],DMD_MAIN_STSMON1,&utemp);
+		if (utemp&0x1) {
+			*status = FE_HAS_VITERBI | FE_HAS_SYNC | FE_HAS_LOCK;
+			break;
+		} else {
+			*status = FE_HAS_SIGNAL | FE_HAS_CARRIER;
 		}
-	else
-		*status = FE_HAS_SIGNAL | FE_HAS_CARRIER;
-
 		msleep(1);
 	}
 	
@@ -1292,7 +1290,7 @@ static int mn88436_read_snr(struct dvb_frontend* fe, u16* snr)
 	struct i2c_client *client = fe->demodulator_priv;
 	struct mn88436_dev *dev = i2c_get_clientdata(client);
 	int	rd;
-	u32	cni,cnd;
+//	u32	cni,cnd;
 	u32	x,y;
 
 	regmap_read(dev->regmap[1], DMD_USR_CNMON1 , &rd );

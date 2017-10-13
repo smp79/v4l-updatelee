@@ -416,17 +416,17 @@ static int max_set_voltage(struct i2c_adapter *i2c,
 	return 0;
 }
 
-static int max_send_master_cmd(struct dvb_frontend *fe, struct dvb_diseqc_master_cmd *cmd)
-{
-	//printk("send master cmd\n");
-	return 0;
-}
-static int max_send_burst(struct dvb_frontend *fe, enum fe_sec_mini_cmd burst)
-{
-	//printk("send burst: %d\n", burst);
-	return 0;
-}
-static void RF_switch(struct i2c_adapter *i2c,u8 rf_in,u8 flag)//flag : 0: dvbs/s2 signal 1:Terrestrial and cable signal 
+//static int max_send_master_cmd(struct dvb_frontend *fe, struct dvb_diseqc_master_cmd *cmd)
+//{
+//	//printk("send master cmd\n");
+//	return 0;
+//}
+//static int max_send_burst(struct dvb_frontend *fe, enum fe_sec_mini_cmd burst)
+//{
+//	//printk("send burst: %d\n", burst);
+//	return 0;
+//}
+static void RF_switch(struct i2c_adapter *i2c,u8 rf_in,u8 flag)//flag : 0: dvbs/s2 signal 1:Terrestrial and cable signal
 {
 	struct tbsecp3_i2c *i2c_adap = i2c_get_adapdata(i2c);
 	struct tbsecp3_dev *dev = i2c_adap->dev;

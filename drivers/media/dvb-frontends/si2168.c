@@ -89,6 +89,8 @@ static int si2168_read_status(struct dvb_frontend *fe, enum fe_status *status)
 	unsigned int utmp, utmp1, utmp2;
 	struct si2168_cmd cmd;
 
+	dev_dbg(&client->dev, "\n");
+
 	*status = 0;
 
 	if (!dev->active) {
@@ -283,24 +285,6 @@ err:
 	return ret;
 }
 
-static int si2168_set_property(struct dvb_frontend *fe, struct dtv_property *tvp)
-{
-	struct i2c_client *client = fe->demodulator_priv;
-	struct si2168_dev *dev = i2c_get_clientdata(client);
-
-	if (tvp->cmd == DTV_TUNE) {
-		dprintk("DTV_TUNE");
-		dev->algo = SI2168_TUNE;
-	}
-
-	return 0;
-}
-
-static int si2168_get_property(struct dvb_frontend *fe, struct dtv_property *tvp)
-{
-	return 0;
-}
-
 static enum dvbfe_algo si2168_get_frontend_algo(struct dvb_frontend *fe)
 {
 	struct i2c_client *client = fe->demodulator_priv;
@@ -313,6 +297,18 @@ static enum dvbfe_algo si2168_get_frontend_algo(struct dvb_frontend *fe)
 	}
 }
 
+static int si2168_dtv_tune(struct dvb_frontend *fe)
+{
+	struct i2c_client *client = fe->demodulator_priv;
+	struct si2168_dev *dev = i2c_get_clientdata(client);
+
+	dprintk("%s: ", __func__);
+
+	dev->algo = SI2168_TUNE;
+
+	return 0;
+}
+
 static int si2168_set_frontend(struct dvb_frontend *fe)
 {
 	struct i2c_client *client = fe->demodulator_priv;
@@ -322,6 +318,7 @@ static int si2168_set_frontend(struct dvb_frontend *fe)
 	struct si2168_cmd cmd;
 	u8 bandwidth, delivery_system;
 
+	dprintk("%s: ", __func__);
 	dev_dbg(&client->dev,
 			"delivery_system=%u modulation=%u frequency=%u bandwidth_hz=%u symbol_rate=%u inversion=%u stream_id=%u\n",
 			c->delivery_system, c->modulation, c->frequency,
@@ -541,7 +538,8 @@ static int si2168_search(struct dvb_frontend *fe)
 	enum fe_status status = 0;
 	int ret, i;
 
-	dprintk("");
+	dprintk("%s: ", __func__);
+	dev_dbg(&client->dev, "\n");
 
 	dev->algo = SI2168_TUNE;
 
@@ -551,7 +549,7 @@ static int si2168_search(struct dvb_frontend *fe)
 		goto error;
 
 	/* wait frontend lock */
-	for (i = 0; i < 10; i++) {
+	for (i = 0; i < 5; i++) {
 		dprintk("loop=%d", i);
 		msleep(100);
 		ret = si2168_read_status(fe, &status);
@@ -946,11 +944,10 @@ static const struct dvb_frontend_ops si2168_ops = {
 	.init			= si2168_init,
 	.sleep			= si2168_sleep,
 
-	.set_property		= si2168_set_property,
-	.get_property		= si2168_get_property,
 	.set_frontend		= si2168_set_frontend,
 	.get_frontend_algo	= si2168_get_frontend_algo,
 	.search			= si2168_search,
+	.dtv_tune		= si2168_dtv_tune,
 	.get_spectrum_scan	= si2168_get_spectrum_scan,
 
 	.read_status		= si2168_read_status,

@@ -1182,48 +1182,47 @@ static int si2183_get_algo(struct dvb_frontend *fe)
 	return DVBFE_ALGO_HW;
 }
 
-static int si2183_set_property(struct dvb_frontend *fe,
-		struct dtv_property *p)
-{
-	int ret = 0;
+//static int si2183_set_property(struct dvb_frontend *fe,
+//		struct dtv_property *p)
+//{
+//	int ret = 0;
 
-	switch (p->cmd) {
-	case DTV_DELIVERY_SYSTEM:
-		switch (p->u.data) {
-		case SYS_DVBS:
-		case SYS_DVBS2:
-		case SYS_DSS:
-			fe->ops.info.frequency_min = 950000;
-			fe->ops.info.frequency_max = 2150000;
-			fe->ops.info.frequency_stepsize = 0;
-			break;
-		case SYS_ISDBT:
-			fe->ops.info.frequency_min = 42000000;
-			fe->ops.info.frequency_max = 1002000000;
-			fe->ops.info.frequency_stepsize = 0;
-			break;
-		case SYS_DVBC_ANNEX_A:
-		case SYS_DVBC_ANNEX_B:
-			fe->ops.info.frequency_min = 47000000;
-			fe->ops.info.frequency_max = 862000000;
-			fe->ops.info.frequency_stepsize = 62500;
-			break;
-		case SYS_DVBT:
-		case SYS_DVBT2:
-		default:
-			fe->ops.info.frequency_min = 174000000;
-			fe->ops.info.frequency_max = 862000000;
-			fe->ops.info.frequency_stepsize = 250000;
-			break;
-		}
-		break;
-	default:
-		break;
-	}
+//	switch (p->cmd) {
+//	case DTV_DELIVERY_SYSTEM:
+//		switch (p->u.data) {
+//		case SYS_DVBS:
+//		case SYS_DVBS2:
+//		case SYS_DSS:
+//			fe->ops.info.frequency_min = 950000;
+//			fe->ops.info.frequency_max = 2150000;
+//			fe->ops.info.frequency_stepsize = 0;
+//			break;
+//		case SYS_ISDBT:
+//			fe->ops.info.frequency_min = 42000000;
+//			fe->ops.info.frequency_max = 1002000000;
+//			fe->ops.info.frequency_stepsize = 0;
+//			break;
+//		case SYS_DVBC_ANNEX_A:
+//		case SYS_DVBC_ANNEX_B:
+//			fe->ops.info.frequency_min = 47000000;
+//			fe->ops.info.frequency_max = 862000000;
+//			fe->ops.info.frequency_stepsize = 62500;
+//			break;
+//		case SYS_DVBT:
+//		case SYS_DVBT2:
+//		default:
+//			fe->ops.info.frequency_min = 174000000;
+//			fe->ops.info.frequency_max = 862000000;
+//			fe->ops.info.frequency_stepsize = 250000;
+//			break;
+//		}
+//		break;
+//	default:
+//		break;
+//	}
 
-	return ret;
-}
-
+//	return ret;
+//}
 
 static int send_diseqc_cmd(struct dvb_frontend *fe,
 	u8 cont_tone, u8 tone_burst, u8 burst_sel,
@@ -1373,8 +1372,6 @@ static const struct dvb_frontend_ops si2183_ops = {
 	.get_frontend_algo = si2183_get_algo,
 	.tune = si2183_tune,
 
-	.set_property			= si2183_set_property,
-
 	.set_tone			= si2183_set_tone,
 	.diseqc_send_burst		= si2183_diseqc_send_burst,
 	.diseqc_send_master_cmd		= si2183_diseqc_send_msg,
@@ -1400,7 +1397,7 @@ static int si2183_probe(struct i2c_client *client,
 	struct si2183_config *config = client->dev.platform_data;
 	struct si2183_dev *dev;
 	struct si_base *base;
-	int ret;
+	int ret = 0;
 
 	dev_dbg(&client->dev, "\n");
 	

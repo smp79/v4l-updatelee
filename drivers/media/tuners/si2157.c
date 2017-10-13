@@ -228,8 +228,6 @@ warm:
 	/* init statistics in order signal app which are supported */
 	c->strength.len = 1;
 	c->strength.stat[0].scale = FE_SCALE_NOT_AVAILABLE;
-	/* start statistics polling */
-//	schedule_delayed_work(&dev->stat_work, msecs_to_jiffies(1000));
 
 	dev->active = true;
 	return 0;
@@ -250,9 +248,6 @@ static int si2157_sleep(struct dvb_frontend *fe)
 	dprintk("");
 
 	dev->active = false;
-
-	/* stop statistics polling */
-//	cancel_delayed_work_sync(&dev->stat_work);
 
 	/* standby */
 	memcpy(cmd.args, "\x16\x00", 2);
@@ -418,34 +413,6 @@ static const struct dvb_tuner_ops si2157_ops = {
 	.get_rf_strength = si2157_get_rf_strength,
 };
 
-static void si2157_stat_work(struct work_struct *work)
-{
-	struct si2157_dev *dev = container_of(work, struct si2157_dev, stat_work.work);
-	struct dvb_frontend *fe = dev->fe;
-	struct i2c_client *client = fe->tuner_priv;
-	struct dtv_frontend_properties *c = &fe->dtv_property_cache;
-	struct si2157_cmd cmd;
-	int ret;
-
-	dprintk("");
-
-	memcpy(cmd.args, "\x42\x00", 2);
-	cmd.wlen = 2;
-	cmd.rlen = 12;
-	ret = si2157_cmd_execute(client, &cmd);
-	if (ret)
-		goto err;
-
-	c->strength.stat[0].scale = FE_SCALE_DECIBEL;
-	c->strength.stat[0].svalue = (s8) cmd.args[3] * 1000;
-
-	schedule_delayed_work(&dev->stat_work, msecs_to_jiffies(2000));
-	return;
-err:
-	c->strength.stat[0].scale = FE_SCALE_NOT_AVAILABLE;
-	dprintk("failed=%d", ret);
-}
-
 static int si2157_probe(struct i2c_client *client,
 			const struct i2c_device_id *id)
 {
@@ -469,7 +436,6 @@ static int si2157_probe(struct i2c_client *client,
 	dev->chiptype = (u8)id->driver_data;
 	dev->if_frequency = 5000000; /* default value of property 0x0706 */
 	mutex_init(&dev->i2c_mutex);
-//	INIT_DELAYED_WORK(&dev->stat_work, si2157_stat_work);
 
 	/* check if the tuner is there */
 	cmd.wlen = 0;
@@ -526,9 +492,6 @@ static int si2157_remove(struct i2c_client *client)
 	struct dvb_frontend *fe = dev->fe;
 
 	dprintk("");
-
-	/* stop statistics polling */
-//	cancel_delayed_work_sync(&dev->stat_work);
 
 #ifdef CONFIG_MEDIA_CONTROLLER_DVB
 	if (dev->mdev)

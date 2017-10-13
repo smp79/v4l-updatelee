@@ -1049,26 +1049,6 @@ fail:
 	return ret;
 }
 
-static int lgdt3306a_set_property(struct dvb_frontend *fe,
-				struct dtv_property *tvp)
-{
-	struct lgdt3306a_state *state = fe->demodulator_priv;
-
-	if (tvp->cmd == DTV_TUNE) {
-		dbg_info("lgdt3306a_set_property\n");
-		state->algo = LG3306_TUNE;
-	}
-
-	return 0;
-}
-
-static int lgdt3306a_get_property(struct dvb_frontend *fe,
-				struct dtv_property *tvp)
-{
-	return 0;
-}
-
-
 static int lgdt3306a_get_frontend(struct dvb_frontend *fe,
 				  struct dtv_frontend_properties *p)
 {
@@ -1764,6 +1744,15 @@ static int lgdt3306a_get_tune_settings(struct dvb_frontend *fe,
 	return 0;
 }
 
+static int lgdt3306a_dtv_tune(struct dvb_frontend *fe)
+{
+	struct lgdt3306a_state *state = fe->demodulator_priv;
+
+	state->algo = LG3306_TUNE;
+
+	return 0;
+}
+
 static int lgdt3306a_search(struct dvb_frontend *fe)
 {
 	struct lgdt3306a_state *state = fe->demodulator_priv;
@@ -2247,8 +2236,6 @@ static const struct dvb_frontend_ops lgdt3306a_ops = {
 	.sleep                = lgdt3306a_fe_sleep,
 	/* if this is set, it overrides the default swzigzag */
 	.tune                 = lgdt3306a_tune,
-	.set_property         = lgdt3306a_set_property,
-	.get_property         = lgdt3306a_get_property,
 	.set_frontend         = lgdt3306a_set_parameters,
 	.get_frontend         = lgdt3306a_get_frontend,
 	.get_frontend_algo    = lgdt3306a_get_frontend_algo,
@@ -2261,6 +2248,7 @@ static const struct dvb_frontend_ops lgdt3306a_ops = {
 	.release              = lgdt3306a_release,
 	.ts_bus_ctrl          = lgdt3306a_ts_bus_ctrl,
 	.search               = lgdt3306a_search,
+	.dtv_tune	      = lgdt3306a_dtv_tune,
 	.get_spectrum_scan    = lgdt3306a_get_spectrum_scan,
         .get_constellation_samples      = lgdt3306a_get_constellation_samples,
 };
