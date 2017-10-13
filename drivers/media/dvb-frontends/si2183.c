@@ -21,6 +21,8 @@
 #define SI2183_USE_I2C_MUX
 #endif
 
+#define dprintk(fmt, arg...)	printk(KERN_INFO pr_fmt("%s: " fmt "\n"),  __func__, ##arg)
+
 #define SI2183_B60_FIRMWARE "dvb-demod-si2183-b60-01.fw"
 
 #define SI2183_PROP_MODE	0x100a
@@ -1177,52 +1179,109 @@ static int si2183_tune(struct dvb_frontend *fe, bool re_tune,
 	return si2183_read_status(fe, status);
 }
 
-static int si2183_get_algo(struct dvb_frontend *fe)
+static int si2183_get_frontend_algo(struct dvb_frontend *fe)
 {
-	return DVBFE_ALGO_HW;
+	struct i2c_client *client = fe->demodulator_priv;
+	struct si2183_config *config = client->dev.platform_data;
+
+	if (config->algo == SI2183_NOTUNE) {
+		return DVBFE_ALGO_NOTUNE;
+	} else {
+		return DVBFE_ALGO_CUSTOM;
+	}
 }
 
-//static int si2183_set_property(struct dvb_frontend *fe,
-//		struct dtv_property *p)
-//{
-//	int ret = 0;
+static int si2183_dtv_tune(struct dvb_frontend *fe)
+{
+	struct i2c_client *client = fe->demodulator_priv;
+	struct si2183_config *config = client->dev.platform_data;
 
-//	switch (p->cmd) {
-//	case DTV_DELIVERY_SYSTEM:
-//		switch (p->u.data) {
-//		case SYS_DVBS:
-//		case SYS_DVBS2:
-//		case SYS_DSS:
-//			fe->ops.info.frequency_min = 950000;
-//			fe->ops.info.frequency_max = 2150000;
-//			fe->ops.info.frequency_stepsize = 0;
-//			break;
-//		case SYS_ISDBT:
-//			fe->ops.info.frequency_min = 42000000;
-//			fe->ops.info.frequency_max = 1002000000;
-//			fe->ops.info.frequency_stepsize = 0;
-//			break;
-//		case SYS_DVBC_ANNEX_A:
-//		case SYS_DVBC_ANNEX_B:
-//			fe->ops.info.frequency_min = 47000000;
-//			fe->ops.info.frequency_max = 862000000;
-//			fe->ops.info.frequency_stepsize = 62500;
-//			break;
-//		case SYS_DVBT:
-//		case SYS_DVBT2:
-//		default:
-//			fe->ops.info.frequency_min = 174000000;
-//			fe->ops.info.frequency_max = 862000000;
-//			fe->ops.info.frequency_stepsize = 250000;
-//			break;
-//		}
-//		break;
-//	default:
-//		break;
-//	}
+	dprintk("%s: ", __func__);
 
-//	return ret;
-//}
+	config->algo = SI2183_TUNE;
+
+	return 0;
+}
+
+static int si2183_search(struct dvb_frontend *fe)
+{
+	struct i2c_client *client = fe->demodulator_priv;
+	struct si2183_config *config = client->dev.platform_data;
+	enum fe_status status = 0;
+	int ret, i;
+
+	dprintk("%s: ", __func__);
+
+	config->algo = SI2183_TUNE;
+
+	/* set frontend */
+	ret = si2183_set_frontend(fe);
+	if (ret)
+		goto error;
+
+	/* wait frontend lock */
+	for (i = 0; i < 5; i++) {
+		dprintk("loop=%d", i);
+		msleep(100);
+		ret = si2183_read_status(fe, &status);
+		if (ret)
+			goto error;
+
+		if (status & FE_HAS_LOCK)
+			break;
+		if (status & FE_TIMEDOUT) {
+			config->algo = SI2183_NOTUNE;
+			return DVBFE_ALGO_SEARCH_FAILED;
+		}
+	}
+
+	/* check if we have a valid signal */
+	if (status & FE_HAS_LOCK) {
+		dprintk("DVBFE_ALGO_SEARCH_SUCCESS");
+		return DVBFE_ALGO_SEARCH_SUCCESS;
+	} else {
+		dprintk("DVBFE_ALGO_SEARCH_FAILED");
+		config->algo = SI2183_NOTUNE;
+		return DVBFE_ALGO_SEARCH_FAILED;
+	}
+
+error:
+	dprintk("ERROR");
+	config->algo = SI2183_NOTUNE;
+	return DVBFE_ALGO_SEARCH_ERROR;
+}
+
+static int si2183_get_spectrum_scan(struct dvb_frontend *fe, struct dvb_fe_spectrum_scan *s)
+{
+	struct i2c_client *client = fe->demodulator_priv;
+	struct si2183_config *config = client->dev.platform_data;
+	struct dtv_frontend_properties *p = &fe->dtv_property_cache;
+	int x, ret;
+
+	p->frequency		= 0;
+	p->bandwidth_hz		= 0;
+	p->delivery_system	= SYS_DVBT;
+	p->modulation		= QAM_16;
+
+	*s->type = SC_DBM;
+
+	config->algo = SI2183_NOTUNE;
+
+	if (fe->ops.tuner_ops.set_params && fe->ops.tuner_ops.get_rf_strength) {
+		for (x = 0; x < s->num_freq; x++)
+		{
+			p->frequency = *(s->freq + x);
+
+			ret = fe->ops.tuner_ops.set_params(fe);
+
+			msleep(100);
+
+			ret = fe->ops.tuner_ops.get_rf_strength(fe, (s->rf_level + x));
+			dprintk("freq: %d strength: %d", p->frequency, *(s->rf_level + x));
+		}
+	}
+	return 0;
+}
 
 static int send_diseqc_cmd(struct dvb_frontend *fe,
 	u8 cont_tone, u8 tone_burst, u8 burst_sel,
@@ -1330,7 +1389,7 @@ static const struct dvb_frontend_ops si2183_ops = {
 	.delsys = {SYS_DVBT, SYS_DVBT2,
 		   SYS_ISDBT,
 		   SYS_DVBC_ANNEX_A,SYS_DVBC_ANNEX_B,
-		   SYS_DVBS, SYS_DVBS2, SYS_DSS},
+		   SYS_DSS, SYS_DVBS, SYS_DVBS2},
 	.info = {
 		.name = "Silicon Labs Si2183",
 		.symbol_rate_min = 1000000,
@@ -1353,30 +1412,38 @@ static const struct dvb_frontend_ops si2183_ops = {
 			FE_CAN_HIERARCHY_AUTO |
 			FE_CAN_MUTE_TS |
 			FE_CAN_2G_MODULATION |
-			FE_CAN_MULTISTREAM
+			FE_CAN_MULTISTREAM |
+			FE_HAS_EXTENDED_CAPS
+	},
+	.extended_info = {
+		.extended_caps	= FE_CAN_SPECTRUMSCAN
 	},
 
-	.get_tune_settings = si2183_get_tune_settings,
+	.get_tune_settings	= si2183_get_tune_settings,
 
-	.init = si2183_init,
-	.sleep = si2183_sleep,
+	.init			= si2183_init,
+	.sleep			= si2183_sleep,
 
-	.set_frontend = si2183_set_frontend,
+	.set_frontend		= si2183_set_frontend,
 
-	.read_status = si2183_read_status,
+	.read_status		= si2183_read_status,
 	.read_signal_strength	= si2183_read_signal_strength,
 	.read_snr		= si2183_read_snr,
 	.read_ber		= si2183_read_ber,
 	.read_ucblocks		= si2183_read_ucblocks,
 
-	.get_frontend_algo = si2183_get_algo,
-	.tune = si2183_tune,
+	.get_frontend_algo	= si2183_get_frontend_algo,
+	.tune			= si2183_tune,
 
-	.set_tone			= si2183_set_tone,
-	.diseqc_send_burst		= si2183_diseqc_send_burst,
-	.diseqc_send_master_cmd		= si2183_diseqc_send_msg,
+	.search			= si2183_search,
+	.dtv_tune		= si2183_dtv_tune,
+	.get_spectrum_scan	= si2183_get_spectrum_scan,
+
+	.set_tone		= si2183_set_tone,
+	.diseqc_send_burst	= si2183_diseqc_send_burst,
+	.diseqc_send_master_cmd	= si2183_diseqc_send_msg,
 #ifndef SI2183_USE_I2C_MUX
-	.i2c_gate_ctrl			= i2c_gate_ctrl,
+	.i2c_gate_ctrl		= i2c_gate_ctrl,
 #endif
 };
 

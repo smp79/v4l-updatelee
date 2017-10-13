@@ -16,10 +16,17 @@
 #define SI2183_H
 
 #include <linux/dvb/frontend.h>
+
 /*
  * I2C address
  * 0x64
  */
+
+enum si2183_algo {
+	SI2183_NOTUNE,
+	SI2183_TUNE,
+};
+
 struct si2183_config {
 	/*
 	 * frontend
@@ -50,6 +57,8 @@ struct si2183_config {
 	void (*RF_switch)(struct i2c_adapter * i2c,u8 rf_in,u8 flag);
 	/*rf no.*/
 	u8 rf_in;
+
+	enum si2183_algo algo;
 };
 
 #endif
