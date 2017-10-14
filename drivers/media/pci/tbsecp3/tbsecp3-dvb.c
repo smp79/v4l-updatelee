@@ -1327,7 +1327,6 @@ err0:
 
 void tbsecp3_dvb_exit(struct tbsecp3_adapter *adapter)
 {
-	struct dvb_adapter *adap = &adapter->dvb_adapter;
 	struct dvb_demux *dvbdemux = &adapter->demux;
 
 	dprintk("1");
