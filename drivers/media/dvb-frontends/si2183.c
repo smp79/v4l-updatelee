@@ -16,6 +16,7 @@
 #include "dvb_frontend.h"
 #include <linux/firmware.h>
 #include <linux/i2c-mux.h>
+#include <linux/delay.h>
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 7, 0)
 #define SI2183_USE_I2C_MUX
@@ -151,7 +152,7 @@ static int si2183_cmd_execute_unlocked(struct i2c_client *client,
 				break;
 		}
 
-		dev_dbg(&client->dev, "cmd execution took %d ms\n",
+		dprintk("cmd execution took %d ms",
 				jiffies_to_msecs(jiffies) -
 				(jiffies_to_msecs(timeout) - TIMEOUT));
 
@@ -169,7 +170,7 @@ static int si2183_cmd_execute_unlocked(struct i2c_client *client,
 
 	return 0;
 err:
-	dev_dbg(&client->dev, "failed=%d\n", ret);
+	dprintk("failed=%d", ret);
 	return ret;
 }
 
@@ -288,7 +289,7 @@ static int si2183_read_status(struct dvb_frontend *fe, enum fe_status *status)
 
 	ret = si2183_cmd_execute(client, &cmd);
 	if (ret) {
-		dev_err(&client->dev, "read_status fe%d cmd_exec failed=%d\n", fe->id, ret);
+		dprintk("read_status fe%d cmd_exec failed=%d", fe->id, ret);
 		goto err;
 	}
 
@@ -313,8 +314,7 @@ static int si2183_read_status(struct dvb_frontend *fe, enum fe_status *status)
 	
 	dev->fe_status = *status;
 
-	dev_dbg(&client->dev, "status=%02x args=%*ph\n",
-			*status, cmd.rlen, cmd.args);
+	dprintk("status=%02x args=%*ph", *status, cmd.rlen, cmd.args);
 
 	if (fe->ops.tuner_ops.get_rf_strength)
 	{
@@ -323,11 +323,10 @@ static int si2183_read_status(struct dvb_frontend *fe, enum fe_status *status)
 		cmd.rlen = 3;
 		ret = si2183_cmd_execute(client, &cmd);
 		if (ret) {
-			dev_err(&client->dev, "read_status fe%d cmd_exec failed=%d\n", fe->id, ret);
+			dprintk("read_status fe%d cmd_exec failed=%d", fe->id, ret);
 			goto err;
 		}
-		dev_dbg(&client->dev, "status=%02x args=%*ph\n",
-			*status, cmd.rlen, cmd.args);
+		dprintk("status=%02x args=%*ph", *status, cmd.rlen, cmd.args);
 
 		agc = cmd.args[1];
 		fe->ops.tuner_ops.get_rf_strength(fe, &agc);
@@ -335,7 +334,7 @@ static int si2183_read_status(struct dvb_frontend *fe, enum fe_status *status)
 
 	return 0;
 err:
-	dev_err(&client->dev, "read_status failed=%d\n", ret);
+	dprintk("read_status failed=%d", ret);
 	return ret;
 }
 
@@ -371,7 +370,7 @@ static int si2183_read_ber(struct dvb_frontend *fe, u32 *ber)
 		cmd.rlen = 3;
 		ret = si2183_cmd_execute(client, &cmd);
 		if (ret) {
-			dev_err(&client->dev, "read_ber fe%d cmd_exec failed=%d\n", fe->id, ret);
+			dprintk("read_ber fe%d cmd_exec failed=%d", fe->id, ret);
 			goto err;
 		}
 		*ber = (u32)cmd.args[2] * cmd.args[1] & 0xf;
@@ -379,7 +378,7 @@ static int si2183_read_ber(struct dvb_frontend *fe, u32 *ber)
 
 	return 0;
 err:
-	dev_err(&client->dev, "read_ber failed=%d\n", ret);
+	dprintk("read_ber failed=%d", ret);
 	return ret;
 }
 
@@ -396,7 +395,7 @@ static int si2183_read_ucblocks(struct dvb_frontend *fe, u32 *ucblocks)
 		cmd.rlen = 3;
 		ret = si2183_cmd_execute(client, &cmd);
 		if (ret) {
-		dev_err(&client->dev, "read_ucblocks fe%d cmd_exec failed=%d\n", fe->id, ret);
+		dprintk("read_ucblocks fe%d cmd_exec failed=%d", fe->id, ret);
 			goto err;
 		}
 
@@ -405,7 +404,7 @@ static int si2183_read_ucblocks(struct dvb_frontend *fe, u32 *ucblocks)
 
 	return 0;
 err:
-	dev_err(&client->dev, "read_ucblocks failed=%d\n", ret);
+	dprintk("read_ucblocks failed=%d", ret);
 	return ret;
 }
 
@@ -419,19 +418,21 @@ static int si2183_set_dvbc(struct dvb_frontend *fe)
 	int ret;
 	u16 prop;
 
+	dprintk("");
+
 	memcpy(cmd.args, "\x89\x41\x06\x12\x0\x0", 6);
 	cmd.args[1]= (dev->agc_mode &0x07)<<4 |0x1;  
  	cmd.wlen = 6;
  	cmd.rlen = 3;
  	ret = si2183_cmd_execute(client, &cmd);
  	if(ret){
- 		dev_err(&client->dev, "err set agc mode\n");
+		dprintk("err set agc mode");
  	}
 	/* dvb-c mode */
 	prop = 0x38;
 	ret = si2183_set_prop(client, SI2183_PROP_MODE, &prop);
 	if (ret) {
-		dev_err(&client->dev, "err set dvb-c mode\n");
+		dprintk("err set dvb-c mode");
 		return ret;
 	}
 
@@ -458,7 +459,7 @@ static int si2183_set_dvbc(struct dvb_frontend *fe)
 	}
 	ret = si2183_set_prop(client, SI2183_PROP_DVBC_CONST, &prop);
 	if (ret) {
-		dev_err(&client->dev, "err set dvb-c constelation\n");
+		dprintk("err set dvb-c constelation");
 		return ret;
 	}
 
@@ -466,7 +467,7 @@ static int si2183_set_dvbc(struct dvb_frontend *fe)
 	prop = c->symbol_rate / 1000;
 	ret = si2183_set_prop(client, SI2183_PROP_DVBC_SR, &prop);
 	if (ret) {
-		dev_err(&client->dev, "err set dvb-c symbol rate\n");
+		dprintk("err set dvb-c symbol rate");
 		return ret;
 	}
 
@@ -482,19 +483,21 @@ static int si2183_set_mcns(struct dvb_frontend *fe)
 	int ret;
 	u16 prop,symb;
 
+	dprintk("");
+
 	memcpy(cmd.args, "\x89\x41\x06\x12\x0\x0", 6);
 	cmd.args[1]= (dev->agc_mode &0x07)<<4 |0x1;  
  	cmd.wlen = 6;
  	cmd.rlen = 3;
  	ret = si2183_cmd_execute(client, &cmd);
  	if(ret){
- 		dev_err(&client->dev, "err set agc mode\n");
+		dprintk("err set agc mode");
  	}
 	/* mcns mode */
 	prop = 0x18;
 	ret = si2183_set_prop(client, SI2183_PROP_MODE, &prop);
 	if (ret) {
-		dev_err(&client->dev, "err set mcns mode\n");
+		dprintk("err set mcns mode");
 		return ret;
 	}
 
@@ -511,14 +514,14 @@ static int si2183_set_mcns(struct dvb_frontend *fe)
 	}
 	ret = si2183_set_prop(client, SI2183_PROP_MCNS_CONST, &prop);
 	if (ret) {
-		dev_err(&client->dev, "err set mcns constelation\n");
+		dprintk("err set mcns constelation");
 		return ret;
 	}
 
 	/* symbol rate */
 	ret = si2183_set_prop(client, SI2183_PROP_MCNS_SR, &symb);
 	if (ret) {
-		dev_err(&client->dev, "err set mcns symbol rate\n");
+		dprintk("err set mcns symbol rate");
 		return ret;
 	}
 
@@ -551,6 +554,8 @@ static int si2183_set_dvbs(struct dvb_frontend *fe)
 	u16 prop;
 	u32 pls_mode, pls_code;
 
+	dprintk("");
+
 	/*set SAT agc*/
 	memcpy(cmd.args, "\x8a\x1d\x12\x0\x0\x0", 6);
 	cmd.args[1]= dev->agc_mode|0x18;  
@@ -558,7 +563,7 @@ static int si2183_set_dvbs(struct dvb_frontend *fe)
  	cmd.rlen = 3;
  	ret = si2183_cmd_execute(client, &cmd);
  	if(ret){
- 		dev_err(&client->dev, "err set agc mode\n");
+		dprintk("err set agc mode");
  	}
 
 	/* set mode */
@@ -579,7 +584,7 @@ static int si2183_set_dvbs(struct dvb_frontend *fe)
 		prop |= 0x100;
 	ret = si2183_set_prop(client, SI2183_PROP_MODE, &prop);
 	if (ret) {
-		dev_err(&client->dev, "err set dvb-s/s2 mode\n");
+		dprintk("err set dvb-s/s2 mode");
 		return ret;
 	}
 
@@ -601,7 +606,7 @@ static int si2183_set_dvbs(struct dvb_frontend *fe)
 		cmd.rlen = 1;
 		ret = si2183_cmd_execute(client, &cmd);
 		if (ret)
-			dev_warn(&client->dev, "dvb-s2: err selecting stream_id\n");
+			dev_warn(&client->dev, "dvb-s2: err selecting stream_id");
 
 		/* pls selection */
 		pls_mode = c->stream_id == NO_STREAM_ID_FILTER ? 0 : (c->stream_id >> 26) & 3;
@@ -619,7 +624,7 @@ static int si2183_set_dvbs(struct dvb_frontend *fe)
 		cmd.rlen = 1;
 		ret = si2183_cmd_execute(client, &cmd);
 		if (ret)
-			dev_warn(&client->dev, "dvb-s2: err set pls\n");
+			dev_warn(&client->dev, "dvb-s2: err set pls");
 	}
 
 	return 0;
@@ -634,13 +639,15 @@ static int si2183_set_dvbt(struct dvb_frontend *fe)
 	int ret;
 	u16 prop;
 
+	dprintk("");
+
 	memcpy(cmd.args, "\x89\x41\x06\x12\x0\x0", 6);
 	cmd.args[1]= (dev->agc_mode &0x07)<<4 |0x1;  
  	cmd.wlen = 6;
  	cmd.rlen = 3;
  	ret = si2183_cmd_execute(client, &cmd);
  	if(ret){
- 		dev_err(&client->dev, "err set agc mode\n");
+		dprintk("err set agc mode");
  	}
 
 	if (c->bandwidth_hz == 0) {
@@ -673,7 +680,7 @@ static int si2183_set_dvbt(struct dvb_frontend *fe)
 	}
 	ret = si2183_set_prop(client, SI2183_PROP_MODE, &prop);
 	if (ret) {
-		dev_err(&client->dev, "err set dvb-t mode\n");
+		dprintk("err set dvb-t mode");
 		return ret;
 	}
 
@@ -681,7 +688,7 @@ static int si2183_set_dvbt(struct dvb_frontend *fe)
 	prop = c->hierarchy == HIERARCHY_1 ? 1 : 0;
 	ret = si2183_set_prop(client, SI2183_PROP_DVBT_HIER, &prop);
 	if (ret)
-		dev_warn(&client->dev, "dvb-t: err set hierarchy\n");
+		dev_warn(&client->dev, "dvb-t: err set hierarchy");
 
 	if (c->delivery_system == SYS_DVBT2) {
 		/* stream_id selection */
@@ -692,13 +699,13 @@ static int si2183_set_dvbt(struct dvb_frontend *fe)
 		cmd.rlen = 1;
 		ret = si2183_cmd_execute(client, &cmd);
 		if (ret)
-			dev_warn(&client->dev, "dvb-t2: err selecting stream_id\n");
+			dev_warn(&client->dev, "dvb-t2: err selecting stream_id");
 
 		/* dvb-t2 mode - any=0 / base=1 / lite=2 */
 		prop = 0;
 		ret = si2183_set_prop(client, SI2183_PROP_DVBT2_MODE, &prop);
 		if (ret)
-			dev_warn(&client->dev, "dvb-t2: err set mode\n");
+			dev_warn(&client->dev, "dvb-t2: err set mode");
 	}
 
 	return 0;
@@ -713,13 +720,15 @@ static int si2183_set_isdbt(struct dvb_frontend *fe)
 	int ret;
 	u16 prop;
 
+	dprintk("");
+
 	memcpy(cmd.args, "\x89\x41\x06\x12\x0\x0", 6);
 	cmd.args[1]= (dev->agc_mode &0x07)<<4 |0x1; 
  	cmd.wlen = 6;
  	cmd.rlen = 3;
  	ret = si2183_cmd_execute(client, &cmd);
  	if(ret){
- 		dev_err(&client->dev, "err set agc mode\n");
+		dprintk("err set agc mode");
  	}
 	if (c->bandwidth_hz == 0) {
 		return -EINVAL;
@@ -744,7 +753,7 @@ static int si2183_set_isdbt(struct dvb_frontend *fe)
 	prop |= 0x40;
 	ret = si2183_set_prop(client, SI2183_PROP_MODE, &prop);
 	if (ret) {
-		dev_err(&client->dev, "err set dvb-t mode\n");
+		dprintk("err set dvb-t mode");
 		return ret;
 	}
 	return 0;
@@ -758,8 +767,7 @@ static int si2183_set_frontend(struct dvb_frontend *fe)
 	int ret;
 	struct si2183_cmd cmd;
 
-	dev_dbg(&client->dev,
-			"delivery_system=%u modulation=%u frequency=%u bandwidth_hz=%u symbol_rate=%u inversion=%u stream_id=%d\n",
+	dprintk("delivery_system=%u modulation=%u frequency=%u bandwidth_hz=%u symbol_rate=%u inversion=%u stream_id=%d",
 			c->delivery_system, c->modulation, c->frequency,
 			c->bandwidth_hz, c->symbol_rate, c->inversion,
 			c->stream_id);
@@ -801,7 +809,7 @@ static int si2183_set_frontend(struct dvb_frontend *fe)
 			fe->ops.i2c_gate_ctrl(fe, 0);
 #endif
 		if (ret) {
-			dev_err(&client->dev, "err setting tuner params\n");
+			dprintk("err setting tuner params");
 			goto err;
 		}
 	}
@@ -836,14 +844,14 @@ static int si2183_set_frontend(struct dvb_frontend *fe)
 	cmd.rlen = 1;
 	ret = si2183_cmd_execute(client, &cmd);
 	if (ret) {
-		dev_err(&client->dev, "err restarting dsp\n");
+		dprintk("err restarting dsp");
 		return ret;
 	}
 
 	dev->delivery_system = c->delivery_system;
 	return 0;
 err:
-	dev_err(&client->dev, "set_params failed=%d\n", ret);
+	dprintk("set_params failed=%d", ret);
 	return ret;
 }
 
@@ -851,6 +859,7 @@ static int si2183_init(struct dvb_frontend *fe)
 {
 	struct i2c_client *client = fe->demodulator_priv;
 	struct si2183_dev *dev = i2c_get_clientdata(client);
+	struct si2183_config *config = client->dev.platform_data;
 	struct dtv_frontend_properties *c = &fe->dtv_property_cache;
 	int ret = 0, len, remaining;
 	const struct firmware *fw;
@@ -859,7 +868,9 @@ static int si2183_init(struct dvb_frontend *fe)
 	unsigned int chip_id;
 	u16 prop;
 
-	dev_dbg(&client->dev, "\n");
+	dprintk("");
+
+	config->algo = SI2183_NOTUNE;
 
 	if (dev->active_fe) {
 		dev->active_fe |= (1 << fe->id);
@@ -885,6 +896,8 @@ static int si2183_init(struct dvb_frontend *fe)
 		ret = si2183_cmd_execute(client, &cmd);
 		if (ret)
 			goto err;
+
+		udelay(100);
 
 		memcpy(cmd.args, "\x85", 1);
 		cmd.wlen = 1;
@@ -922,25 +935,23 @@ static int si2183_init(struct dvb_frontend *fe)
 		fw_name = SI2183_B60_FIRMWARE;
 		break;
 	default:
-		dev_err(&client->dev, "unknown chip version Si21%d-%c%c%c\n",
+		dprintk("unknown chip version Si21%d-%c%c%c",
 				cmd.args[2], cmd.args[1],
 				cmd.args[3], cmd.args[4]);
 		ret = -EINVAL;
 		goto err;
 	}
 
-	dev_info(&client->dev, "found a 'Silicon Labs Si21%d-%c%c%c'\n",
+	dprintk("found a 'Silicon Labs Si21%d-%c%c%c'",
 			cmd.args[2], cmd.args[1], cmd.args[3], cmd.args[4]);
 
 	ret = request_firmware(&fw, fw_name, &client->dev);
 	if (ret) {
-		dev_err(&client->dev,
-				"firmware file '%s' not found\n",
-				fw_name);
+		dprintk("firmware file '%s' not found", fw_name);
 		goto err;
 	}
 
-	dev_info(&client->dev, "downloading firmware from file '%s'\n",
+	dprintk("downloading firmware from file '%s'",
 			fw_name);
 
 	for (remaining = fw->size; remaining > 0; remaining -= 17) {
@@ -959,7 +970,7 @@ static int si2183_init(struct dvb_frontend *fe)
 	release_firmware(fw);
 
 	if (ret) {
-		dev_err(&client->dev, "firmware download failed %d\n", ret);
+		dprintk("firmware download failed %d", ret);
 		goto err;
 	}
 
@@ -978,21 +989,21 @@ static int si2183_init(struct dvb_frontend *fe)
 	if (ret)
 		goto err;
 
-	dev_info(&client->dev, "firmware version: %c.%c.%d\n",
+	dprintk("firmware version: %c.%c.%d",
 			cmd.args[6], cmd.args[7], cmd.args[8]);
 
 	/* set ts mode */
 	prop = 0x10 | dev->ts_mode | (dev->ts_clock_gapped ? 0x40 : 0);
 	ret = si2183_set_prop(client, 0x1001, &prop);
 	if (ret) {
-		dev_err(&client->dev, "err set ts mode\n");
+		dprintk("err set ts mode");
 	}
 
 	/* FER resol */
 	prop = 0x12;
 	ret = si2183_set_prop(client, 0x100c, &prop);
 	if (ret) {
-		dev_err(&client->dev, "err set FER resol\n");
+		dprintk("err set FER resol");
 		return ret;
 	}
 
@@ -1000,7 +1011,7 @@ static int si2183_init(struct dvb_frontend *fe)
 	prop = 0x00;
 	ret = si2183_set_prop(client, 0x1006, &prop);
 	if (ret) {
-		dev_err(&client->dev, "err set dd ien\n");
+		dprintk("err set dd ien");
 		return ret;
 	}
 
@@ -1008,7 +1019,7 @@ static int si2183_init(struct dvb_frontend *fe)
 	prop = 0x2000;
 	ret = si2183_set_prop(client, 0x1007, &prop);
 	if (ret) {
-		dev_err(&client->dev, "err set int sense\n");
+		dprintk("err set int sense");
 		return ret;
 	}
 
@@ -1016,7 +1027,7 @@ static int si2183_init(struct dvb_frontend *fe)
 	prop = 0x1e;
 	ret = si2183_set_prop(client, 0x100f, &prop);
 	if (ret) {
-		dev_err(&client->dev, "err set sqi comp\n");
+		dprintk("err set sqi comp");
 		return ret;
 	}
 
@@ -1024,7 +1035,7 @@ static int si2183_init(struct dvb_frontend *fe)
 	prop = 0x0104 | (dev->ts_clock_inv ? 0x0000 : 0x1000);
 	ret = si2183_set_prop(client, 0x1009, &prop);
 	if (ret) {
-		dev_err(&client->dev, "err set par_ts\n");
+		dprintk("err set par_ts");
 		return ret;
 	}
 
@@ -1032,7 +1043,7 @@ static int si2183_init(struct dvb_frontend *fe)
 	prop = 0x230C | (dev->ts_clock_inv ? 0x0000 : 0x1000);
 	ret = si2183_set_prop(client, 0x1008, &prop);
 	if (ret) {
-		dev_err(&client->dev, "err set ser_ts\n");
+		dprintk("err set ser_ts");
 		return ret;
 	}
 
@@ -1040,7 +1051,7 @@ static int si2183_init(struct dvb_frontend *fe)
 	prop = 0x08e3;
 	ret = si2183_set_prop(client, 0x1015, &prop);
 	if (ret) {
-		dev_err(&client->dev, "err set int par_ts_sec\n");
+		dprintk("err set int par_ts_sec");
 		return ret;
 	}
 
@@ -1048,7 +1059,7 @@ static int si2183_init(struct dvb_frontend *fe)
 	prop = 0x01c7;
 	ret = si2183_set_prop(client, 0x1016, &prop);
 	if (ret) {
-		dev_err(&client->dev, "err set int ser_ts_sec\n");
+		dprintk("err set int ser_ts_sec");
 		return ret;
 	}
 
@@ -1059,7 +1070,7 @@ warm:
 	return 0;
 
 err:
-	dev_dbg(&client->dev, "init failed=%d\n", ret);
+	dprintk("init failed=%d", ret);
 	return ret;
 }
 
@@ -1067,10 +1078,13 @@ static int si2183_sleep(struct dvb_frontend *fe)
 {
 	struct i2c_client *client = fe->demodulator_priv;
 	struct si2183_dev *dev = i2c_get_clientdata(client);
+	struct si2183_config *config = client->dev.platform_data;
 	int ret;
 	struct si2183_cmd cmd;
 
-	dev_dbg(&client->dev, "\n");
+	dprintk("");
+
+	config->algo = SI2183_NOTUNE;
 
 	dev->active_fe &= ~(1 << fe->id);
 	if (dev->active_fe)
@@ -1087,7 +1101,7 @@ static int si2183_sleep(struct dvb_frontend *fe)
 
 	return 0;
 err:
-	dev_dbg(&client->dev, "failed=%d\n", ret);
+	dprintk("failed=%d", ret);
 	return ret;
 }
 
@@ -1122,7 +1136,7 @@ static int si2183_select(struct i2c_adapter *adap, void *mux_priv, u32 chan)
 
 	return 0;
 err:
-	dev_dbg(&client->dev, "failed=%d\n", ret);
+	dprintk("failed=%d", ret);
 	return ret;
 }
 
@@ -1148,7 +1162,7 @@ static int si2183_deselect(struct i2c_adapter *adap, void *mux_priv, u32 chan)
 
 	return 0;
 err:
-	dev_dbg(&client->dev, "failed=%d\n", ret);
+	dprintk("failed=%d", ret);
 	return ret;
 }
 #else
@@ -1170,6 +1184,8 @@ static int i2c_gate_ctrl(struct dvb_frontend* fe, int enable)
 static int si2183_tune(struct dvb_frontend *fe, bool re_tune,
 	unsigned int mode_flags, unsigned int *delay, enum fe_status *status)
 {
+	dprintk("");
+
 	*delay = HZ / 5;
 	if (re_tune) {
 		int ret = si2183_set_frontend(fe);
@@ -1196,7 +1212,7 @@ static int si2183_dtv_tune(struct dvb_frontend *fe)
 	struct i2c_client *client = fe->demodulator_priv;
 	struct si2183_config *config = client->dev.platform_data;
 
-	dprintk("%s: ", __func__);
+	dprintk("");
 
 	config->algo = SI2183_TUNE;
 
@@ -1210,7 +1226,7 @@ static int si2183_search(struct dvb_frontend *fe)
 	enum fe_status status = 0;
 	int ret, i;
 
-	dprintk("%s: ", __func__);
+	dprintk("");
 
 	config->algo = SI2183_TUNE;
 
@@ -1257,6 +1273,8 @@ static int si2183_get_spectrum_scan(struct dvb_frontend *fe, struct dvb_fe_spect
 	struct si2183_config *config = client->dev.platform_data;
 	struct dtv_frontend_properties *p = &fe->dtv_property_cache;
 	int x, ret;
+
+	dprintk("");
 
 	p->frequency		= 0;
 	p->bandwidth_hz		= 0;
@@ -1306,7 +1324,6 @@ static int send_diseqc_cmd(struct dvb_frontend *fe,
 
 static int si2183_set_tone(struct dvb_frontend *fe, enum fe_sec_tone_mode tone)
 {
-	struct i2c_client *client = fe->demodulator_priv;
 	int ret;
 	u8 cont_tone;
 
@@ -1327,14 +1344,13 @@ static int si2183_set_tone(struct dvb_frontend *fe, enum fe_sec_tone_mode tone)
 
 	return 0;
 err:
-	dev_err(&client->dev, "set_tone failed=%d\n", ret);
+	dprintk("set_tone failed=%d", ret);
 	return ret;
 }
 
 static int si2183_diseqc_send_burst(struct dvb_frontend *fe,
 	enum fe_sec_mini_cmd burst)
 {
-	struct i2c_client *client = fe->demodulator_priv;
 	int ret;
 	u8 burst_sel;
 
@@ -1355,14 +1371,13 @@ static int si2183_diseqc_send_burst(struct dvb_frontend *fe,
 
 	return 0;
 err:
-	dev_err(&client->dev, "set_tone failed=%d\n", ret);
+	dprintk("set_tone failed=%d", ret);
 	return ret;
 }
 
 static int si2183_diseqc_send_msg(struct dvb_frontend *fe,
 	struct dvb_diseqc_master_cmd *d)
 {
-	struct i2c_client *client = fe->demodulator_priv;
 	int ret;
 	u8 remaining = d->msg_len;
 	u8 *p = d->msg;
@@ -1381,7 +1396,7 @@ static int si2183_diseqc_send_msg(struct dvb_frontend *fe,
 
 	return 0;
 err:
-	dev_err(&client->dev, "set_tone failed=%d\n", ret);
+	dprintk("set_tone failed=%d", ret);
 	return ret;
 }
 
@@ -1466,12 +1481,12 @@ static int si2183_probe(struct i2c_client *client,
 	struct si_base *base;
 	int ret = 0;
 
-	dev_dbg(&client->dev, "\n");
+	dprintk("");
 	
 	dev = kzalloc(sizeof(*dev), GFP_KERNEL);
 	if (!dev) {
 		ret = -ENOMEM;
-		dev_err(&client->dev, "kzalloc() failed\n");
+		dprintk("kzalloc() failed");
 		goto err;
 	}
 
@@ -1542,14 +1557,14 @@ static int si2183_probe(struct i2c_client *client,
 	/* leave gate open for tuner to init */
 	i2c_gate_ctrl(&dev->fe, 1);
 #endif
-	dev_info(&client->dev, "Silicon Labs Si2183 successfully attached\n");
+	dprintk("Silicon Labs Si2183 successfully attached");
 	return 0;
 err_base_kfree:
 	kfree(base);
 err_kfree:
 	kfree(dev);
 err:
-	dev_dbg(&client->dev, "probe failed=%d\n", ret);
+	dprintk("probe failed=%d", ret);
 	return ret;
 }
 
@@ -1557,7 +1572,7 @@ static int si2183_remove(struct i2c_client *client)
 {
 	struct si2183_dev *dev = i2c_get_clientdata(client);
 
-	dev_dbg(&client->dev, "\n");
+	dprintk("");
 
 	dev->base->count--;
 	if (dev->base->count == 0) {

@@ -37,6 +37,7 @@
 #include "tbsecp3-regs.h"
 #include "dvb_ca_en50221.h"
 
+#define dprintk(fmt, arg...)	printk(KERN_INFO pr_fmt("%s: " fmt "\n"),  __func__, ##arg)
 
 #define TBSECP3_VID		0x544d
 #define TBSECP3_PID		0x6178

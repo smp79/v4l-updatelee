@@ -15,6 +15,7 @@
  */
 
 #include "si2168_priv.h"
+#include <linux/delay.h>
 
 static const struct dvb_frontend_ops si2168_ops;
 
@@ -645,6 +646,8 @@ static int si2168_init(struct dvb_frontend *fe)
 		ret = si2168_cmd_execute(client, &cmd);
 		if (ret)
 			goto err;
+
+		udelay(100);
 
 		memcpy(cmd.args, "\x85", 1);
 		cmd.wlen = 1;

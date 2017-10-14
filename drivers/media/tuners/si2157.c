@@ -438,8 +438,15 @@ static int si2157_probe(struct i2c_client *client,
 	mutex_init(&dev->i2c_mutex);
 
 	/* check if the tuner is there */
-	cmd.wlen = 0;
-	cmd.rlen = 1;
+        /* wake tuner */
+	if (dev->chiptype == SI2157_CHIPTYPE_SI2146) {
+		memcpy(cmd.args, "\xc0\x05\x01\x00\x00\x0b\x00\x00\x01", 9);
+		cmd.wlen = 9;
+	} else {
+		memcpy(cmd.args, "\xc0\x00\x0c\x00\x00\x01\x01\x01\x01\x01\x01\x02\x00\x00\x01", 15);
+		cmd.wlen = 15;
+	}
+        cmd.rlen = 1;
 	ret = si2157_cmd_execute(client, &cmd);
 	if (ret)
 		goto err_kfree;
