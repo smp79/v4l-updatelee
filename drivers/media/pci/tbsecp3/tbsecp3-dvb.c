@@ -863,11 +863,11 @@ static int tbsecp3_frontend_attach(struct tbsecp3_adapter *adapter)
 
 		/* terrestrial tuner */
 		memset(adapter->fe->ops.delsys, 0, MAX_DELSYS);
-		adapter->fe->ops.delsys[0] = SYS_DVBT;
-		adapter->fe->ops.delsys[1] = SYS_DVBT2;
-		adapter->fe->ops.delsys[2] = SYS_DVBC_ANNEX_A;
-		adapter->fe->ops.delsys[3] = SYS_ISDBT;
-		adapter->fe->ops.delsys[4] = SYS_DVBC_ANNEX_B;
+		adapter->fe->ops.delsys[0] = SYS_ISDBT;
+		adapter->fe->ops.delsys[1] = SYS_DVBC_ANNEX_A;
+		adapter->fe->ops.delsys[2] = SYS_DVBC_ANNEX_B;
+		adapter->fe->ops.delsys[3] = SYS_DVBT;
+		adapter->fe->ops.delsys[4] = SYS_DVBT2;
 
 		/* attach tuner */
 		memset(&si2157_config, 0, sizeof(si2157_config));
@@ -893,9 +893,9 @@ static int tbsecp3_frontend_attach(struct tbsecp3_adapter *adapter)
 
 		/* sattelite tuner */
 		memset(adapter->fe2->ops.delsys, 0, MAX_DELSYS);
-		adapter->fe2->ops.delsys[0] = SYS_DVBS;
-		adapter->fe2->ops.delsys[1] = SYS_DVBS2;
-		adapter->fe2->ops.delsys[2] = SYS_DSS;
+		adapter->fe2->ops.delsys[0] = SYS_DSS;
+		adapter->fe2->ops.delsys[1] = SYS_DVBS;
+		adapter->fe2->ops.delsys[2] = SYS_DVBS2;
 		adapter->fe2->id = 1;
 		if (dvb_attach(av201x_attach, adapter->fe2, &tbs6522_av201x_cfg[adapter->nr],
 				i2c) == NULL) {
@@ -955,11 +955,11 @@ static int tbsecp3_frontend_attach(struct tbsecp3_adapter *adapter)
 
 		/* terrestrial tuner */
 		memset(adapter->fe->ops.delsys, 0, MAX_DELSYS);
-		adapter->fe->ops.delsys[0] = SYS_DVBT;
-		adapter->fe->ops.delsys[1] = SYS_DVBT2;
-		adapter->fe->ops.delsys[2] = SYS_DVBC_ANNEX_A;
-		adapter->fe->ops.delsys[3] = SYS_ISDBT;
-		adapter->fe->ops.delsys[4] = SYS_DVBC_ANNEX_B;
+		adapter->fe->ops.delsys[0] = SYS_ISDBT;
+		adapter->fe->ops.delsys[1] = SYS_DVBC_ANNEX_A;
+		adapter->fe->ops.delsys[2] = SYS_DVBC_ANNEX_B;
+		adapter->fe->ops.delsys[3] = SYS_DVBT;
+		adapter->fe->ops.delsys[4] = SYS_DVBT2;
 
 		/* attach tuner */
 		memset(&si2157_config, 0, sizeof(si2157_config));
@@ -988,9 +988,9 @@ static int tbsecp3_frontend_attach(struct tbsecp3_adapter *adapter)
 
 		/* sattelite tuner */
 		memset(adapter->fe2->ops.delsys, 0, MAX_DELSYS);
-		adapter->fe2->ops.delsys[0] = SYS_DVBS;
-		adapter->fe2->ops.delsys[1] = SYS_DVBS2;
-		adapter->fe2->ops.delsys[2] = SYS_DSS;
+		adapter->fe2->ops.delsys[0] = SYS_DSS;
+		adapter->fe2->ops.delsys[1] = SYS_DVBS;
+		adapter->fe2->ops.delsys[2] = SYS_DVBS2;
 		adapter->fe2->id = 1;
 		if(pci->subsystem_vendor==0x6528)
 		{
@@ -1329,42 +1329,25 @@ void tbsecp3_dvb_exit(struct tbsecp3_adapter *adapter)
 {
 	struct dvb_demux *dvbdemux = &adapter->demux;
 
-	dprintk("1");
 	if (adapter->fe) {
-		dprintk("2");
 		tbsecp3_ca_release(adapter);
-		dprintk("3");
 		dvb_unregister_frontend(adapter->fe);
-		dprintk("4");
 		tbsecp3_release_sec(adapter->fe);
-		dprintk("5");
 		dvb_frontend_detach(adapter->fe);
-		dprintk("6");
 		adapter->fe = NULL;
 
 		if (adapter->fe2 != NULL) {
-			dprintk("7");
 			dvb_unregister_frontend(adapter->fe2);
-			dprintk("8");
 			tbsecp3_release_sec(adapter->fe2);
-			dprintk("9");
 			dvb_frontend_detach(adapter->fe2);
-			dprintk("10");
 			adapter->fe2 = NULL;
 		}
 	}
-	dprintk("11");
 	dvb_net_release(&adapter->dvbnet);
-	dprintk("12");
 	dvbdemux->dmx.close(&dvbdemux->dmx);
-	dprintk("13");
 	dvbdemux->dmx.remove_frontend(&dvbdemux->dmx, &adapter->fe_mem);
-	dprintk("14");
 	dvbdemux->dmx.remove_frontend(&dvbdemux->dmx, &adapter->fe_hw);
-	dprintk("15");
 	dvb_dmxdev_release(&adapter->dmxdev);
-	dprintk("16");
 	dvb_dmx_release(&adapter->demux);
-	dprintk("17");
 	dvb_unregister_adapter(&adapter->dvb_adapter);
 }

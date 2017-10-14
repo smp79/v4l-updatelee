@@ -25,30 +25,32 @@ static int si2157_cmd_execute(struct i2c_client *client, struct si2157_cmd *cmd)
 	int ret;
 	unsigned long timeout;
 
+//	dprintk("W: %*ph", cmd->wlen, cmd->args);
+
 	mutex_lock(&dev->i2c_mutex);
 
 	if (cmd->wlen) {
 		/* write cmd and args for firmware */
 		ret = i2c_master_send(client, cmd->args, cmd->wlen);
 		if (ret < 0) {
-			goto err_mutex_unlock;
+			goto w_err_mutex_unlock;
 		} else if (ret != cmd->wlen) {
 			ret = -EREMOTEIO;
-			goto err_mutex_unlock;
+			goto w_err_mutex_unlock;
 		}
 	}
 
 	if (cmd->rlen) {
 		/* wait cmd execution terminate */
-		#define TIMEOUT 80
+		#define TIMEOUT 500
 		timeout = jiffies + msecs_to_jiffies(TIMEOUT);
 		while (!time_after(jiffies, timeout)) {
 			ret = i2c_master_recv(client, cmd->args, cmd->rlen);
 			if (ret < 0) {
-				goto err_mutex_unlock;
+				goto r_err_mutex_unlock;
 			} else if (ret != cmd->rlen) {
 				ret = -EREMOTEIO;
-				goto err_mutex_unlock;
+				goto r_err_mutex_unlock;
 			}
 
 			/* firmware ready? */
@@ -58,17 +60,23 @@ static int si2157_cmd_execute(struct i2c_client *client, struct si2157_cmd *cmd)
 
 		if (!((cmd->args[0] >> 7) & 0x01)) {
 			ret = -ETIMEDOUT;
-			goto err_mutex_unlock;
+			goto r_err_mutex_unlock;
 		}
 	}
 
 	mutex_unlock(&dev->i2c_mutex);
+
+//	dprintk("R: %*ph", cmd->rlen, cmd->args);
+
 	return 0;
 
-err_mutex_unlock:
+w_err_mutex_unlock:
 	mutex_unlock(&dev->i2c_mutex);
-	dprintk("failed=%d", ret);
-	dprintk("args=%*ph", cmd->wlen, cmd->args);
+	dprintk("W: failed=%d", ret);
+	return ret;
+r_err_mutex_unlock:
+	mutex_unlock(&dev->i2c_mutex);
+	dprintk("R: failed=%d", ret);
 	return ret;
 }
 
@@ -272,8 +280,6 @@ static int si2157_set_params(struct dvb_frontend *fe)
 	struct si2157_cmd cmd;
 	u8 bandwidth, delivery_system;
 	u32 if_frequency = 5000000;
-
-//	dprintk("delivery_system=%d frequency=%u bandwidth_hz=%u", c->delivery_system, c->frequency, c->bandwidth_hz);
 
 	if (!dev->active) {
 		ret = -EAGAIN;
