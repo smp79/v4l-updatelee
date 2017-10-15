@@ -41,24 +41,25 @@ DVB_DEFINE_MOD_OPT_ADAPTER_NR(adapter_nr);
 
 struct sec_priv {
 	struct tbsecp3_adapter *adap;
-	int (*set_voltage)(struct dvb_frontend *fe,
-			   enum fe_sec_voltage voltage);
+	int (*set_voltage)(struct dvb_frontend *fe, enum fe_sec_voltage voltage);
 };
+
 static void ecp3_spi_read(struct i2c_adapter *i2c,u8 reg, u32 *buf)
 {	
 	struct tbsecp3_i2c *i2c_adap = i2c_get_adapdata(i2c);
 	struct tbsecp3_dev *dev = i2c_adap->dev;
-	*buf = tbs_read(TBSECP3_GPIO_BASE,reg );
 
-	//printk(" tbsecp3-dvb : ecp3_spi_read **********%x = %x*******\n",reg,*buf);
+	*buf = tbs_read(TBSECP3_GPIO_BASE,reg);
 
+//	dprintk("**********%x = %x*******", reg, *buf);
 	return ;
 }
 static void ecp3_spi_write(struct i2c_adapter *i2c,u8 reg, u32 buf)
 {
 	struct tbsecp3_i2c *i2c_adap = i2c_get_adapdata(i2c);
 	struct tbsecp3_dev *dev = i2c_adap->dev;
-	//printk(" tbsecp3-dvb : ecp3_spi_write **********%x = %x*******\n",reg,buf);
+//	dprintk("**********%x = %x*******", reg, *buf);
+
 	tbs_write(TBSECP3_GPIO_BASE, reg, buf);
 
 	return ;
@@ -68,17 +69,18 @@ static void mcu_24cxx_read(struct i2c_adapter *i2c,u32 bassaddr, u8 reg, u32 *bu
 {	
 	struct tbsecp3_i2c *i2c_adap = i2c_get_adapdata(i2c);
 	struct tbsecp3_dev *dev = i2c_adap->dev;
-	*buf = tbs_read(bassaddr,reg );
 
-	//printk(" tbsecp3-dvb : mcu_24cxx_read *****bassaddr: %x,  %x = %x*******\n",bassaddr,reg,*buf);
+	*buf = tbs_read(bassaddr,reg);
 
+//	dprintk("**********%x = %x*******", reg, *buf);
 	return ;
 }
 static void mcu_24cxx_write(struct i2c_adapter *i2c,u32 bassaddr,u8 reg, u32 buf)
 {
 	struct tbsecp3_i2c *i2c_adap = i2c_get_adapdata(i2c);
 	struct tbsecp3_dev *dev = i2c_adap->dev;
-	//printk(" tbsecp3-dvb : mcu_24cxx_write ****bassaddr: %x,***%x = %x*******\n",bassaddr,reg,buf);
+//	dprintk("**********%x = %x*******", reg, *buf);
+
 	tbs_write(bassaddr, reg, buf);
 
 	return ;
@@ -87,74 +89,64 @@ static void mcu_24cxx_write(struct i2c_adapter *i2c,u32 bassaddr,u8 reg, u32 buf
 static void tbs6301_read_mac(struct tbsecp3_adapter *adap)
 {
 	struct tbsecp3_dev *dev = adap->dev;
-
-	int i =0;
-	unsigned char tmpbuf[4]={0};
-	unsigned char rdbuffer[8]={0};
+	int i = 0;
+	unsigned char tmpbuf[4] = {0};
+	unsigned char rdbuffer[8] = {0};
 
 	tmpbuf[0] = 0x31; //24cxx read;
-	tmpbuf[1] = 6;  //how many byte;
+	tmpbuf[1] = 6;    //how many byte;
 	tmpbuf[2] = 0;
 	tmpbuf[3] = 0x08; //24cxx sub_address,0x08 for mac
 
-	tbs_write( BASE_ADDRESS_24CXX, CMD_24CXX, *(u32 *)&tmpbuf[0] );
+	tbs_write(BASE_ADDRESS_24CXX, CMD_24CXX, *(u32 *)&tmpbuf[0]);
 	//wait... until the data are received correctly;
-	for(i=0;i<100;i++)
-	{
+	for (i = 0; i < 100; i++) {
 		msleep(1);
-		*(u32 *)tmpbuf = tbs_read( BASE_ADDRESS_24CXX, STATUS_MAC16_24CXX );
-		if((tmpbuf[0]&1) == 0)
+		*(u32 *)tmpbuf = tbs_read(BASE_ADDRESS_24CXX, STATUS_MAC16_24CXX);
+		if ((tmpbuf[0]&1) == 0)
 			break;
 	}
-	if(i==100)
-	{
-		printk(" the receiver always busy !\n");
+	if (i == 100) {
+		dprintk("the receiver was always busy !");
 		//check mcu status
-		*(u32 *)tmpbuf = tbs_read( BASE_ADDRESS_24CXX,  STATUS_MAC16_24CXX );
-		if((tmpbuf[0]&0x4) == 1) // bit2==1 mcu busy
-		{
-			printk("MCU status is busy!!!\n" );
+		*(u32 *)tmpbuf = tbs_read(BASE_ADDRESS_24CXX,  STATUS_MAC16_24CXX);
+		if ((tmpbuf[0]&0x4) == 1) { // bit2==1 mcu busy
+			dprintk("MCU status is busy!!!");
 			// release cs;
-			tbs_write( BASE_ADDRESS_24CXX,  CS_RELEASE, *(u32 *)&tmpbuf[0] );
+			tbs_write(BASE_ADDRESS_24CXX,  CS_RELEASE, *(u32 *)&tmpbuf[0]);
 			return;
 		}
 		
 	}
 	// release cs;
-	tbs_write(  BASE_ADDRESS_24CXX, CS_RELEASE, *(u32 *)&tmpbuf[0] );
+	tbs_write(BASE_ADDRESS_24CXX, CS_RELEASE, *(u32 *)&tmpbuf[0]);
 	//check the write finished;
-	for(i=0;i<100;i++)
-	{
+	for (i = 0;i < 100; i++) {
 		msleep(1);
-		*(u32 *)tmpbuf = tbs_read(  BASE_ADDRESS_24CXX, STATUS_MAC16_24CXX );
-		if((tmpbuf[0]&1) == 1)
+		*(u32 *)tmpbuf = tbs_read(BASE_ADDRESS_24CXX, STATUS_MAC16_24CXX);
+		if ((tmpbuf[0]&1) == 1)
 			break;
 	}
-	if(i==100)
-	{
-		printk(" wait wt_24cxx_done timeout! \n");
+	if (i == 100) {
+		dprintk("wait wt_24cxx_done timeout!");
 	}
 	//read back to host;
-	*(u32 *)rdbuffer = tbs_read(  BASE_ADDRESS_24CXX, DATA0_24CXX );
-	*(u32 *)&rdbuffer[4] = tbs_read(  BASE_ADDRESS_24CXX, DATA1_24CXX );
+	*(u32 *)rdbuffer = tbs_read(BASE_ADDRESS_24CXX, DATA0_24CXX);
+	*(u32 *)&rdbuffer[4] = tbs_read(BASE_ADDRESS_24CXX, DATA1_24CXX);
 
-	printk(" tbs6301 mac address: %x,%x,%x,%x,%x,%x \n",rdbuffer[0],rdbuffer[1],rdbuffer[2],rdbuffer[3],rdbuffer[4],rdbuffer[5]);
+	dprintk("tbs6301 mac address: %*phC", 6, rdbuffer);
 
 	return ;
 };
 
 
-static int tbsecp3_set_voltage(struct dvb_frontend* fe,
-		enum fe_sec_voltage voltage)
+static int tbsecp3_set_voltage(struct dvb_frontend* fe, enum fe_sec_voltage voltage)
 {
 	struct sec_priv *priv = fe->sec_priv;
 	struct tbsecp3_gpio_config *cfg = &priv->adap->cfg->gpio;
 	struct tbsecp3_dev *dev = priv->adap->dev;
 
-	dev_dbg(&dev->pci_dev->dev, "%s() %s\n", __func__,
-		voltage == SEC_VOLTAGE_13 ? "SEC_VOLTAGE_13" :
-		voltage == SEC_VOLTAGE_18 ? "SEC_VOLTAGE_18" :
-		"SEC_VOLTAGE_OFF");
+	dprintk("%s", voltage == SEC_VOLTAGE_13 ? "SEC_VOLTAGE_13" : voltage == SEC_VOLTAGE_18 ? "SEC_VOLTAGE_18" : "SEC_VOLTAGE_OFF");
 
 	switch (voltage) {
 		case SEC_VOLTAGE_13:
@@ -232,12 +224,9 @@ static int set_mac_address(struct tbsecp3_adapter *adap)
 	eep_addr += 0x10 * adap->nr;
 	ret = i2c_transfer(i2c, msg, 2);
 	if (ret != 2) {
-		dev_warn(&dev->pci_dev->dev,
-			"error reading MAC address for adapter %d\n",
-			adap->nr);
+		dprintk("error reading MAC address for adapter %d", adap->nr);
 	} else {
-		dev_info(&dev->pci_dev->dev,
-			"MAC address %pM\n", adap->dvb_adapter.proposed_mac);
+		dprintk("MAC address %pM", adap->dvb_adapter.proposed_mac);
 	}
 	return 0;
 };
@@ -383,15 +372,14 @@ static struct av201x_config tbs6910_av201x_cfg = {
 	.xtal_freq   = 27000,		/* kHz */
 };
 
-static int max_set_voltage(struct i2c_adapter *i2c,
-		enum fe_sec_voltage voltage, u8 rf_in)
+static int max_set_voltage(struct i2c_adapter *i2c, enum fe_sec_voltage voltage, u8 rf_in)
 {
 	struct tbsecp3_i2c *i2c_adap = i2c_get_adapdata(i2c);
 	struct tbsecp3_dev *dev = i2c_adap->dev;
 
 	u32 val, reg;
 
-	//printk("set voltage on %u = %d\n", rf_in, voltage);
+	//printk("set voltage on %u = %d", rf_in, voltage);
 	
 	if (rf_in > 3)
 		return -EINVAL;
@@ -416,26 +404,18 @@ static int max_set_voltage(struct i2c_adapter *i2c,
 	return 0;
 }
 
-//static int max_send_master_cmd(struct dvb_frontend *fe, struct dvb_diseqc_master_cmd *cmd)
-//{
-//	//printk("send master cmd\n");
-//	return 0;
-//}
-//static int max_send_burst(struct dvb_frontend *fe, enum fe_sec_mini_cmd burst)
-//{
-//	//printk("send burst: %d\n", burst);
-//	return 0;
-//}
-static void RF_switch(struct i2c_adapter *i2c,u8 rf_in,u8 flag)//flag : 0: dvbs/s2 signal 1:Terrestrial and cable signal
+static void RF_switch(struct i2c_adapter *i2c,u8 rf_in,u8 flag) //flag : 0: dvbs/s2 signal 1:Terrestrial and cable signal
 {
 	struct tbsecp3_i2c *i2c_adap = i2c_get_adapdata(i2c);
 	struct tbsecp3_dev *dev = i2c_adap->dev;
 	u32 val ,reg;
 	
-	reg = 0x8+rf_in*4;
+	dprintk("%s", flag ? "Terrestrial" : "Satellite");
+
+	reg = 0x8 + rf_in * 4;
 	
 	val = tbs_read(TBSECP3_GPIO_BASE, reg);
-	if(flag)
+	if (flag)
 		val |= 2;
 	else
 		val &= ~2;
@@ -495,8 +475,6 @@ static struct av201x_config tbs6522_av201x_cfg[] = {
 	},
 };
 
-
-
 static int tbsecp3_frontend_attach(struct tbsecp3_adapter *adapter)
 {
 	struct tbsecp3_dev *dev = adapter->dev;
@@ -545,44 +523,43 @@ static int tbsecp3_frontend_attach(struct tbsecp3_adapter *adapter)
 		
 		// init asi
 		mpbuf[0] = adapter->nr; //0--3 select value
-		tbs_write( TBSECP3_GPIO_BASE, 0x34 , *(u32 *)&mpbuf[0]); // select chip : 13*8 =104=0x68 select address
+		tbs_write(TBSECP3_GPIO_BASE, 0x34 , *(u32 *)&mpbuf[0]); // select chip : 13*8 =104=0x68 select address
 		//u32 mpbuf = adapter->nr;
-		//tbs_write( TBSECP3_GPIO_BASE, 0x34 , mpbuf); // select chip : 13*8 =104=0x68 select address
+		//tbs_write(TBSECP3_GPIO_BASE, 0x34 , mpbuf); // select chip : 13*8 =104=0x68 select address
 		// ==***********************************************************************
 
-		asi_chip_reset(dev,ASI0_BASEADDRESS);  //asi chip reset;
+		asi_chip_reset(dev, ASI0_BASEADDRESS);  //asi chip reset;
 
 		mpbuf[0] = 1; //active spi bus from "z"
-		tbs_write( ASI0_BASEADDRESS, ASI_SPI_ENABLE, *(u32 *)&mpbuf[0]);
+		tbs_write(ASI0_BASEADDRESS, ASI_SPI_ENABLE, *(u32 *)&mpbuf[0]);
 
-		regdata = asi_read16bit(dev,ASI0_BASEADDRESS,0x24);
-		asi_write16bit(dev,ASI0_BASEADDRESS,0x24,3);	 
-		regdata = asi_read16bit(dev,ASI0_BASEADDRESS, 0x24);
+		regdata = asi_read16bit(dev, ASI0_BASEADDRESS, 0x24);
+		asi_write16bit(dev, ASI0_BASEADDRESS, 0x24, 3);
+		regdata = asi_read16bit(dev, ASI0_BASEADDRESS, 0x24);
 
 		mpbuf[0] = 0; //spi disable, enter "z" state;
-		tbs_write( ASI0_BASEADDRESS, ASI_SPI_ENABLE, *(u32 *)&mpbuf[0]);
+		tbs_write(ASI0_BASEADDRESS, ASI_SPI_ENABLE, *(u32 *)&mpbuf[0]);
 
 		//==****************************************************************************************
 		// ~~init asi
 		break;
 	case 0x6514:
-		 memset(&gx1503_config,0,sizeof(gx1503_config));
-		 gx1503_config.i2c_adapter =&i2c;
-		 gx1503_config.fe = &adapter->fe;
-		 gx1503_config.clk_freq = 30400;//KHZ
-		 gx1503_config.ts_mode = 1;
-		 gx1503_config.i2c_wr_max = 8;
+		memset(&gx1503_config, 0, sizeof(gx1503_config));
+		gx1503_config.i2c_adapter =&i2c;
+		gx1503_config.fe = &adapter->fe;
+		gx1503_config.clk_freq = 30400;//KHZ
+		gx1503_config.ts_mode = 1;
+		gx1503_config.i2c_wr_max = 8;
 
-		 memset(&info, 0, sizeof(struct i2c_board_info));
-		 strlcpy(info.type, "gx1503", I2C_NAME_SIZE);
-		 info.addr = 0x30;
-		 info.platform_data = &gx1503_config;
-		 request_module(info.type);
-		 client_demod = i2c_new_device(i2c,&info);
-		 if(client_demod == NULL||
-		 	client_demod->dev.driver == NULL)
-		 	goto frontend_atach_fail;
-		 
+		memset(&info, 0, sizeof(struct i2c_board_info));
+		strlcpy(info.type, "gx1503", I2C_NAME_SIZE);
+		info.addr = 0x30;
+		info.platform_data = &gx1503_config;
+		request_module(info.type);
+		client_demod = i2c_new_device(i2c,&info);
+		if (client_demod == NULL || client_demod->dev.driver == NULL)
+			goto frontend_atach_fail;
+
 		if (!try_module_get(client_demod->dev.driver->owner)) {
 			i2c_unregister_device(client_demod);
 			goto frontend_atach_fail;
@@ -601,8 +578,7 @@ static int tbsecp3_frontend_attach(struct tbsecp3_adapter *adapter)
 		info.platform_data = &si2157_config;
 		request_module(info.type);
 		client_tuner = i2c_new_device(i2c, &info);
-		if (client_tuner == NULL ||
-				client_tuner->dev.driver == NULL)
+		if (client_tuner == NULL || client_tuner->dev.driver == NULL)
 			goto frontend_atach_fail;
 
 		if (!try_module_get(client_tuner->dev.driver->owner)) {
@@ -610,29 +586,28 @@ static int tbsecp3_frontend_attach(struct tbsecp3_adapter *adapter)
 			goto frontend_atach_fail;
 		}
 		adapter->i2c_client_tuner = client_tuner;
-		 break;
+		break;
 	case 0x6814:
-		 memset(&mtv23x_config, 0, sizeof(mtv23x_config));
-		 mtv23x_config.fe = &adapter->fe;
-		 mtv23x_config.clk_freq = 32000;
-		 mtv23x_config.ts_mode  = 6;
-		 mtv23x_config.i2c_wr_max = 32;
+		memset(&mtv23x_config, 0, sizeof(mtv23x_config));
+		mtv23x_config.fe = &adapter->fe;
+		mtv23x_config.clk_freq = 32000;
+		mtv23x_config.ts_mode  = 6;
+		mtv23x_config.i2c_wr_max = 32;
 
-		 memset(&info, 0, sizeof(struct i2c_board_info));
-		 strlcpy(info.type, "mtv23x", I2C_NAME_SIZE);
-		 info.addr = (adapter->nr%2)? 0x44 : 0x43;
-		 info.platform_data = &mtv23x_config;
-		 request_module(info.type);
+		memset(&info, 0, sizeof(struct i2c_board_info));
+		strlcpy(info.type, "mtv23x", I2C_NAME_SIZE);
+		info.addr = (adapter->nr%2) ? 0x44 : 0x43;
+		info.platform_data = &mtv23x_config;
+		request_module(info.type);
 		client_demod = i2c_new_device(i2c, &info);
-		if (client_demod == NULL ||
-				client_demod->dev.driver == NULL)
+		if (client_demod == NULL || client_demod->dev.driver == NULL)
 			goto frontend_atach_fail;
 		if (!try_module_get(client_demod->dev.driver->owner)) {
 			i2c_unregister_device(client_demod);
 			goto frontend_atach_fail;
 		}
 		adapter->i2c_client_demod = client_demod;
-		 break;
+		break;
 	case 0x6209:
 		/* attach demod */
 		memset(&si2183_config, 0, sizeof(si2183_config));
@@ -645,13 +620,12 @@ static int tbsecp3_frontend_attach(struct tbsecp3_adapter *adapter)
 
 		memset(&info, 0, sizeof(struct i2c_board_info));
 		strlcpy(info.type, "si2183", I2C_NAME_SIZE);
-		info.addr = (adapter->nr%2)? 0x67 : 0x64;
-		si2183_config.agc_mode = (adapter->nr%2)? 0x5 : 0x4;
+		info.addr = (adapter->nr%2) ? 0x67 : 0x64;
+		si2183_config.agc_mode = (adapter->nr%2) ? 0x5 : 0x4;
 		info.platform_data = &si2183_config;
 		request_module(info.type);
 		client_demod = i2c_new_device(i2c, &info);
-		if (client_demod == NULL ||
-				client_demod->dev.driver == NULL)
+		if (client_demod == NULL || client_demod->dev.driver == NULL)
 			goto frontend_atach_fail;
 		if (!try_module_get(client_demod->dev.driver->owner)) {
 			i2c_unregister_device(client_demod);
@@ -659,7 +633,7 @@ static int tbsecp3_frontend_attach(struct tbsecp3_adapter *adapter)
 		}
 		adapter->i2c_client_demod = client_demod;
 
-			/* terrestrial tuner */
+		/* terrestrial tuner */
 		memset(adapter->fe->ops.delsys, 0, MAX_DELSYS);
 		adapter->fe->ops.delsys[0] = SYS_DVBT;
 		adapter->fe->ops.delsys[1] = SYS_DVBT2;
@@ -674,12 +648,11 @@ static int tbsecp3_frontend_attach(struct tbsecp3_adapter *adapter)
 
 		memset(&info, 0, sizeof(struct i2c_board_info));
 		strlcpy(info.type, "si2157", I2C_NAME_SIZE);
-		info.addr = (adapter->nr %2)? 0x60 : 0x63;
+		info.addr = (adapter->nr %2) ? 0x60 : 0x63;
 		info.platform_data = &si2157_config;
 		request_module(info.type);
 		client_tuner = i2c_new_device(i2c, &info);
-		if (client_tuner == NULL ||
-				client_tuner->dev.driver == NULL)
+		if (client_tuner == NULL || client_tuner->dev.driver == NULL)
 			goto frontend_atach_fail;
 
 		if (!try_module_get(client_tuner->dev.driver->owner)) {
@@ -687,7 +660,7 @@ static int tbsecp3_frontend_attach(struct tbsecp3_adapter *adapter)
 			goto frontend_atach_fail;
 		}
 		adapter->i2c_client_tuner = client_tuner;
-			break;
+		break;
 	case 0x6704:
 		/* attach demod */
 		memset(&mn88436_config, 0, sizeof(mn88436_config));
@@ -701,8 +674,7 @@ static int tbsecp3_frontend_attach(struct tbsecp3_adapter *adapter)
 		info.platform_data = &mn88436_config;
 		request_module(info.type);
 		client_demod = i2c_new_device(i2c, &info);
-		if (client_demod == NULL ||
-				client_demod->dev.driver == NULL)
+		if (client_demod == NULL || client_demod->dev.driver == NULL)
 			goto frontend_atach_fail;
 		if (!try_module_get(client_demod->dev.driver->owner)) {
 			i2c_unregister_device(client_demod);
@@ -725,8 +697,7 @@ static int tbsecp3_frontend_attach(struct tbsecp3_adapter *adapter)
 		info.platform_data = &mxl603_config;
 		request_module(info.type);
 		client_tuner = i2c_new_device(i2c, &info);
-		if (client_tuner == NULL ||
-				client_tuner->dev.driver == NULL)
+		if (client_tuner == NULL || client_tuner->dev.driver == NULL)
 			goto frontend_atach_fail;
 
 		if (!try_module_get(client_tuner->dev.driver->owner)) {
@@ -751,8 +722,7 @@ static int tbsecp3_frontend_attach(struct tbsecp3_adapter *adapter)
 		info.platform_data = &si2168_config;
 		request_module(info.type);
 		client_demod = i2c_new_device(i2c, &info);
-		if (client_demod == NULL ||
-				client_demod->dev.driver == NULL)
+		if (client_demod == NULL || client_demod->dev.driver == NULL)
 			goto frontend_atach_fail;
 		if (!try_module_get(client_demod->dev.driver->owner)) {
 			i2c_unregister_device(client_demod);
@@ -771,8 +741,7 @@ static int tbsecp3_frontend_attach(struct tbsecp3_adapter *adapter)
 		info.platform_data = &si2157_config;
 		request_module(info.type);
 		client_tuner = i2c_new_device(i2c, &info);
-		if (client_tuner == NULL ||
-				client_tuner->dev.driver == NULL)
+		if (client_tuner == NULL || client_tuner->dev.driver == NULL)
 			goto frontend_atach_fail;
 
 		if (!try_module_get(client_tuner->dev.driver->owner)) {
@@ -894,11 +863,11 @@ static int tbsecp3_frontend_attach(struct tbsecp3_adapter *adapter)
 		adapter->fe2->ops.delsys[2] = SYS_DVBS2;
 		adapter->fe2->id = 1;
 		if (dvb_attach(av201x_attach, adapter->fe2, &tbs6522_av201x_cfg[adapter->nr], i2c) == NULL) {
-			dev_err(&dev->pci_dev->dev, "frontend %d tuner attach failed\n", adapter->nr);
+			dprintk("frontend %d tuner attach failed", adapter->nr);
 			goto frontend_atach_fail;
 		}
 		if (tbsecp3_attach_sec(adapter, adapter->fe2) == NULL) {
-			dev_warn(&dev->pci_dev->dev,  "error attaching lnb control on adapter %d\n", adapter->nr);
+			dprintk(  "error attaching lnb control on adapter %d", adapter->nr);
 		}
 
 		break;
@@ -978,19 +947,19 @@ static int tbsecp3_frontend_attach(struct tbsecp3_adapter *adapter)
 		adapter->fe2->ops.delsys[1] = SYS_DVBS;
 		adapter->fe2->ops.delsys[2] = SYS_DVBS2;
 		adapter->fe2->id = 1;
-		if( pci->subsystem_vendor == 0x6528) {
+		if ( pci->subsystem_vendor == 0x6528) {
 			if (dvb_attach(av201x_attach, adapter->fe2, &tbs6522_av201x_cfg[1], i2c) == NULL) {
-				dev_err(&dev->pci_dev->dev, "frontend %d tuner attach failed\n", adapter->nr);
+				dprintk("frontend %d tuner attach failed", adapter->nr);
 				goto frontend_atach_fail;
 			}
 		} else {
 			if (dvb_attach(av201x_attach, adapter->fe2, &tbs6522_av201x_cfg[adapter->nr], i2c) == NULL) {
-				dev_err(&dev->pci_dev->dev, "frontend %d tuner attach failed\n", adapter->nr);
+				dprintk("frontend %d tuner attach failed", adapter->nr);
 				goto frontend_atach_fail;
 			}
 		}
 		if (tbsecp3_attach_sec(adapter, adapter->fe2) == NULL) {
-			dev_warn(&dev->pci_dev->dev, "error attaching lnb control on adapter %d\n", adapter->nr);
+			dprintk("error attaching lnb control on adapter %d", adapter->nr);
 		}
 
 		tbsecp3_ca_init(adapter, adapter->nr);
@@ -1001,27 +970,21 @@ static int tbsecp3_frontend_attach(struct tbsecp3_adapter *adapter)
 		if (adapter->fe == NULL)
 			goto frontend_atach_fail;
 
-		if (dvb_attach(av201x_attach, adapter->fe, &tbs6902_av201x_cfg,
-				tas2101_get_i2c_adapter(adapter->fe, 2)) == NULL) {
+		if (dvb_attach(av201x_attach, adapter->fe, &tbs6902_av201x_cfg, tas2101_get_i2c_adapter(adapter->fe, 2)) == NULL) {
 			dvb_frontend_detach(adapter->fe);
 			adapter->fe = NULL;
-			dev_err(&dev->pci_dev->dev,
-				"frontend %d tuner attach failed\n",
-				adapter->nr);
+			dprintk("frontend %d tuner attach failed", adapter->nr);
 			goto frontend_atach_fail;
 		}
 
 		if (tbsecp3_attach_sec(adapter, adapter->fe) == NULL) {
-			dev_warn(&dev->pci_dev->dev,
-				"error attaching lnb control on adapter %d\n",
-				adapter->nr);
+			dprintk("error attaching lnb control on adapter %d", adapter->nr);
 		}
 		break;
 	case 0x6903:
 	case 0x6905:
 	case 0x6908:
-		adapter->fe = dvb_attach(stv091x_attach, i2c,
-				&tbs6903_stv091x_cfg, adapter->nr & 1);
+		adapter->fe = dvb_attach(stv091x_attach, i2c, &tbs6903_stv091x_cfg, adapter->nr & 1);
 		if (adapter->fe == NULL)
 			goto frontend_atach_fail;
 
@@ -1036,9 +999,7 @@ static int tbsecp3_frontend_attach(struct tbsecp3_adapter *adapter)
 		if (ctl == NULL) {
 			dvb_frontend_detach(adapter->fe);
 			adapter->fe = NULL;
-			dev_err(&dev->pci_dev->dev,
-				"frontend %d tuner attach failed\n",
-				adapter->nr);
+			dprintk("frontend %d tuner attach failed", adapter->nr);
 			goto frontend_atach_fail;
 		}
 
@@ -1048,9 +1009,7 @@ static int tbsecp3_frontend_attach(struct tbsecp3_adapter *adapter)
 		tbs6903_stv091x_cfg.tuner_set_bandwidth = ctl->tuner_set_bandwidth;
 
 		if (tbsecp3_attach_sec(adapter, adapter->fe) == NULL) {
-			dev_warn(&dev->pci_dev->dev,
-				"error attaching lnb control on adapter %d\n",
-				adapter->nr);
+			dprintk("error attaching lnb control on adapter %d", adapter->nr);
 		}
 
 		break;
@@ -1059,105 +1018,46 @@ static int tbsecp3_frontend_attach(struct tbsecp3_adapter *adapter)
 		if (adapter->fe == NULL)
 			goto frontend_atach_fail;
 
-		if (dvb_attach(av201x_attach, adapter->fe, &tbs6904_av201x_cfg,
-				tas2101_get_i2c_adapter(adapter->fe, 2)) == NULL) {
+		if (dvb_attach(av201x_attach, adapter->fe, &tbs6904_av201x_cfg, tas2101_get_i2c_adapter(adapter->fe, 2)) == NULL) {
 			dvb_frontend_detach(adapter->fe);
 			adapter->fe = NULL;
-			dev_err(&dev->pci_dev->dev,
-				"frontend %d tuner attach failed\n",
-				adapter->nr);
+			dprintk("frontend %d tuner attach failed", adapter->nr);
 			goto frontend_atach_fail;
 		}
 
 		if (tbsecp3_attach_sec(adapter, adapter->fe) == NULL) {
-			dev_warn(&dev->pci_dev->dev,
-				"error attaching lnb control on adapter %d\n",
-				adapter->nr);
+			dprintk("error attaching lnb control on adapter %d", adapter->nr);
 		}
-#if 0
-		/* attach tuner */
-		memset(&av201x_config, 0, sizeof(av201x_config));
-		av201x_config.fe = adapter->fe;
-		av201x_config.xtal_freq = 27000,
-
-		memset(&info, 0, sizeof(struct i2c_board_info));
-		strlcpy(info.type, "av2012", I2C_NAME_SIZE);
-		info.addr = 0x63;
-		info.platform_data = &av201x_config;
-		request_module(info.type);
-		client_tuner = i2c_new_device(i2c, &info);
-		printk("cli_tu=%p\n", client_tuner);
-		if (client_tuner != NULL)
-			printk("cli_tu.drv=%p\n", client_tuner->dev.driver);
-		if (client_tuner == NULL ||
-				client_tuner->dev.driver == NULL) {
-			printk("client tunner fail 1\n");
-			goto frontend_atach_fail;
-		}
-
-		if (!try_module_get(client_tuner->dev.driver->owner)) {
-			i2c_unregister_device(client_tuner);
-			printk("client tunner fail 2\n");
-			goto frontend_atach_fail;
-		}
-		adapter->i2c_client_tuner = client_tuner;
-#endif
 		break;
 	case 0x6909:
-/*
-		tmp = tbs_read(TBS_GPIO_BASE, 0x20);
-		printk("RD 0x20 = %x\n", tmp);
-		tbs_write(TBS_GPIO_BASE, 0x20, tmp & 0xfffe);
-		tmp = tbs_read(TBS_GPIO_BASE, 0x20);
-		printk("RD 0x20 = %x\n", tmp);
-
-		tmp = tbs_read(TBS_GPIO_BASE, 0x24);
-		printk("RD 0x24 = %x\n", tmp);
-		tbs_write(TBS_GPIO_BASE, 0x24, tmp & 0xfffc);
-		tmp = tbs_read(TBS_GPIO_BASE, 0x24);
-		printk("RD 0x24 = %x\n", tmp);
-*/
-
-		adapter->fe = dvb_attach(mxl58x_attach, i2c,
-				&tbs6909_mxl58x_cfg, adapter->nr);
+		adapter->fe = dvb_attach(mxl58x_attach, i2c, &tbs6909_mxl58x_cfg, adapter->nr);
 		if (adapter->fe == NULL)
 			goto frontend_atach_fail;
 
-	//	adapter->fe->ops.diseqc_send_master_cmd = max_send_master_cmd;
-	//	adapter->fe->ops.diseqc_send_burst = max_send_burst;
-
 		if (tbsecp3_attach_sec(adapter, adapter->fe) == NULL) {
-			dev_warn(&dev->pci_dev->dev,
-				"error attaching lnb control on adapter %d\n",
-				adapter->nr);
+			dprintk("error attaching lnb control on adapter %d", adapter->nr);
 		}
 
 		break;
-
 	case 0x6910:
 		adapter->fe = dvb_attach(tas2101_attach, &tbs6910_demod_cfg[adapter->nr], i2c);
 		if (adapter->fe == NULL)
 			goto frontend_atach_fail;
 
-		if (dvb_attach(av201x_attach, adapter->fe, &tbs6910_av201x_cfg,
-				tas2101_get_i2c_adapter(adapter->fe, 2)) == NULL) {
+		if (dvb_attach(av201x_attach, adapter->fe, &tbs6910_av201x_cfg, tas2101_get_i2c_adapter(adapter->fe, 2)) == NULL) {
 			dvb_frontend_detach(adapter->fe);
 			adapter->fe = NULL;
-			dev_err(&dev->pci_dev->dev,
-				"frontend %d tuner attach failed\n",
-				adapter->nr);
+			dprintk("frontend %d tuner attach failed", adapter->nr);
 			goto frontend_atach_fail;
 		}
 		if (tbsecp3_attach_sec(adapter, adapter->fe) == NULL) {
-			dev_warn(&dev->pci_dev->dev,
-				"error attaching lnb control on adapter %d\n",
-				adapter->nr);
+			dprintk("error attaching lnb control on adapter %d", adapter->nr);
 		}
 
 		tbsecp3_ca_init(adapter, adapter->nr);
 		break;
 	default:
-		dev_warn(&dev->pci_dev->dev, "unknonw card\n");
+		dprintk("unknonw card\n");
 		return -ENODEV;
 		break;
 	}
@@ -1169,7 +1069,7 @@ frontend_atach_fail:
 	if (adapter->fe != NULL)
 		dvb_frontend_detach(adapter->fe);
 	adapter->fe = NULL;
-	dev_err(&dev->pci_dev->dev, "TBSECP3 frontend %d attach failed\n",
+	dprintk("TBSECP3 frontend %d attach failed",
 		adapter->nr);
 
 	return -ENODEV;
@@ -1177,7 +1077,6 @@ frontend_atach_fail:
 
 int tbsecp3_dvb_init(struct tbsecp3_adapter *adapter)
 {
-	struct tbsecp3_dev *dev = adapter->dev;
 	struct dvb_adapter *adap = &adapter->dvb_adapter;
 	struct dvb_demux *dvbdemux = &adapter->demux;
 	struct dmxdev *dmxdev;
@@ -1185,16 +1084,11 @@ int tbsecp3_dvb_init(struct tbsecp3_adapter *adapter)
 	struct dmx_frontend *fe_mem;
 	int ret;
 
-	ret = dvb_register_adapter(adap, "TBSECP3 DVB Adapter",
-					THIS_MODULE,
-					&adapter->dev->pci_dev->dev,
-					adapter_nr);
+	ret = dvb_register_adapter(adap, "TBSECP3 DVB Adapter", THIS_MODULE, &adapter->dev->pci_dev->dev, adapter_nr);
 	if (ret < 0) {
-		dev_err(&dev->pci_dev->dev, "error registering adapter\n");
+		dprintk("error registering adapter\n");
 		if (ret == -ENFILE)
-			dev_err(&dev->pci_dev->dev,
-				"increase DVB_MAX_ADAPTERS (%d)\n",
-				DVB_MAX_ADAPTERS);
+			dprintk("increase DVB_MAX_ADAPTERS (%d)", DVB_MAX_ADAPTERS);
 		return ret;
 	}
 
@@ -1211,7 +1105,7 @@ int tbsecp3_dvb_init(struct tbsecp3_adapter *adapter)
 
 	ret = dvb_dmx_init(dvbdemux);
 	if (ret < 0) {
-		dev_err(&dev->pci_dev->dev, "dvb_dmx_init failed\n");
+		dprintk("dvb_dmx_init failed\n");
 		goto err0;
 	}
 
@@ -1223,7 +1117,7 @@ int tbsecp3_dvb_init(struct tbsecp3_adapter *adapter)
 
 	ret = dvb_dmxdev_init(dmxdev, adap);
 	if (ret < 0) {
-		dev_err(&dev->pci_dev->dev, "dvb_dmxdev_init failed\n");
+		dprintk("dvb_dmxdev_init failed\n");
 		goto err1;
 	}
 
@@ -1233,46 +1127,46 @@ int tbsecp3_dvb_init(struct tbsecp3_adapter *adapter)
 	fe_hw->source = DMX_FRONTEND_0;
 	ret = dvbdemux->dmx.add_frontend(&dvbdemux->dmx, fe_hw);
 	if ( ret < 0) {
-		dev_err(&dev->pci_dev->dev, "dvb_dmx_init failed");
+		dprintk("dvb_dmx_init failed");
 		goto err2;
 	}
 
 	fe_mem->source = DMX_MEMORY_FE;
 	ret = dvbdemux->dmx.add_frontend(&dvbdemux->dmx, fe_mem);
 	if (ret  < 0) {
-		dev_err(&dev->pci_dev->dev, "dvb_dmx_init failed");
+		dprintk("dvb_dmx_init failed");
 		goto err3;
 	}
 
 	ret = dvbdemux->dmx.connect_frontend(&dvbdemux->dmx, fe_hw);
 	if (ret < 0) {
-		dev_err(&dev->pci_dev->dev, "dvb_dmx_init failed");
+		dprintk("dvb_dmx_init failed");
 		goto err4;
 	}
 
 	ret = dvb_net_init(adap, &adapter->dvbnet, adapter->dmxdev.demux);
 	if (ret < 0) {
-		dev_err(&dev->pci_dev->dev, "dvb_net_init failed");
+		dprintk("dvb_net_init failed");
 		goto err5;
 	}
 
 	tbsecp3_frontend_attach(adapter);
 	if (adapter->fe == NULL) {
-		dev_err(&dev->pci_dev->dev, "frontend attach failed\n");
+		dprintk("frontend attach failed\n");
 		ret = -ENODEV;
 		goto err6;
 	}
 
 	ret = dvb_register_frontend(adap, adapter->fe);
 	if (ret < 0) {
-		dev_err(&dev->pci_dev->dev, "frontend register failed\n");
+		dprintk("frontend register failed\n");
 		goto err7;
 	}
 
 	if (adapter->fe2 != NULL) {
 		ret = dvb_register_frontend(adap, adapter->fe2);
 		if (ret < 0) {
-			dev_err(&dev->pci_dev->dev, "frontend2 register failed\n");
+			dprintk("frontend2 register failed\n");
 		}
 	}
 
