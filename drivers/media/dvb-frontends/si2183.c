@@ -233,19 +233,13 @@ static int si2183_read_status(struct dvb_frontend *fe, enum fe_status *status)
 
 	*status = 0;
 
-	dprintk("1");
-
 	if (!dev->active) {
 		ret = -EAGAIN;
 		goto err;
 	}
 
-	dprintk("2");
-
 	if ((dev->delivery_system != c->delivery_system) || (dev->delivery_system == 0))
 		return 0;
-
-	dprintk("3");
 
 	switch (c->delivery_system) {
 	case SYS_DVBT:
@@ -300,8 +294,6 @@ static int si2183_read_status(struct dvb_frontend *fe, enum fe_status *status)
 		goto err;
 	}
 
-	dprintk("4");
-
 	dev->stat_resp = cmd.args[2];
 	switch ((dev->stat_resp >> 1) & 0x03) {
 	case 0x01:
@@ -324,8 +316,6 @@ static int si2183_read_status(struct dvb_frontend *fe, enum fe_status *status)
 	dev->fe_status = *status;
 
 	si2183_read_signal_strength(fe, &agc);
-
-	dprintk("5");
 
 	return 0;
 err:
