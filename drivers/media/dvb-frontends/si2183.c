@@ -70,14 +70,13 @@ struct si2183_dev {
 	bool ts_clock_gapped;
 	u8 agc_mode;
 	struct si_base *base;
-	void (*RF_switch)(struct i2c_adapter * i2c,u8 rf_in,u8 flag);
+	void (*RF_switch)(struct i2c_adapter * i2c, u8 rf_in, u8 flag);
 	u8 rf_in;
 	u8 active_fe;
 };
 
 /* Own I2C adapter locking is needed because of I2C gate logic. */
-static int si2183_i2c_master_send_unlocked(const struct i2c_client *client,
-					   const char *buf, int count)
+static int si2183_i2c_master_send_unlocked(const struct i2c_client *client, const char *buf, int count)
 {
 	int ret;
 	struct i2c_msg msg = {
@@ -91,8 +90,7 @@ static int si2183_i2c_master_send_unlocked(const struct i2c_client *client,
 	return (ret == 1) ? count : ret;
 }
 
-static int si2183_i2c_master_recv_unlocked(const struct i2c_client *client,
-					   char *buf, int count)
+static int si2183_i2c_master_recv_unlocked(const struct i2c_client *client, char *buf, int count)
 {
 	int ret;
 	struct i2c_msg msg = {
@@ -107,8 +105,7 @@ static int si2183_i2c_master_recv_unlocked(const struct i2c_client *client,
 }
 
 /* execute firmware command */
-static int si2183_cmd_execute_unlocked(struct i2c_client *client,
-				       struct si2183_cmd *cmd)
+static int si2183_cmd_execute_unlocked(struct i2c_client *client, struct si2183_cmd *cmd)
 {
 	int ret;
 	unsigned long timeout;
@@ -117,8 +114,7 @@ static int si2183_cmd_execute_unlocked(struct i2c_client *client,
 
 	if (cmd->wlen) {
 		/* write cmd and args for firmware */
-		ret = si2183_i2c_master_send_unlocked(client, cmd->args,
-						      cmd->wlen);
+		ret = si2183_i2c_master_send_unlocked(client, cmd->args, cmd->wlen);
 		if (ret < 0) {
 			goto w_err;
 		} else if (ret != cmd->wlen) {
@@ -132,8 +128,7 @@ static int si2183_cmd_execute_unlocked(struct i2c_client *client,
 		#define TIMEOUT 500
 		timeout = jiffies + msecs_to_jiffies(TIMEOUT);
 		while (!time_after(jiffies, timeout)) {
-			ret = si2183_i2c_master_recv_unlocked(client, cmd->args,
-							      cmd->rlen);
+			ret = si2183_i2c_master_recv_unlocked(client, cmd->args, cmd->rlen);
 			if (ret < 0) {
 				goto r_err;
 			} else if (ret != cmd->rlen) {
@@ -238,13 +233,19 @@ static int si2183_read_status(struct dvb_frontend *fe, enum fe_status *status)
 
 	*status = 0;
 
+	dprintk("1");
+
 	if (!dev->active) {
 		ret = -EAGAIN;
 		goto err;
 	}
 
+	dprintk("2");
+
 	if ((dev->delivery_system != c->delivery_system) || (dev->delivery_system == 0))
 		return 0;
+
+	dprintk("3");
 
 	switch (c->delivery_system) {
 	case SYS_DVBT:
@@ -299,6 +300,8 @@ static int si2183_read_status(struct dvb_frontend *fe, enum fe_status *status)
 		goto err;
 	}
 
+	dprintk("4");
+
 	dev->stat_resp = cmd.args[2];
 	switch ((dev->stat_resp >> 1) & 0x03) {
 	case 0x01:
@@ -321,6 +324,8 @@ static int si2183_read_status(struct dvb_frontend *fe, enum fe_status *status)
 	dev->fe_status = *status;
 
 	si2183_read_signal_strength(fe, &agc);
+
+	dprintk("5");
 
 	return 0;
 err:
@@ -1182,9 +1187,9 @@ static int si2183_search(struct dvb_frontend *fe)
 		goto error;
 
 	/* wait frontend lock */
-	for (i = 0; i < 5; i++) {
+	for (i = 0; i < 10; i++) {
 		dprintk("loop=%d", i);
-		msleep(100);
+		msleep(200);
 		ret = si2183_read_status(fe, &status);
 		if (ret)
 			goto error;
