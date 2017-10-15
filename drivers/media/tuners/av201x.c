@@ -21,6 +21,8 @@
 #include "av201x.h"
 #include "av201x_priv.h"
 
+#define dprintk(fmt, arg...)	printk(KERN_INFO pr_fmt("%s: " fmt "\n"),  __func__, ##arg)
+
 /* write multiple (continuous) registers */
 static int av201x_wrm(struct av201x_priv *priv, u8 *buf, int len)
 {
@@ -29,14 +31,11 @@ static int av201x_wrm(struct av201x_priv *priv, u8 *buf, int len)
 		.addr = priv->cfg->i2c_address,
 		.flags = 0, .buf = buf, .len = len };
 
-	dev_dbg(&priv->i2c->dev, "%s() i2c wrm @0x%02x (len=%d) ",
-		__func__, buf[0], len);
+//	dprintk("buf = %*ph", len, buf);
 
 	ret = i2c_transfer(priv->i2c, &msg, 1);
 	if (ret < 0) {
-		dev_warn(&priv->i2c->dev,
-			"%s: i2c wrm err(%i) @0x%02x (len=%d)\n",
-			KBUILD_MODNAME, ret, buf[0], len);
+		dprintk("ERROR: %d", ret);
 		return ret;
 	}
 	return 0;
@@ -60,16 +59,14 @@ static int av201x_rdm(struct av201x_priv *priv, u8 addr, u8 *buf, int len)
 			.buf = buf, .len = len }
 	};
 
-	dev_dbg(&priv->i2c->dev, "%s() i2c rdm @0x%02x (len=%d)\n",
-		__func__, addr, len);
-
 	ret = i2c_transfer(priv->i2c, msg, 2);
 	if (ret < 0) {
-		dev_warn(&priv->i2c->dev,
-			"%s: i2c rdm err(%i) @0x%02x (len=%d)\n",
-			KBUILD_MODNAME, ret, addr, len);
+		dprintk("ERROR: %d", ret);
 		return ret;
 	}
+
+//	dprintk("addr: %02x, buf = %*ph", addr, len, buf);
+
 	return 0;
 }
 
@@ -80,8 +77,7 @@ static int av201x_rd(struct av201x_priv *priv, u8 addr, u8 *data)
 }
 
 /* read register, apply masks, write back */
-static int av201x_regmask(struct av201x_priv *priv,
-	u8 reg, u8 setmask, u8 clrmask)
+static int av201x_regmask(struct av201x_priv *priv, u8 reg, u8 setmask, u8 clrmask)
 {
 	int ret;
 	u8 b = 0;
@@ -94,8 +90,7 @@ static int av201x_regmask(struct av201x_priv *priv,
 	return av201x_wr(priv, reg, b | setmask);
 }
 
-static int av201x_wrtable(struct av201x_priv *priv,
-	struct av201x_regtable *regtable, int len)
+static int av201x_wrtable(struct av201x_priv *priv, struct av201x_regtable *regtable, int len)
 {
 	int ret, i;
 
@@ -112,8 +107,7 @@ static int av201x_wrtable(struct av201x_priv *priv,
 
 static void av201x_release(struct dvb_frontend *fe)
 {
-	struct av201x_priv *priv = fe->tuner_priv;
-	dev_dbg(&priv->i2c->dev, "%s()\n", __func__);
+	dprintk("");
 
 	kfree(fe->tuner_priv);
 	fe->tuner_priv = NULL;
@@ -123,32 +117,28 @@ static int av201x_init(struct dvb_frontend *fe)
 {
 	struct av201x_priv *priv = fe->tuner_priv;
 	int ret;
-	dev_dbg(&priv->i2c->dev, "%s()\n", __func__);
+	dprintk("");
 
-	ret = av201x_wrtable(priv, av201x_inittuner0,
-		ARRAY_SIZE(av201x_inittuner0));
+	ret = av201x_wrtable(priv, av201x_inittuner0, ARRAY_SIZE(av201x_inittuner0));
 
 	switch (priv->cfg->id) {
 	case ID_AV2011:
-		ret |= av201x_wrtable(priv, av201x_inittuner1a,
-			ARRAY_SIZE(av201x_inittuner1a));
+		ret |= av201x_wrtable(priv, av201x_inittuner1a, ARRAY_SIZE(av201x_inittuner1a));
 		break;
 	case ID_AV2012:
 	default:
-		ret |= av201x_wrtable(priv, av201x_inittuner1b,
-			ARRAY_SIZE(av201x_inittuner1b));
+		ret |= av201x_wrtable(priv, av201x_inittuner1b, ARRAY_SIZE(av201x_inittuner1b));
 		break;
 	}
 
-	ret |= av201x_wrtable(priv, av201x_inittuner2,
-		ARRAY_SIZE(av201x_inittuner2));
+	ret |= av201x_wrtable(priv, av201x_inittuner2, ARRAY_SIZE(av201x_inittuner2));
 
 	ret |= av201x_wr(priv, REG_TUNER_CTRL, 0x96);
 
 	msleep(120);
 
 	if (ret)
-		dev_dbg(&priv->i2c->dev, "%s() failed\n", __func__);
+		dprintk("ERROR");
 	return ret;
 }
 
@@ -156,11 +146,11 @@ static int av201x_sleep(struct dvb_frontend *fe)
 {
 	struct av201x_priv *priv = fe->tuner_priv;
 	int ret;
-	dev_dbg(&priv->i2c->dev, "%s()\n", __func__);
+	dprintk("");
 
 	ret = av201x_regmask(priv, REG_TUNER_CTRL, AV201X_SLEEP, 0);
 	if (ret)
-		dev_dbg(&priv->i2c->dev, "%s() failed\n", __func__);
+		dprintk("ERROR");
 	return ret;
 }
 
@@ -172,9 +162,7 @@ static int av201x_set_params(struct dvb_frontend *fe)
 	u8 buf[5];
 	int ret;
 
-	dev_dbg(&priv->i2c->dev, "%s() delivery_system=%d frequency=%d " \
-			"symbol_rate=%d\n", __func__,
-			c->delivery_system, c->frequency, c->symbol_rate);
+	dprintk("");
 
 	/*
 	   ** PLL setup **
@@ -197,16 +185,13 @@ static int av201x_set_params(struct dvb_frontend *fe)
 	msleep(20);
 
 	/* set bandwidth */
-	bw = (c->symbol_rate / 1000) * 135/200;
-	if (c->symbol_rate < 6500000)
-		bw += 6000;
-	bw += 2000;
-	bw *= 108/100;
+	bw  = c->symbol_rate;
+	bw += ((c->symbol_rate * 10) * 35) / 1000;
 
 	/* check limits (4MHz < bw < 40MHz) */
 	if (bw > 40000)
 		bw = 40000;
-	else if (bw < 4000)
+	if (bw < 4000)
 		bw = 4000;
 
 	/* bandwidth step = 211kHz */
@@ -215,12 +200,11 @@ static int av201x_set_params(struct dvb_frontend *fe)
 
 	/* enable fine tune agc */
 	ret |= av201x_wr(priv, REG_FT_CTRL, AV201X_FT_EN | AV201X_FT_BLK);
-
 	ret |= av201x_wr(priv, REG_TUNER_CTRL, 0x96);
 	msleep(20);
 exit:
 	if (ret)
-		dev_dbg(&priv->i2c->dev, "%s() failed\n", __func__);
+		dprintk("ERROR");
 	return ret;
 }
 
@@ -229,7 +213,6 @@ static  int   AV201x_level_dBm_10[] = {    90, -50,  -263, -361, -463, -563, -66
 
 static int av201x_get_rf_strength(struct dvb_frontend *fe, u16 *st)
 {
-//	struct av201x_priv *priv = fe->tuner_priv;
 	struct dtv_frontend_properties *c = &fe->dtv_property_cache;
 	int   if_agc, index, table_length, slope, *x, *y;
 
@@ -238,7 +221,6 @@ static int av201x_get_rf_strength(struct dvb_frontend *fe, u16 *st)
 	y = AV201x_level_dBm_10;
 	table_length = sizeof(AV201x_agc)/sizeof(int);
 
-	
 	/* Finding in which segment the if_agc value is */
 	for (index = 0; index < table_length; index ++)
 		if (x[index] > if_agc ) break;
@@ -273,23 +255,20 @@ static const struct dvb_tuner_ops av201x_tuner_ops = {
 	.get_rf_strength = av201x_get_rf_strength,
 };
 
-struct dvb_frontend *av201x_attach(struct dvb_frontend *fe,
-		struct av201x_config *cfg, struct i2c_adapter *i2c)
+struct dvb_frontend *av201x_attach(struct dvb_frontend *fe, struct av201x_config *cfg, struct i2c_adapter *i2c)
 {
 	struct av201x_priv *priv = NULL;
 
 	priv = kzalloc(sizeof(struct av201x_priv), GFP_KERNEL);
 	if (priv == NULL) {
-		dev_dbg(&i2c->dev, "%s() attach failed\n", __func__);
+		dprintk("attach ERROR");
 		return NULL;
 	}
 
 	priv->cfg = cfg;
 	priv->i2c = i2c;
 
-	dev_info(&priv->i2c->dev,
-		"%s: Airoha Technology AV201x successfully attached\n",
-		KBUILD_MODNAME);
+	dprintk("Airoha Technology AV201x successfully attached");
 
 	memcpy(&fe->ops.tuner_ops, &av201x_tuner_ops,
 			sizeof(struct dvb_tuner_ops));

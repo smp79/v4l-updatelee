@@ -201,6 +201,32 @@ static int si2183_set_prop(struct i2c_client *client, u16 prop, u16 *val)
 	return ret;
 }
 
+static int si2183_read_signal_strength(struct dvb_frontend *fe, u16 *strength)
+{
+	struct i2c_client *client = fe->demodulator_priv;
+	struct dtv_frontend_properties *c = &fe->dtv_property_cache;
+	int ret;
+	struct si2183_cmd cmd;
+
+	if (fe->ops.tuner_ops.get_rf_strength)
+	{
+		memcpy(cmd.args, "\x8a\x00\x00\x00\x00\x00", 6);
+		cmd.wlen = 6;
+		cmd.rlen = 3;
+		ret = si2183_cmd_execute(client, &cmd);
+		if (ret) {
+			dprintk("err getting RF strength");
+		}
+
+		*strength = cmd.args[1];
+		fe->ops.tuner_ops.get_rf_strength(fe, strength);
+	}
+
+	*strength = c->strength.stat[0].scale == FE_SCALE_DECIBEL ? ((100000 + (s32)c->strength.stat[0].svalue) / 1000) * 656 : 0;
+
+	return 0;
+}
+
 static int si2183_read_status(struct dvb_frontend *fe, enum fe_status *status)
 {
 	struct i2c_client *client = fe->demodulator_priv;
@@ -294,19 +320,7 @@ static int si2183_read_status(struct dvb_frontend *fe, enum fe_status *status)
 	
 	dev->fe_status = *status;
 
-	if (fe->ops.tuner_ops.get_rf_strength)
-	{
-		memcpy(cmd.args, "\x8a\x00\x00\x00\x00\x00", 6);
-		cmd.wlen = 6;
-		cmd.rlen = 3;
-		ret = si2183_cmd_execute(client, &cmd);
-		if (ret) {
-			goto err;
-		}
-
-		agc = cmd.args[1];
-		fe->ops.tuner_ops.get_rf_strength(fe, &agc);
-	}
+	si2183_read_signal_strength(fe, &agc);
 
 	return 0;
 err:
@@ -320,15 +334,6 @@ static int si2183_read_snr(struct dvb_frontend *fe, u16 *snr)
 	struct si2183_dev *dev = i2c_get_clientdata(client);
 	
 	*snr = (dev->fe_status & FE_HAS_LOCK) ? dev->snr : 0;
-
-	return 0;
-}
-
-static int si2183_read_signal_strength(struct dvb_frontend *fe, u16 *strength)
-{
-	struct dtv_frontend_properties *c = &fe->dtv_property_cache;
-	
-	*strength = c->strength.stat[0].scale == FE_SCALE_DECIBEL ? ((100000 + (s32)c->strength.stat[0].svalue) / 1000) * 656 : 0;
 
 	return 0;
 }
@@ -395,13 +400,14 @@ static int si2183_set_dvbc(struct dvb_frontend *fe)
 	dprintk("");
 
 	memcpy(cmd.args, "\x89\x41\x06\x12\x0\x0", 6);
-	cmd.args[1]= (dev->agc_mode &0x07)<<4 |0x1;  
- 	cmd.wlen = 6;
- 	cmd.rlen = 3;
- 	ret = si2183_cmd_execute(client, &cmd);
- 	if(ret){
+	cmd.args[1]= (dev->agc_mode &0x07)<<4 |0x1;
+	cmd.wlen = 6;
+	cmd.rlen = 3;
+	ret = si2183_cmd_execute(client, &cmd);
+	if(ret){
 		dprintk("err set agc mode");
- 	}
+	}
+
 	/* dvb-c mode */
 	prop = 0x38;
 	ret = si2183_set_prop(client, SI2183_PROP_MODE, &prop);
@@ -460,13 +466,14 @@ static int si2183_set_mcns(struct dvb_frontend *fe)
 	dprintk("");
 
 	memcpy(cmd.args, "\x89\x41\x06\x12\x0\x0", 6);
-	cmd.args[1]= (dev->agc_mode &0x07)<<4 |0x1;  
- 	cmd.wlen = 6;
- 	cmd.rlen = 3;
- 	ret = si2183_cmd_execute(client, &cmd);
- 	if(ret){
+	cmd.args[1]= (dev->agc_mode &0x07)<<4 |0x1;
+	cmd.wlen = 6;
+	cmd.rlen = 3;
+	ret = si2183_cmd_execute(client, &cmd);
+	if(ret){
 		dprintk("err set agc mode");
- 	}
+	}
+
 	/* mcns mode */
 	prop = 0x18;
 	ret = si2183_set_prop(client, SI2183_PROP_MODE, &prop);
@@ -1211,20 +1218,26 @@ static int si2183_get_spectrum_scan(struct dvb_frontend *fe, struct dvb_fe_spect
 	struct i2c_client *client = fe->demodulator_priv;
 	struct si2183_config *config = client->dev.platform_data;
 	struct dtv_frontend_properties *p = &fe->dtv_property_cache;
+	struct si2183_cmd cmd;
 	int x, ret;
 
 	dprintk("");
 
-	p->frequency		= 0;
-	p->bandwidth_hz		= 0;
-	p->delivery_system	= SYS_DVBT;
-	p->modulation		= QAM_16;
-
+	config->algo = SI2183_NOTUNE;
 	*s->type = SC_DBM;
 
-	config->algo = SI2183_NOTUNE;
+	if (!fe->ops.tuner_ops.set_params || !fe->ops.tuner_ops.get_rf_strength) {
+		dprintk("tuner does not support set_params() or get_rf_strength()");
+		return 1;
+	}
 
-	if (fe->ops.tuner_ops.set_params && fe->ops.tuner_ops.get_rf_strength) {
+	if (fe->id == 0) { // Terrestrial
+		p->frequency		= 0;
+		p->bandwidth_hz		= 1000;
+		p->symbol_rate		= 1000;
+		p->delivery_system	= SYS_DVBT;
+		p->modulation		= QAM_16;
+
 		for (x = 0; x < s->num_freq; x++)
 		{
 			p->frequency = *(s->freq + x);
@@ -1235,9 +1248,35 @@ static int si2183_get_spectrum_scan(struct dvb_frontend *fe, struct dvb_fe_spect
 
 			ret = fe->ops.tuner_ops.get_rf_strength(fe, (s->rf_level + x));
 		}
-	} else {
-		dprintk("tuner does not support set_params() or get_rf_strength()");
+	} else { // Satellite
+		p->frequency		= 0;
+		p->bandwidth_hz		= 1000;
+		p->symbol_rate		= 1000;
+		p->delivery_system	= SYS_DVBS;
+		p->modulation		= QPSK;
+
+		si2183_set_frontend(fe);
+
+		for (x = 0; x < s->num_freq; x++)
+		{
+			p->frequency = *(s->freq + x);
+
+			ret = fe->ops.tuner_ops.set_params(fe);
+
+			msleep(100);
+
+			memcpy(cmd.args, "\x8a\x00\x00\x00\x00\x00", 6);
+			cmd.wlen = 6;
+			cmd.rlen = 3;
+			ret = si2183_cmd_execute(client, &cmd);
+			if (ret) {
+				dprintk("err getting RF strength");
+			}
+
+			*(s->rf_level + x) = 0xff - cmd.args[1];
+		}
 	}
+
 	return 0;
 }
 

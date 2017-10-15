@@ -1177,7 +1177,6 @@ err7:
 	dvb_frontend_detach(adapter->fe);
 err6:
 	tbsecp3_release_sec(adapter->fe);
-
 	dvb_net_release(&adapter->dvbnet);
 err5:
 	dvbdemux->dmx.close(&dvbdemux->dmx);
