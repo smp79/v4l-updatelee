@@ -412,11 +412,11 @@ static const struct dvb_tuner_ops si2157_ops = {
 		.frequency_max  = 870000000,
 	},
 
-	.init = si2157_init,
-	.sleep = si2157_sleep,
-	.set_params = si2157_set_params,
-	.get_if_frequency = si2157_get_if_frequency,
-	.get_rf_strength = si2157_get_rf_strength,
+	.init			= si2157_init,
+	.sleep			= si2157_sleep,
+	.set_params		= si2157_set_params,
+	.get_if_frequency	= si2157_get_if_frequency,
+	.get_rf_strength	= si2157_get_rf_strength,
 };
 
 static int si2157_probe(struct i2c_client *client,

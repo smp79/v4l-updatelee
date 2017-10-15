@@ -1235,6 +1235,8 @@ static int si2183_get_spectrum_scan(struct dvb_frontend *fe, struct dvb_fe_spect
 
 			ret = fe->ops.tuner_ops.get_rf_strength(fe, (s->rf_level + x));
 		}
+	} else {
+		dprintk("tuner does not support set_params() or get_rf_strength()");
 	}
 	return 0;
 }
