@@ -1572,15 +1572,21 @@ static int lgdt3306a_read_status(struct dvb_frontend *fe,
 				 enum fe_status *status)
 {
 	struct lgdt3306a_state *state = fe->demodulator_priv;
+	struct dtv_frontend_properties *c = &fe->dtv_property_cache;
+
 	u16 strength = 0;
 	int ret = 0;
 
 	if (fe->ops.tuner_ops.get_rf_strength) {
 		ret = fe->ops.tuner_ops.get_rf_strength(fe, &strength);
-		if (ret == 0)
+		if (ret == 0) {
+			c->strength.stat[0].scale = FE_SCALE_DECIBEL;
+			c->strength.stat[0].svalue = (s16) strength;
+
 			dbg_info("strength=%d\n", strength);
-		else
+		} else {
 			dbg_info("fe->ops.tuner_ops.get_rf_strength() failed\n");
+		}
 	}
 
 	*status = 0;
