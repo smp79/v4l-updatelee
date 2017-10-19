@@ -400,7 +400,7 @@ static int si2157_get_rf_strength(struct dvb_frontend *fe,
 		return -1;
 	}
 
-	*signal_strength = cmd.args[3] * 1000;
+	*signal_strength = (s8)cmd.args[3] * 1000;
 
 	return 0;
 }
