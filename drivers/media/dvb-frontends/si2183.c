@@ -225,6 +225,7 @@ static int si2183_read_signal_strength(struct dvb_frontend *fe, u16 *strength)
 static int si2183_read_status(struct dvb_frontend *fe, enum fe_status *status)
 {
 	struct i2c_client *client = fe->demodulator_priv;
+	struct si2183_config *config = client->dev.platform_data;
 	struct si2183_dev *dev = i2c_get_clientdata(client);
 	struct dtv_frontend_properties *c = &fe->dtv_property_cache;
 	int ret;
@@ -306,7 +307,9 @@ static int si2183_read_status(struct dvb_frontend *fe, enum fe_status *status)
 	default:
 		break;
 	}
-	
+	if (config->algo == SI21835_NOTUNE)
+		*status |= FE_TIMEDOUT;
+
 	c->cnr.len = 1;
 	c->cnr.stat[0].scale = FE_SCALE_DECIBEL;
 	c->cnr.stat[0].svalue = (s64) cmd.args[3] * 250;
