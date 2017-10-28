@@ -1649,7 +1649,7 @@ static int tc358743_s_stream(struct v4l2_subdev *sd, int enable)
 {
 	enable_stream(sd, enable);
 	if (!enable) {
-		/* Put all lanes in PL-11 state (STOPSTATE) */
+		/* Put all lanes in LP-11 state (STOPSTATE) */
 		tc358743_set_csi(sd);
 	}
 
@@ -1941,6 +1941,11 @@ static int tc358743_probe_of(struct tc358743_state *state)
 		goto free_endpoint;
 	}
 
+	if (endpoint->bus.mipi_csi2.num_data_lanes > 4) {
+		dev_err(dev, "invalid number of lanes\n");
+		goto free_endpoint;
+	}
+
 	state->bus = endpoint->bus.mipi_csi2;
 
 	ret = clk_prepare_enable(refclk);
@@ -2101,6 +2106,7 @@ static int tc358743_probe(struct i2c_client *client,
 	}
 
 	state->pad.flags = MEDIA_PAD_FL_SOURCE;
+	sd->entity.function = MEDIA_ENT_F_VID_IF_BRIDGE;
 	err = media_entity_pads_init(&sd->entity, 1, &state->pad);
 	if (err < 0)
 		goto err_hdl;
@@ -2122,7 +2128,7 @@ static int tc358743_probe(struct i2c_client *client,
 		state, dev_name(&client->dev),
 		CEC_CAP_DEFAULTS | CEC_CAP_MONITOR_ALL, CEC_MAX_LOG_ADDRS);
 	if (IS_ERR(state->cec_adap)) {
-		err = state->cec_adap ? PTR_ERR(state->cec_adap) : -ENOMEM;
+		err = PTR_ERR(state->cec_adap);
 		goto err_hdl;
 	}
 	irq_mask |= MASK_CEC_RMSK | MASK_CEC_TMSK;

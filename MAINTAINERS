@@ -1961,6 +1961,14 @@ M:	Lennert Buytenhek <kernel@wantstofly.org>
 L:	linux-arm-kernel@lists.infradead.org (moderated for non-subscribers)
 S:	Maintained
 
+ARM/TEGRA HDMI CEC SUBSYSTEM SUPPORT
+M:	Hans Verkuil <hans.verkuil@cisco.com>
+L:	linux-tegra@vger.kernel.org
+L:	linux-media@vger.kernel.org
+S:	Maintained
+F:	drivers/media/platform/tegra-cec/
+F:	Documentation/devicetree/bindings/media/tegra-cec.txt
+
 ARM/TETON BGA MACHINE SUPPORT
 M:	"Mark F. Brown" <mark.brown314@gmail.com>
 L:	linux-arm-kernel@lists.infradead.org (moderated for non-subscribers)
@@ -12678,6 +12686,13 @@ M:	Greg Kroah-Hartman <gregkh@linuxfoundation.org>
 L:	stable@vger.kernel.org
 S:	Supported
 F:	Documentation/process/stable-kernel-rules.rst
+
+STAGING - ATOMISP DRIVER
+M:	Alan Cox <alan@linux.intel.com>
+M:	Sakari Ailus <sakari.ailus@linux.intel.com>
+L:	linux-media@vger.kernel.org
+S:	Maintained
+F:	drivers/staging/media/atomisp/
 
 STAGING - COMEDI
 M:	Ian Abbott <abbotti@mev.co.uk>
