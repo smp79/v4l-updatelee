@@ -162,8 +162,6 @@ static int av201x_set_params(struct dvb_frontend *fe)
 	u8 buf[5];
 	int ret;
 
-	dprintk("");
-
 	/*
 	   ** PLL setup **
 	   RF = (pll_N * ref_freq) / pll_M

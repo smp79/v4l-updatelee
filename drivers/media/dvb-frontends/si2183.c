@@ -298,21 +298,19 @@ static int si2183_read_status(struct dvb_frontend *fe, enum fe_status *status)
 	switch ((dev->stat_resp >> 1) & 0x03) {
 	case 0x01:
 		*status = FE_HAS_SIGNAL | FE_HAS_CARRIER;
-		c->cnr.stat[0].scale = FE_SCALE_NOT_AVAILABLE;
 		break;
 	case 0x03:
 		*status = FE_HAS_SIGNAL | FE_HAS_CARRIER | FE_HAS_VITERBI |
 				FE_HAS_SYNC | FE_HAS_LOCK;
-		c->cnr.len = 1;
-		c->cnr.stat[0].scale = FE_SCALE_DECIBEL;			
-		c->cnr.stat[0].svalue = (s64) cmd.args[3] * 250;
-		dev->snr *= cmd.args[3] * 164;
 		break;
 	default:
-		c->cnr.stat[0].scale = FE_SCALE_NOT_AVAILABLE;
 		break;
 	}
 	
+	c->cnr.len = 1;
+	c->cnr.stat[0].scale = FE_SCALE_DECIBEL;
+	c->cnr.stat[0].svalue = (s64) cmd.args[3] * 250;
+	dev->snr *= cmd.args[3] * 164;
 	dev->fe_status = *status;
 
 	si2183_read_signal_strength(fe, &agc);
@@ -1215,6 +1213,7 @@ static int si2183_get_spectrum_scan(struct dvb_frontend *fe, struct dvb_fe_spect
 	struct dtv_frontend_properties *p = &fe->dtv_property_cache;
 	struct si2183_cmd cmd;
 	int x, ret;
+	u16 strength = 0;
 
 	dprintk("");
 
@@ -1238,9 +1237,7 @@ static int si2183_get_spectrum_scan(struct dvb_frontend *fe, struct dvb_fe_spect
 			p->frequency = *(s->freq + x);
 
 			ret = fe->ops.tuner_ops.set_params(fe);
-
-			msleep(100);
-
+			msleep(20);
 			ret = fe->ops.tuner_ops.get_rf_strength(fe, (s->rf_level + x));
 		}
 	} else { // Satellite
@@ -1258,8 +1255,6 @@ static int si2183_get_spectrum_scan(struct dvb_frontend *fe, struct dvb_fe_spect
 
 			ret = fe->ops.tuner_ops.set_params(fe);
 
-			msleep(100);
-
 			memcpy(cmd.args, "\x8a\x00\x00\x00\x00\x00", 6);
 			cmd.wlen = 6;
 			cmd.rlen = 3;
@@ -1268,7 +1263,9 @@ static int si2183_get_spectrum_scan(struct dvb_frontend *fe, struct dvb_fe_spect
 				dprintk("err getting RF strength");
 			}
 
-			*(s->rf_level + x) = 0xff - cmd.args[1];
+			strength = cmd.args[1];
+			fe->ops.tuner_ops.get_rf_strength(fe, &strength);
+			*(s->rf_level + x) = (s16)(p->strength.stat[0].svalue/10);
 		}
 	}
 
