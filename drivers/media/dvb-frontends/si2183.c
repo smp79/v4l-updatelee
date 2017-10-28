@@ -307,7 +307,7 @@ static int si2183_read_status(struct dvb_frontend *fe, enum fe_status *status)
 	default:
 		break;
 	}
-	if (config->algo == SI21835_NOTUNE)
+	if (config->algo == SI2183_NOTUNE)
 		*status |= FE_TIMEDOUT;
 
 	c->cnr.len = 1;
