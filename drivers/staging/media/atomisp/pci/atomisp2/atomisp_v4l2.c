@@ -14,10 +14,6 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
- * 02110-1301, USA.
  *
  */
 #include <linux/module.h>
@@ -750,7 +746,6 @@ static int atomisp_subdev_probe(struct atomisp_device *isp)
 			&subdevs->v4l2_subdev.board_info;
 		struct i2c_adapter *adapter =
 			i2c_get_adapter(subdevs->v4l2_subdev.i2c_adapter_id);
-		struct camera_sensor_platform_data *sensor_pdata;
 		int sensor_num, i;
 
 		if (adapter == NULL) {
@@ -802,13 +797,7 @@ static int atomisp_subdev_probe(struct atomisp_device *isp)
 			 * pixel_format.
 			 */
 			isp->inputs[isp->input_cnt].frame_size.pixel_format = 0;
-			sensor_pdata = (struct camera_sensor_platform_data *)
-					board_info->platform_data;
-			if (sensor_pdata->get_camera_caps)
-				isp->inputs[isp->input_cnt].camera_caps =
-					sensor_pdata->get_camera_caps();
-			else
-				isp->inputs[isp->input_cnt].camera_caps =
+			isp->inputs[isp->input_cnt].camera_caps =
 					atomisp_get_default_camera_caps();
 			sensor_num = isp->inputs[isp->input_cnt]
 				.camera_caps->sensor_num;
@@ -1150,17 +1139,12 @@ static int init_atomisp_wdts(struct atomisp_device *isp)
 		struct atomisp_sub_device *asd = &isp->asd[i];
 		asd = &isp->asd[i];
 #ifndef ISP2401
-		setup_timer(&asd->wdt, atomisp_wdt, (unsigned long)isp);
+		timer_setup(&asd->wdt, atomisp_wdt, 0);
 #else
-		setup_timer(&asd->video_out_capture.wdt,
-			atomisp_wdt, (unsigned long)&asd->video_out_capture);
-		setup_timer(&asd->video_out_preview.wdt,
-			atomisp_wdt, (unsigned long)&asd->video_out_preview);
-		setup_timer(&asd->video_out_vf.wdt,
-			atomisp_wdt, (unsigned long)&asd->video_out_vf);
-		setup_timer(&asd->video_out_video_capture.wdt,
-			atomisp_wdt,
-			(unsigned long)&asd->video_out_video_capture);
+		timer_setup(&asd->video_out_capture.wdt, atomisp_wdt, 0);
+		timer_setup(&asd->video_out_preview.wdt, atomisp_wdt, 0);
+		timer_setup(&asd->video_out_vf.wdt, atomisp_wdt, 0);
+		timer_setup(&asd->video_out_video_capture.wdt, atomisp_wdt, 0);
 #endif
 	}
 	return 0;

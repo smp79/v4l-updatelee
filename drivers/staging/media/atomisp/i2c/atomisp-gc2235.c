@@ -26,7 +26,6 @@
 #include <linux/delay.h>
 #include <linux/slab.h>
 #include <linux/i2c.h>
-#include <linux/gpio.h>
 #include <linux/moduleparam.h>
 #include <media/v4l2-device.h>
 #include "../include/linux/atomisp_gmin_platform.h"
@@ -548,10 +547,6 @@ static int power_ctrl(struct v4l2_subdev *sd, bool flag)
 	if (!dev || !dev->platform_data)
 		return -ENODEV;
 
-	/* Non-gmin platforms use the legacy callback */
-	if (dev->platform_data->power_ctrl)
-		return dev->platform_data->power_ctrl(sd, flag);
-
 	if (flag) {
 		ret = dev->platform_data->v1p8_ctrl(sd, 1);
 		usleep_range(60, 90);
@@ -571,10 +566,6 @@ static int gpio_ctrl(struct v4l2_subdev *sd, bool flag)
 
 	if (!dev || !dev->platform_data)
 		return -ENODEV;
-
-	/* Non-gmin platforms use the legacy callback */
-	if (dev->platform_data->gpio_ctrl)
-		return dev->platform_data->gpio_ctrl(sd, flag);
 
 	ret |= dev->platform_data->gpio1_ctrl(sd, !flag);
 	usleep_range(60, 90);
@@ -906,13 +897,6 @@ static int gc2235_s_config(struct v4l2_subdev *sd,
 		(struct camera_sensor_platform_data *)platform_data;
 
 	mutex_lock(&dev->input_lock);
-	if (dev->platform_data->platform_init) {
-		ret = dev->platform_data->platform_init(client);
-		if (ret) {
-			dev_err(&client->dev, "platform init err\n");
-			goto platform_init_failed;
-		}
-	}
 	/* power off the module, then power on it in future
 	 * as first power on by board may not fulfill the
 	 * power on sequqence needed by the module
@@ -956,9 +940,6 @@ fail_power_on:
 	power_down(sd);
 	dev_err(&client->dev, "sensor power-gating failed\n");
 fail_power_off:
-	if (dev->platform_data->platform_deinit)
-		dev->platform_data->platform_deinit();
-platform_init_failed:
 	mutex_unlock(&dev->input_lock);
 	return ret;
 }
@@ -1101,9 +1082,6 @@ static int gc2235_remove(struct i2c_client *client)
 	struct gc2235_device *dev = to_gc2235_sensor(sd);
 	dev_dbg(&client->dev, "gc2235_remove...\n");
 
-	if (dev->platform_data->platform_deinit)
-		dev->platform_data->platform_deinit();
-
 	dev->platform_data->csi_cfg(sd, 0);
 
 	v4l2_device_unregister_subdev(sd);
@@ -1114,8 +1092,7 @@ static int gc2235_remove(struct i2c_client *client)
 	return 0;
 }
 
-static int gc2235_probe(struct i2c_client *client,
-			const struct i2c_device_id *id)
+static int gc2235_probe(struct i2c_client *client)
 {
 	struct gc2235_device *dev;
 	void *gcpdev;
@@ -1123,10 +1100,8 @@ static int gc2235_probe(struct i2c_client *client,
 	unsigned int i;
 
 	dev = kzalloc(sizeof(*dev), GFP_KERNEL);
-	if (!dev) {
-		dev_err(&client->dev, "out of memory\n");
+	if (!dev)
 		return -ENOMEM;
-	}
 
 	mutex_init(&dev->input_lock);
 
@@ -1187,32 +1162,17 @@ static const struct acpi_device_id gc2235_acpi_match[] = {
 	{ "INT33F8" },
 	{},
 };
-
 MODULE_DEVICE_TABLE(acpi, gc2235_acpi_match);
-MODULE_DEVICE_TABLE(i2c, gc2235_id);
+
 static struct i2c_driver gc2235_driver = {
 	.driver = {
-		.name = GC2235_NAME,
-		.acpi_match_table = ACPI_PTR(gc2235_acpi_match),
+		.name = "gc2235",
+		.acpi_match_table = gc2235_acpi_match,
 	},
-	.probe = gc2235_probe,
+	.probe_new = gc2235_probe,
 	.remove = gc2235_remove,
-	.id_table = gc2235_id,
 };
-
-static int init_gc2235(void)
-{
-	return i2c_add_driver(&gc2235_driver);
-}
-
-static void exit_gc2235(void)
-{
-
-	i2c_del_driver(&gc2235_driver);
-}
-
-module_init(init_gc2235);
-module_exit(exit_gc2235);
+module_i2c_driver(gc2235_driver);
 
 MODULE_AUTHOR("Shuguang Gong <Shuguang.Gong@intel.com>");
 MODULE_DESCRIPTION("A low-level driver for GC2235 sensors");

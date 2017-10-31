@@ -106,49 +106,6 @@ const struct atomisp_platform_data *atomisp_get_platform_data(void)
 }
 EXPORT_SYMBOL_GPL(atomisp_get_platform_data);
 
-static int af_power_ctrl(struct v4l2_subdev *subdev, int flag)
-{
-	struct gmin_subdev *gs = find_gmin_subdev(subdev);
-
-	if (gs && gs->v2p8_vcm_on == flag)
-		return 0;
-	gs->v2p8_vcm_on = flag;
-
-	/*
-	 * The power here is used for dw9817,
-	 * regulator is from rear sensor
-	 */
-	if (gs->v2p8_vcm_reg) {
-		if (flag)
-			return regulator_enable(gs->v2p8_vcm_reg);
-		else
-			return regulator_disable(gs->v2p8_vcm_reg);
-	}
-	return 0;
-}
-
-/*
- * Used in a handful of modules.  Focus motor control, I think.  Note
- * that there is no configurability in the API, so this needs to be
- * fixed where it is used.
- *
- * struct camera_af_platform_data {
- *     int (*power_ctrl)(struct v4l2_subdev *subdev, int flag);
- * };
- *
- * Note that the implementation in MCG platform_camera.c is stubbed
- * out anyway (i.e. returns zero from the callback) on BYT.  So
- * neither needed on gmin platforms or supported upstream.
- */
-const struct camera_af_platform_data *camera_get_af_platform_data(void)
-{
-	static struct camera_af_platform_data afpd = {
-		.power_ctrl = af_power_ctrl,
-	};
-	return &afpd;
-}
-EXPORT_SYMBOL_GPL(camera_get_af_platform_data);
-
 int atomisp_register_i2c_module(struct v4l2_subdev *subdev,
 				struct camera_sensor_platform_data *plat_data,
 				enum intel_v4l2_subdev_type type)
@@ -332,16 +289,6 @@ static const struct {
 
 #define CFG_VAR_NAME_MAX 64
 
-static int gmin_platform_init(struct i2c_client *client)
-{
-	return 0;
-}
-
-static int gmin_platform_deinit(void)
-{
-	return 0;
-}
-
 #define GMIN_PMC_CLK_NAME 14 /* "pmc_plt_clk_[0..5]" */
 static char gmin_pmc_clk_name[GMIN_PMC_CLK_NAME];
 
@@ -409,21 +356,11 @@ static struct gmin_subdev *gmin_subdev_add(struct v4l2_subdev *subdev)
 	if (!ret)
 		clk_disable_unprepare(gmin_subdevs[i].pmc_clk);
 
-	if (!IS_ERR(gmin_subdevs[i].gpio0)) {
-		ret = gpiod_direction_output(gmin_subdevs[i].gpio0, 0);
-		if (ret)
-			dev_err(dev, "gpio0 set output failed: %d\n", ret);
-	} else {
+	if (IS_ERR(gmin_subdevs[i].gpio0))
 		gmin_subdevs[i].gpio0 = NULL;
-	}
 
-	if (!IS_ERR(gmin_subdevs[i].gpio1)) {
-		ret = gpiod_direction_output(gmin_subdevs[i].gpio1, 0);
-		if (ret)
-			dev_err(dev, "gpio1 set output failed: %d\n", ret);
-	} else {
+	if (IS_ERR(gmin_subdevs[i].gpio1))
 		gmin_subdevs[i].gpio1 = NULL;
-	}
 
 	if (pmic_id == PMIC_REGULATOR) {
 		gmin_subdevs[i].v1p8_reg = regulator_get(dev, "V1P8SX");
@@ -638,8 +575,6 @@ static struct camera_sensor_platform_data gmin_plat = {
 	.v2p8_ctrl = gmin_v2p8_ctrl,
 	.v1p2_ctrl = gmin_v1p2_ctrl,
 	.flisclk_ctrl = gmin_flisclk_ctrl,
-	.platform_init = gmin_platform_init,
-	.platform_deinit = gmin_platform_deinit,
 	.csi_cfg = gmin_csi_cfg,
 	.get_vcm_ctrl = gmin_get_vcm_ctrl,
 };
@@ -785,10 +720,8 @@ int camera_sensor_csi(struct v4l2_subdev *sd, u32 port,
 
 	if (flag) {
 		csi = kzalloc(sizeof(*csi), GFP_KERNEL);
-		if (!csi) {
-			dev_err(&client->dev, "out of memory\n");
+		if (!csi)
 			return -ENOMEM;
-		}
 		csi->port = port;
 		csi->num_lanes = lanes;
 		csi->input_format = format;

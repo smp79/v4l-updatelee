@@ -12,10 +12,6 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
- * 02110-1301, USA.
  *
  */
 
@@ -31,7 +27,6 @@
 #include <linux/delay.h>
 #include <linux/slab.h>
 #include <linux/i2c.h>
-#include <linux/gpio.h>
 #include <linux/moduleparam.h>
 #include <media/v4l2-device.h>
 #include <linux/io.h>
@@ -1298,10 +1293,6 @@ static int power_ctrl(struct v4l2_subdev *sd, bool flag)
 	if (!dev || !dev->platform_data)
 		return -ENODEV;
 
-	/* Non-gmin platforms use the legacy callback */
-	if (dev->platform_data->power_ctrl)
-		return dev->platform_data->power_ctrl(sd, flag);
-
 	/* This driver assumes "internal DVDD, PWDNB tied to DOVDD".
 	 * In this set up only gpio0 (XSHUTDN) should be available
 	 * but in some products (for example ECS) gpio1 (PWDNB) is
@@ -1332,10 +1323,6 @@ static int gpio_ctrl(struct v4l2_subdev *sd, bool flag)
 
 	if (!dev || !dev->platform_data)
 		return -ENODEV;
-
-	/* Non-gmin platforms use the legacy callback */
-	if (dev->platform_data->gpio_ctrl)
-		return dev->platform_data->gpio_ctrl(sd, flag);
 
 	return dev->platform_data->gpio0_ctrl(sd, flag);
 }
@@ -1935,8 +1922,7 @@ static int ov5693_remove(struct i2c_client *client)
 	return 0;
 }
 
-static int ov5693_probe(struct i2c_client *client,
-			const struct i2c_device_id *id)
+static int ov5693_probe(struct i2c_client *client)
 {
 	struct ov5693_device *dev;
 	int i2c;
@@ -1958,10 +1944,8 @@ static int ov5693_probe(struct i2c_client *client,
 	}
 
 	dev = kzalloc(sizeof(*dev), GFP_KERNEL);
-	if (!dev) {
-		dev_err(&client->dev, "out of memory\n");
+	if (!dev)
 		return -ENOMEM;
-	}
 
 	mutex_init(&dev->input_lock);
 
@@ -2023,8 +2007,6 @@ out_free:
 	return ret;
 }
 
-MODULE_DEVICE_TABLE(i2c, ov5693_id);
-
 static const struct acpi_device_id ov5693_acpi_match[] = {
 	{"INT33BE"},
 	{},
@@ -2033,27 +2015,13 @@ MODULE_DEVICE_TABLE(acpi, ov5693_acpi_match);
 
 static struct i2c_driver ov5693_driver = {
 	.driver = {
-		.name = OV5693_NAME,
-		.acpi_match_table = ACPI_PTR(ov5693_acpi_match),
+		.name = "ov5693",
+		.acpi_match_table = ov5693_acpi_match,
 	},
-	.probe = ov5693_probe,
+	.probe_new = ov5693_probe,
 	.remove = ov5693_remove,
-	.id_table = ov5693_id,
 };
-
-static int init_ov5693(void)
-{
-	return i2c_add_driver(&ov5693_driver);
-}
-
-static void exit_ov5693(void)
-{
-
-	i2c_del_driver(&ov5693_driver);
-}
-
-module_init(init_ov5693);
-module_exit(exit_ov5693);
+module_i2c_driver(ov5693_driver);
 
 MODULE_DESCRIPTION("A low-level driver for OmniVision 5693 sensors");
 MODULE_LICENSE("GPL");

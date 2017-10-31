@@ -12,10 +12,6 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
- * 02110-1301, USA.
  *
  */
 #include <linux/module.h>
@@ -171,10 +167,9 @@ static int lm3554_set_config1(struct lm3554 *flash)
 /* -----------------------------------------------------------------------------
  * Hardware trigger
  */
-static void lm3554_flash_off_delay(long unsigned int arg)
+static void lm3554_flash_off_delay(struct timer_list *t)
 {
-	struct v4l2_subdev *sd = i2c_get_clientdata((struct i2c_client *)arg);
-	struct lm3554 *flash = to_lm3554(sd);
+	struct lm3554 *flash = from_timer(flash, t, flash_off_delay);
 	struct lm3554_platform_data *pdata = flash->pdata;
 
 	gpio_set_value(pdata->gpio_strobe, 0);
@@ -862,8 +857,7 @@ static void *lm3554_platform_data_func(struct i2c_client *client)
 	return &platform_data;
 }
 
-static int lm3554_probe(struct i2c_client *client,
-				  const struct i2c_device_id *id)
+static int lm3554_probe(struct i2c_client *client)
 {
 	int err = 0;
 	struct lm3554 *flash;
@@ -871,10 +865,8 @@ static int lm3554_probe(struct i2c_client *client,
 	int ret;
 
 	flash = kzalloc(sizeof(*flash), GFP_KERNEL);
-	if (!flash) {
-		dev_err(&client->dev, "out of memory\n");
+	if (!flash)
 		return -ENOMEM;
-	}
 
 	flash->pdata = client->dev.platform_data;
 
@@ -915,8 +907,7 @@ static int lm3554_probe(struct i2c_client *client,
 
 	mutex_init(&flash->power_lock);
 
-	setup_timer(&flash->flash_off_delay, lm3554_flash_off_delay,
-		    (unsigned long)client);
+	timer_setup(&flash->flash_off_delay, lm3554_flash_off_delay, 0);
 
 	err = lm3554_gpio_init(client);
 	if (err) {
@@ -962,13 +953,6 @@ fail:
 	return ret;
 }
 
-static const struct i2c_device_id lm3554_id[] = {
-	{LM3554_NAME, 0},
-	{},
-};
-
-MODULE_DEVICE_TABLE(i2c, lm3554_id);
-
 static const struct dev_pm_ops lm3554_pm_ops = {
 	.suspend = lm3554_suspend,
 	.resume = lm3554_resume,
@@ -978,32 +962,19 @@ static const struct acpi_device_id lm3554_acpi_match[] = {
 	{ "INTCF1C" },
 	{},
 };
-
 MODULE_DEVICE_TABLE(acpi, lm3554_acpi_match);
 
 static struct i2c_driver lm3554_driver = {
 	.driver = {
-		.name = LM3554_NAME,
+		.name = "lm3554",
 		.pm   = &lm3554_pm_ops,
-		.acpi_match_table = ACPI_PTR(lm3554_acpi_match),
+		.acpi_match_table = lm3554_acpi_match,
 	},
-	.probe = lm3554_probe,
+	.probe_new = lm3554_probe,
 	.remove = lm3554_remove,
-	.id_table = lm3554_id,
 };
+module_i2c_driver(lm3554_driver);
 
-static __init int init_lm3554(void)
-{
-	return i2c_add_driver(&lm3554_driver);
-}
-
-static __exit void exit_lm3554(void)
-{
-	i2c_del_driver(&lm3554_driver);
-}
-
-module_init(init_lm3554);
-module_exit(exit_lm3554);
 MODULE_AUTHOR("Jing Tao <jing.tao@intel.com>");
 MODULE_DESCRIPTION("LED flash driver for LM3554");
 MODULE_LICENSE("GPL");

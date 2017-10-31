@@ -26,7 +26,6 @@
 #include <linux/delay.h>
 #include <linux/slab.h>
 #include <linux/i2c.h>
-#include <linux/gpio.h>
 #include <linux/moduleparam.h>
 #include <media/v4l2-device.h>
 #include <linux/io.h>
@@ -847,10 +846,6 @@ static int power_ctrl(struct v4l2_subdev *sd, bool flag)
 	if (!dev || !dev->platform_data)
 		return -ENODEV;
 
-	/* Non-gmin platforms use the legacy callback */
-	if (dev->platform_data->power_ctrl)
-		return dev->platform_data->power_ctrl(sd, flag);
-
 	if (flag) {
 		ret |= dev->platform_data->v1p8_ctrl(sd, 1);
 		ret |= dev->platform_data->v2p8_ctrl(sd, 1);
@@ -871,10 +866,6 @@ static int gpio_ctrl(struct v4l2_subdev *sd, bool flag)
 
 	if (!dev || !dev->platform_data)
 		return -ENODEV;
-
-	/* Non-gmin platforms use the legacy callback */
-	if (dev->platform_data->gpio_ctrl)
-		return dev->platform_data->gpio_ctrl(sd, flag);
 
 	/* The OV2680 documents only one GPIO input (#XSHUTDN), but
 	 * existing integrations often wire two (reset/power_down)
@@ -1438,8 +1429,7 @@ static int ov2680_remove(struct i2c_client *client)
 	return 0;
 }
 
-static int ov2680_probe(struct i2c_client *client,
-			const struct i2c_device_id *id)
+static int ov2680_probe(struct i2c_client *client)
 {
 	struct ov2680_device *dev;
 	int ret;
@@ -1447,10 +1437,8 @@ static int ov2680_probe(struct i2c_client *client,
 	unsigned int i;
 
 	dev = kzalloc(sizeof(*dev), GFP_KERNEL);
-	if (!dev) {
-		dev_err(&client->dev, "out of memory\n");
+	if (!dev)
 		return -ENOMEM;
-	}
 
 	mutex_init(&dev->input_lock);
 
@@ -1523,35 +1511,16 @@ static const struct acpi_device_id ov2680_acpi_match[] = {
 };
 MODULE_DEVICE_TABLE(acpi, ov2680_acpi_match);
 
-
-MODULE_DEVICE_TABLE(i2c, ov2680_id);
 static struct i2c_driver ov2680_driver = {
 	.driver = {
-		.owner = THIS_MODULE,
-		.name = OV2680_NAME,
-		.acpi_match_table = ACPI_PTR(ov2680_acpi_match),
-
+		.name = "ov2680",
+		.acpi_match_table = ov2680_acpi_match,
 	},
-	.probe = ov2680_probe,
+	.probe_new = ov2680_probe,
 	.remove = ov2680_remove,
-	.id_table = ov2680_id,
 };
-
-static int init_ov2680(void)
-{
-	return i2c_add_driver(&ov2680_driver);
-}
-
-static void exit_ov2680(void)
-{
-
-	i2c_del_driver(&ov2680_driver);
-}
-
-module_init(init_ov2680);
-module_exit(exit_ov2680);
+module_i2c_driver(ov2680_driver);
 
 MODULE_AUTHOR("Jacky Wang <Jacky_wang@ovt.com>");
 MODULE_DESCRIPTION("A low-level driver for OmniVision 2680 sensors");
 MODULE_LICENSE("GPL");
-

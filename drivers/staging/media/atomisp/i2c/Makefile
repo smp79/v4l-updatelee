@@ -2,7 +2,6 @@
 # Makefile for sensor drivers
 #
 
-obj-$(CONFIG_VIDEO_ATOMISP_IMX)        += imx/
 obj-$(CONFIG_VIDEO_ATOMISP_OV5693)     += ov5693/
 obj-$(CONFIG_VIDEO_ATOMISP_MT9M114)    += atomisp-mt9m114.o
 obj-$(CONFIG_VIDEO_ATOMISP_GC2235)     += atomisp-gc2235.o
@@ -11,8 +10,6 @@ obj-$(CONFIG_VIDEO_ATOMISP_OV2680)     += atomisp-ov2680.o
 obj-$(CONFIG_VIDEO_ATOMISP_GC0310)     += atomisp-gc0310.o
 
 obj-$(CONFIG_VIDEO_ATOMISP_MSRLIST_HELPER) += atomisp-libmsrlisthelper.o
-
-obj-$(CONFIG_VIDEO_ATOMISP_AP1302)     += atomisp-ap1302.o
 
 # Makefile for flash drivers
 #

@@ -14,10 +14,6 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
- * 02110-1301, USA.
  *
  */
 #include <linux/firmware.h>
@@ -1661,20 +1657,15 @@ void atomisp_css_flush(struct atomisp_device *isp)
 	dev_dbg(isp->dev, "atomisp css flush done\n");
 }
 
-#ifndef ISP2401
-void atomisp_wdt(unsigned long isp_addr)
-#else
-void atomisp_wdt(unsigned long pipe_addr)
-#endif
+void atomisp_wdt(struct timer_list *t)
 {
 #ifndef ISP2401
-	struct atomisp_device *isp = (struct atomisp_device *)isp_addr;
+	struct atomisp_sub_device *asd = from_timer(asd, t, wdt);
 #else
-	struct atomisp_video_pipe *pipe =
-		(struct atomisp_video_pipe *)pipe_addr;
+	struct atomisp_video_pipe *pipe = from_timer(pipe, t, wdt);
 	struct atomisp_sub_device *asd = pipe->asd;
-	struct atomisp_device *isp = asd->isp;
 #endif
+	struct atomisp_device *isp = asd->isp;
 
 #ifdef ISP2401
 	atomic_inc(&pipe->wdt_count);

@@ -26,7 +26,6 @@
 #include <linux/delay.h>
 #include <linux/slab.h>
 #include <linux/i2c.h>
-#include <linux/gpio.h>
 #include <linux/moduleparam.h>
 #include <media/v4l2-device.h>
 #include "../include/linux/atomisp_gmin_platform.h"
@@ -651,10 +650,6 @@ static int power_ctrl(struct v4l2_subdev *sd, bool flag)
 	if (!dev || !dev->platform_data)
 		return -ENODEV;
 
-	/* Non-gmin platforms use the legacy callback */
-	if (dev->platform_data->power_ctrl)
-		return dev->platform_data->power_ctrl(sd, flag);
-
 	if (flag) {
 		ret = dev->platform_data->v1p8_ctrl(sd, 1);
 		if (ret == 0) {
@@ -677,10 +672,6 @@ static int gpio_ctrl(struct v4l2_subdev *sd, bool flag)
 
 	if (!dev || !dev->platform_data)
 		return -ENODEV;
-
-	/* Non-gmin platforms use the legacy callback */
-	if (dev->platform_data->gpio_ctrl)
-		return dev->platform_data->gpio_ctrl(sd, flag);
 
 	/* Note: the GPIO order is asymmetric: always RESET#
 	 * before PWDN# when turning it on or off.
@@ -1044,13 +1035,6 @@ static int ov2722_s_config(struct v4l2_subdev *sd,
 		(struct camera_sensor_platform_data *)platform_data;
 
 	mutex_lock(&dev->input_lock);
-	if (dev->platform_data->platform_init) {
-		ret = dev->platform_data->platform_init(client);
-		if (ret) {
-			dev_err(&client->dev, "platform init err\n");
-			goto platform_init_failed;
-		}
-	}
 
 	/* power off the module, then power on it in future
 	 * as first power on by board may not fulfill the
@@ -1095,9 +1079,6 @@ fail_power_on:
 	power_down(sd);
 	dev_err(&client->dev, "sensor power-gating failed\n");
 fail_power_off:
-	if (dev->platform_data->platform_deinit)
-		dev->platform_data->platform_deinit();
-platform_init_failed:
 	mutex_unlock(&dev->input_lock);
 	return ret;
 }
@@ -1241,9 +1222,6 @@ static int ov2722_remove(struct i2c_client *client)
 	struct ov2722_device *dev = to_ov2722_sensor(sd);
 	dev_dbg(&client->dev, "ov2722_remove...\n");
 
-	if (dev->platform_data->platform_deinit)
-		dev->platform_data->platform_deinit();
-
 	dev->platform_data->csi_cfg(sd, 0);
 	v4l2_ctrl_handler_free(&dev->ctrl_handler);
 	v4l2_device_unregister_subdev(sd);
@@ -1276,8 +1254,7 @@ static int __ov2722_init_ctrl_handler(struct ov2722_device *dev)
 	return 0;
 }
 
-static int ov2722_probe(struct i2c_client *client,
-			const struct i2c_device_id *id)
+static int ov2722_probe(struct i2c_client *client)
 {
 	struct ov2722_device *dev;
 	void *ovpdev;
@@ -1285,10 +1262,8 @@ static int ov2722_probe(struct i2c_client *client,
 	struct acpi_device *adev;
 
 	dev = kzalloc(sizeof(*dev), GFP_KERNEL);
-	if (!dev) {
-		dev_err(&client->dev, "out of memory\n");
+	if (!dev)
 		return -ENOMEM;
-	}
 
 	mutex_init(&dev->input_lock);
 
@@ -1335,38 +1310,21 @@ out_free:
 	return ret;
 }
 
-MODULE_DEVICE_TABLE(i2c, ov2722_id);
-
 static const struct acpi_device_id ov2722_acpi_match[] = {
 	{ "INT33FB" },
 	{},
 };
-
 MODULE_DEVICE_TABLE(acpi, ov2722_acpi_match);
 
 static struct i2c_driver ov2722_driver = {
 	.driver = {
-		.name = OV2722_NAME,
-		.acpi_match_table = ACPI_PTR(ov2722_acpi_match),
+		.name = "ov2722",
+		.acpi_match_table = ov2722_acpi_match,
 	},
-	.probe = ov2722_probe,
+	.probe_new = ov2722_probe,
 	.remove = ov2722_remove,
-	.id_table = ov2722_id,
 };
-
-static int init_ov2722(void)
-{
-	return i2c_add_driver(&ov2722_driver);
-}
-
-static void exit_ov2722(void)
-{
-
-	i2c_del_driver(&ov2722_driver);
-}
-
-module_init(init_ov2722);
-module_exit(exit_ov2722);
+module_i2c_driver(ov2722_driver);
 
 MODULE_AUTHOR("Wei Liu <wei.liu@intel.com>");
 MODULE_DESCRIPTION("A low-level driver for OmniVision 2722 sensors");

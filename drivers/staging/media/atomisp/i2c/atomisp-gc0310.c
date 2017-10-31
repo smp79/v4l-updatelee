@@ -26,7 +26,6 @@
 #include <linux/delay.h>
 #include <linux/slab.h>
 #include <linux/i2c.h>
-#include <linux/gpio.h>
 #include <linux/moduleparam.h>
 #include <media/v4l2-device.h>
 #include <linux/io.h>
@@ -738,10 +737,6 @@ static int power_ctrl(struct v4l2_subdev *sd, bool flag)
 	if (!dev || !dev->platform_data)
 		return -ENODEV;
 
-	/* Non-gmin platforms use the legacy callback */
-	if (dev->platform_data->power_ctrl)
-		return dev->platform_data->power_ctrl(sd, flag);
-
 	if (flag) {
 		/* The upstream module driver (written to Crystal
 		 * Cove) had this logic to pulse the rails low first.
@@ -771,10 +766,6 @@ static int gpio_ctrl(struct v4l2_subdev *sd, bool flag)
 
 	if (!dev || !dev->platform_data)
 		return -ENODEV;
-
-	/* Non-gmin platforms use the legacy callback */
-	if (dev->platform_data->gpio_ctrl)
-		return dev->platform_data->gpio_ctrl(sd, flag);
 
 	/* GPIO0 == "reset" (active low), GPIO1 == "power down" */
 	if (flag) {
@@ -1165,13 +1156,6 @@ static int gc0310_s_config(struct v4l2_subdev *sd,
 		(struct camera_sensor_platform_data *)platform_data;
 
 	mutex_lock(&dev->input_lock);
-	if (dev->platform_data->platform_init) {
-		ret = dev->platform_data->platform_init(client);
-		if (ret) {
-			dev_err(&client->dev, "platform init err\n");
-			goto platform_init_failed;
-		}
-	}
 	/* power off the module, then power on it in future
 	 * as first power on by board may not fulfill the
 	 * power on sequqence needed by the module
@@ -1216,9 +1200,6 @@ fail_power_on:
 	power_down(sd);
 	dev_err(&client->dev, "sensor power-gating failed\n");
 fail_power_off:
-	if (dev->platform_data->platform_deinit)
-		dev->platform_data->platform_deinit();
-platform_init_failed:
 	mutex_unlock(&dev->input_lock);
 	return ret;
 }
@@ -1362,9 +1343,6 @@ static int gc0310_remove(struct i2c_client *client)
 	struct gc0310_device *dev = to_gc0310_sensor(sd);
 	dev_dbg(&client->dev, "gc0310_remove...\n");
 
-	if (dev->platform_data->platform_deinit)
-		dev->platform_data->platform_deinit();
-
 	dev->platform_data->csi_cfg(sd, 0);
 
 	v4l2_device_unregister_subdev(sd);
@@ -1375,8 +1353,7 @@ static int gc0310_remove(struct i2c_client *client)
 	return 0;
 }
 
-static int gc0310_probe(struct i2c_client *client,
-			const struct i2c_device_id *id)
+static int gc0310_probe(struct i2c_client *client)
 {
 	struct gc0310_device *dev;
 	int ret;
@@ -1385,10 +1362,8 @@ static int gc0310_probe(struct i2c_client *client,
 
 	pr_info("%s S\n", __func__);
 	dev = kzalloc(sizeof(*dev), GFP_KERNEL);
-	if (!dev) {
-		dev_err(&client->dev, "out of memory\n");
+	if (!dev)
 		return -ENOMEM;
-	}
 
 	mutex_init(&dev->input_lock);
 
@@ -1457,33 +1432,17 @@ static const struct acpi_device_id gc0310_acpi_match[] = {
 	{"INT0310"},
 	{},
 };
-
 MODULE_DEVICE_TABLE(acpi, gc0310_acpi_match);
 
-MODULE_DEVICE_TABLE(i2c, gc0310_id);
 static struct i2c_driver gc0310_driver = {
 	.driver = {
-		.name = GC0310_NAME,
-		.acpi_match_table = ACPI_PTR(gc0310_acpi_match),
+		.name = "gc0310",
+		.acpi_match_table = gc0310_acpi_match,
 	},
-	.probe = gc0310_probe,
+	.probe_new = gc0310_probe,
 	.remove = gc0310_remove,
-	.id_table = gc0310_id,
 };
-
-static int init_gc0310(void)
-{
-	return i2c_add_driver(&gc0310_driver);
-}
-
-static void exit_gc0310(void)
-{
-
-	i2c_del_driver(&gc0310_driver);
-}
-
-module_init(init_gc0310);
-module_exit(exit_gc0310);
+module_i2c_driver(gc0310_driver);
 
 MODULE_AUTHOR("Lai, Angie <angie.lai@intel.com>");
 MODULE_DESCRIPTION("A low-level driver for GalaxyCore GC0310 sensors");
