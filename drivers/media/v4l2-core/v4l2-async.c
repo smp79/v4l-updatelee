@@ -502,7 +502,7 @@ void v4l2_async_notifier_cleanup(struct v4l2_async_notifier *notifier)
 {
 	unsigned int i;
 
-	if (!notifier->max_subdevs)
+	if (!notifier || !notifier->max_subdevs)
 		return;
 
 	for (i = 0; i < notifier->num_subdevs; i++) {
@@ -550,7 +550,6 @@ int v4l2_async_register_subdev(struct v4l2_subdev *sd)
 		struct v4l2_device *v4l2_dev =
 			v4l2_async_notifier_find_v4l2_dev(notifier);
 		struct v4l2_async_subdev *asd;
-		int ret;
 
 		if (!v4l2_dev)
 			continue;
