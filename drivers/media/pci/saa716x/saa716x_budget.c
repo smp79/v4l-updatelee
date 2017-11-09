@@ -1168,6 +1168,7 @@ static int saa716x_tbs6285_frontend_attach(struct saa716x_adapter *adapter, int 
 	si2168_config.fe = &adapter->fe;
 	si2168_config.ts_mode = SI2168_TS_SERIAL;
 	si2168_config.ts_clock_gapped = true;
+	si2168_config.ts_clock_inv = 1;
 	memset(&info, 0, sizeof(struct i2c_board_info));
 	strlcpy(info.type, "si2168", I2C_NAME_SIZE);
 	info.addr = ((count == 0) || (count == 2)) ? 0x64 : 0x66;

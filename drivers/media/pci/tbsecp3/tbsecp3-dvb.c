@@ -757,7 +757,7 @@ static int tbsecp3_frontend_attach(struct tbsecp3_adapter *adapter)
 		si2168_config.fe = &adapter->fe;
 		si2168_config.ts_mode = SI2168_TS_SERIAL;//zc2016/07/20
 		si2168_config.ts_clock_gapped = true;
-		//si2168_config.ts_clock_inv=1;//zc2016/07/20
+		si2168_config.ts_clock_inv=0;//zc2016/07/20
 		
 		memset(&info, 0, sizeof(struct i2c_board_info));
 		strlcpy(info.type, "si2168", I2C_NAME_SIZE);
