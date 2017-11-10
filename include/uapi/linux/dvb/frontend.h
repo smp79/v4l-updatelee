@@ -28,19 +28,6 @@
 
 #include <linux/types.h>
 
-struct ecp3_info
-{
-	__u8 reg;
-	__u32 data;
-};
-
-struct mcu24cxx_info
-{
-	__u32 bassaddr;
-	__u8 reg;
-	__u32 data;
-};
-
 enum fe_extended_caps {
 	FE_EXTENDED_CAPS_IS_STUPID = 0x00,
 	FE_CAN_SPECTRUMSCAN        = 0x01,
@@ -545,7 +532,6 @@ enum fe_interleaving {
 #define DTV_STREAM_ID		42
 #define DTV_ISDBS_TS_ID_LEGACY	DTV_STREAM_ID
 #define DTV_DVBT2_PLP_ID_LEGACY	43
-#define DTV_DVBS2_MIS_ID        43
 
 #define DTV_ENUM_DELSYS		44
 
@@ -1073,12 +1059,25 @@ struct dvb_frontend_event {
 #define FE_SET_FRONTEND		   _IOW('o', 76, struct dvb_frontend_parameters)
 #define FE_GET_FRONTEND		   _IOR('o', 77, struct dvb_frontend_parameters)
 
+#endif
+
+struct ecp3_info
+{
+	__u8 reg;
+	__u32 data;
+};
+
+struct mcu24cxx_info
+{
+	__u32 bassaddr;
+	__u8 reg;
+	__u32 data;
+};
+
 #define FE_ECP3FW_READ    _IOR('o', 90, struct ecp3_info)
 #define FE_ECP3FW_WRITE   _IOW('o', 91, struct ecp3_info)
 
 #define FE_24CXX_READ    _IOR('o', 92, struct mcu24cxx_info)
 #define FE_24CXX_WRITE   _IOW('o', 93, struct mcu24cxx_info)
-
-#endif
 
 #endif /*_DVBFRONTEND_H_*/
