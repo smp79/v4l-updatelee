@@ -843,12 +843,12 @@ static int si2168_sleep(struct dvb_frontend *fe)
 	if (dev->version > ('B' << 24 | 4 << 16 | 0 << 8 | 11 << 0))
 		dev->warm = false;
 
-	memcpy(cmd.args, "\x13", 1);
-	cmd.wlen = 1;
-	cmd.rlen = 0;
-	ret = si2168_cmd_execute(client, &cmd);
-	if (ret)
-		goto err;
+//	memcpy(cmd.args, "\x13", 1);
+//	cmd.wlen = 1;
+//	cmd.rlen = 0;
+//	ret = si2168_cmd_execute(client, &cmd);
+//	if (ret)
+//		goto err;
 
 	return 0;
 err:

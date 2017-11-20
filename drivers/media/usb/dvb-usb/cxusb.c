@@ -52,8 +52,8 @@ MODULE_PARM_DESC(debug, "set debugging level (1=rc (or-able))." DVB_USB_DEBUG_ST
 
 DVB_DEFINE_MOD_OPT_ADAPTER_NR(adapter_nr);
 
-#define deb_info(args...)   dprintk(dvb_usb_cxusb_debug, 0x03, args)
-#define deb_i2c(args...)    dprintk(dvb_usb_cxusb_debug, 0x02, args)
+#define deb_info(args...)   dprintk(args)
+#define deb_i2c(args...)    dprintk(args)
 
 static int cxusb_ctrl_msg(struct dvb_usb_device *d,
 			  u8 cmd, u8 *wbuf, int wlen, u8 *rbuf, int rlen)
@@ -87,6 +87,8 @@ static void cxusb_gpio_tuner(struct dvb_usb_device *d, int onoff)
 {
 	struct cxusb_state *st = d->priv;
 	u8 o[2], i;
+
+	dprintk("");
 
 	if (st->gpio_write_state[GPIO_TUNER] == onoff)
 		return;
@@ -135,6 +137,8 @@ static int cxusb_d680_dmb_gpio_tuner(struct dvb_usb_device *d,
 	u8  o[2] = {addr, onoff};
 	u8  i;
 	int rc;
+
+	dprintk("");
 
 	rc = cxusb_ctrl_msg(d, CMD_GPIO_WRITE, o, 2, &i, 1);
 
@@ -269,6 +273,9 @@ static struct i2c_algorithm cxusb_i2c_algo = {
 static int cxusb_power_ctrl(struct dvb_usb_device *d, int onoff)
 {
 	u8 b = 0;
+
+	dprintk("onoff: %d", onoff);
+
 	if (onoff)
 		return cxusb_ctrl_msg(d, CMD_POWER_ON, &b, 1, NULL, 0);
 	else
@@ -339,13 +346,24 @@ static int cxusb_d680_dmb_power_ctrl(struct dvb_usb_device *d, int onoff)
 {
 	int ret;
 	u8  b;
-	ret = cxusb_power_ctrl(d, onoff);
-	if (!onoff)
-		return ret;
 
-	msleep(128);
-	cxusb_ctrl_msg(d, CMD_DIGITAL, NULL, 0, &b, 1);
-	msleep(100);
+	dprintk("onoff: %d", onoff);
+
+	if (onoff) { // on
+//		msleep(100);
+//		ret = cxusb_power_ctrl(d, 0);
+//		msleep(100);
+//		cxusb_ctrl_msg(d, CMD_DIGITAL, NULL, 0, &b, 1);
+//		msleep(100);
+
+		ret = cxusb_power_ctrl(d, 1);
+		msleep(100);
+	} else { // off
+//		ret = cxusb_power_ctrl(d, 0);
+//		msleep(100);
+//		cxusb_ctrl_msg(d, CMD_DIGITAL, NULL, 0, &b, 1);
+//		msleep(100);
+	}
 	return ret;
 }
 
@@ -1250,17 +1268,19 @@ static int cxusb_mygica_t230c_frontend_attach(struct dvb_usb_adapter *adap)
 	struct si2168_config si2168_config;
 	struct si2157_config si2157_config;
 
-	/* Select required USB configuration */
-	if (usb_set_interface(d->udev, 0, 0) < 0)
-		err("set interface failed");
+	dprintk("");
 
-	/* Unblock all USB pipes */
-	usb_clear_halt(d->udev,
-		usb_sndbulkpipe(d->udev, d->props.generic_bulk_ctrl_endpoint));
-	usb_clear_halt(d->udev,
-		usb_rcvbulkpipe(d->udev, d->props.generic_bulk_ctrl_endpoint));
-	usb_clear_halt(d->udev,
-		usb_rcvbulkpipe(d->udev, d->props.adapter[0].fe[0].stream.endpoint));
+//	/* Select required USB configuration */
+//	if (usb_set_interface(d->udev, 0, 0) < 0)
+//		err("set interface failed");
+
+//	/* Unblock all USB pipes */
+//	usb_clear_halt(d->udev,
+//		usb_sndbulkpipe(d->udev, d->props.generic_bulk_ctrl_endpoint));
+//	usb_clear_halt(d->udev,
+//		usb_rcvbulkpipe(d->udev, d->props.generic_bulk_ctrl_endpoint));
+//	usb_clear_halt(d->udev,
+//		usb_rcvbulkpipe(d->udev, d->props.adapter[0].fe[0].stream.endpoint));
 
 	/* attach frontend */
 	memset(&si2168_config, 0, sizeof(si2168_config));
@@ -2282,11 +2302,11 @@ static struct dvb_usb_device_properties cxusb_mygica_t230c_properties = {
 			/* parameter for the MPEG2-data transfer */
 			.stream = {
 				.type = USB_BULK,
-				.count = 5,
+				.count = 7,
 				.endpoint = 0x02,
 				.u = {
 					.bulk = {
-						.buffersize = 8192,
+						.buffersize = 4096,
 					}
 				}
 			},
