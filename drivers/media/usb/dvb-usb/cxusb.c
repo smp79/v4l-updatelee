@@ -344,26 +344,24 @@ static int cxusb_nano2_power_ctrl(struct dvb_usb_device *d, int onoff)
 
 static int cxusb_d680_dmb_power_ctrl(struct dvb_usb_device *d, int onoff)
 {
-	int ret;
-	u8  b;
+	int ret = 0;
+//	u8  b;
 
 	dprintk("onoff: %d", onoff);
 
-	if (onoff) { // on
-//		msleep(100);
-//		ret = cxusb_power_ctrl(d, 0);
-//		msleep(100);
-//		cxusb_ctrl_msg(d, CMD_DIGITAL, NULL, 0, &b, 1);
-//		msleep(100);
-
+	if (onoff) {
+		msleep(100);
 		ret = cxusb_power_ctrl(d, 1);
 		msleep(100);
-	} else { // off
-//		ret = cxusb_power_ctrl(d, 0);
-//		msleep(100);
-//		cxusb_ctrl_msg(d, CMD_DIGITAL, NULL, 0, &b, 1);
-//		msleep(100);
 	}
+
+//	ret = cxusb_power_ctrl(d, onoff);
+//	if (!onoff)
+//		return ret;
+
+//	msleep(128);
+//	cxusb_ctrl_msg(d, CMD_DIGITAL, NULL, 0, &b, 1);
+//	msleep(100);
 	return ret;
 }
 

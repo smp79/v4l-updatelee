@@ -91,13 +91,13 @@ static int si2157_init(struct dvb_frontend *fe)
 	const char *fw_name;
 	unsigned int uitmp, chip_id;
 
-	dprintk("");
-
 	/* Returned IF frequency is garbage when firmware is not running */
 	memcpy(cmd.args, "\x15\x00\x06\x07", 4);
 	cmd.wlen = 4;
 	cmd.rlen = 4;
+	dprintk("1");
 	ret = si2157_cmd_execute(client, &cmd);
+	dprintk("2");
 	if (ret)
 		goto err;
 
@@ -112,6 +112,7 @@ static int si2157_init(struct dvb_frontend *fe)
 		memcpy(cmd.args, "\xc0\x05\x01\x00\x00\x0b\x00\x00\x01", 9);
 		cmd.wlen = 9;
 	} else if (dev->chiptype == SI2157_CHIPTYPE_SI2141) {
+		// This might be wrong
 		memcpy(cmd.args, "\xc0\x00\x0d\x0e\x00\x01\x01\x01\x01\x03", 10);
 		cmd.wlen = 10;
 	} else {
@@ -119,7 +120,9 @@ static int si2157_init(struct dvb_frontend *fe)
 		cmd.wlen = 15;
 	}
 	cmd.rlen = 1;
+	dprintk("3");
 	ret = si2157_cmd_execute(client, &cmd);
+	dprintk("4");
 	if (ret)
 		goto err;
 
@@ -127,7 +130,9 @@ static int si2157_init(struct dvb_frontend *fe)
 	if (dev->chiptype == SI2157_CHIPTYPE_SI2141) {
 		memcpy(cmd.args, "\xc0\x08\x01\x02\x00\x00\x01", 7);
 		cmd.wlen = 7;
+		dprintk("5");
 		ret = si2157_cmd_execute(client, &cmd);
+		dprintk("6");
 		if (ret)
 			goto err;
 	}
@@ -136,7 +141,9 @@ static int si2157_init(struct dvb_frontend *fe)
 	memcpy(cmd.args, "\x02", 1);
 	cmd.wlen = 1;
 	cmd.rlen = 13;
+	dprintk("7");
 	ret = si2157_cmd_execute(client, &cmd);
+	dprintk("8");
 	if (ret)
 		goto err;
 
@@ -164,7 +171,7 @@ static int si2157_init(struct dvb_frontend *fe)
 		fw_name = NULL;
 		break;
 	default:
-		dprintk("unknown chip version Si21%d-%c%c%c\n",
+		dprintk("unknown chip version Si21%d-%c%c%c \n\n",
 				cmd.args[2], cmd.args[1],
 				cmd.args[3], cmd.args[4]);
 		ret = -EINVAL;
@@ -250,8 +257,8 @@ static int si2157_sleep(struct dvb_frontend *fe)
 {
 	struct i2c_client *client = fe->tuner_priv;
 	struct si2157_dev *dev = i2c_get_clientdata(client);
-	int ret;
-	struct si2157_cmd cmd;
+//	int ret;
+//	struct si2157_cmd cmd;
 
 	dprintk("");
 
@@ -266,9 +273,9 @@ static int si2157_sleep(struct dvb_frontend *fe)
 //		goto err;
 
 	return 0;
-err:
-	dprintk("failed=%d", ret);
-	return ret;
+//err:
+//	dprintk("failed=%d", ret);
+//	return ret;
 }
 
 static int si2157_set_params(struct dvb_frontend *fe)

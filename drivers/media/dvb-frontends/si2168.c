@@ -623,14 +623,15 @@ static int si2168_init(struct dvb_frontend *fe)
 	const struct firmware *fw;
 	struct si2168_cmd cmd;
 
-	dprintk("");
 	dev->algo = SI2168_NOTUNE;
 
 	/* initialize */
 	memcpy(cmd.args, "\xc0\x12\x00\x0c\x00\x0d\x16\x00\x00\x00\x00\x00\x00", 13);
 	cmd.wlen = 13;
 	cmd.rlen = 0;
+	dprintk("1");
 	ret = si2168_cmd_execute(client, &cmd);
+	dprintk("2");
 	if (ret)
 		goto err;
 
@@ -639,7 +640,9 @@ static int si2168_init(struct dvb_frontend *fe)
 		memcpy(cmd.args, "\xc0\x06\x08\x0f\x00\x20\x21\x01", 8);
 		cmd.wlen = 8;
 		cmd.rlen = 1;
+		dprintk("3");
 		ret = si2168_cmd_execute(client, &cmd);
+		dprintk("4");
 		if (ret)
 			goto err;
 
@@ -648,7 +651,9 @@ static int si2168_init(struct dvb_frontend *fe)
 		memcpy(cmd.args, "\x85", 1);
 		cmd.wlen = 1;
 		cmd.rlen = 1;
+		dprintk("5");
 		ret = si2168_cmd_execute(client, &cmd);
+		dprintk("6");
 		if (ret)
 			goto err;
 
@@ -659,7 +664,9 @@ static int si2168_init(struct dvb_frontend *fe)
 	memcpy(cmd.args, "\xc0\x06\x01\x0f\x00\x20\x20\x01", 8);
 	cmd.wlen = 8;
 	cmd.rlen = 1;
+	dprintk("7");
 	ret = si2168_cmd_execute(client, &cmd);
+	dprintk("8");
 	if (ret)
 		goto err;
 
@@ -831,8 +838,8 @@ static int si2168_sleep(struct dvb_frontend *fe)
 {
 	struct i2c_client *client = fe->demodulator_priv;
 	struct si2168_dev *dev = i2c_get_clientdata(client);
-	int ret;
-	struct si2168_cmd cmd;
+//	int ret;
+//	struct si2168_cmd cmd;
 
 	dprintk("");
 
@@ -851,9 +858,9 @@ static int si2168_sleep(struct dvb_frontend *fe)
 //		goto err;
 
 	return 0;
-err:
-	dprintk("failed=%d", ret);
-	return ret;
+//err:
+//	dprintk("failed=%d", ret);
+//	return ret;
 }
 
 static int si2168_get_tune_settings(struct dvb_frontend *fe,
