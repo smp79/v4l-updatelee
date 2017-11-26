@@ -1024,6 +1024,12 @@ static int stv091x_probe(struct stv091x_state *state)
 	/* Speed = 67.5 MHz */
 	stv091x_write_reg(state, RSTV091X_P2_TSSPEED, state->tsspeed);
 
+	/* Reset stream merger */
+	stv091x_write_reg(state, RSTV091X_P1_TSCFGH, state->tscfgh | 0x01);
+	stv091x_write_reg(state, RSTV091X_P2_TSCFGH, state->tscfgh | 0x01);
+	stv091x_write_reg(state, RSTV091X_P1_TSCFGH, state->tscfgh);
+	stv091x_write_reg(state, RSTV091X_P2_TSCFGH, state->tscfgh);
+
 	stv091x_write_reg(state, RSTV091X_P1_I2CRPT, 0x4a);
 	stv091x_write_reg(state, RSTV091X_P2_I2CRPT, 0x4a);
 
