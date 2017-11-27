@@ -48,9 +48,9 @@ struct infrared {
 
 
 /* key-up timer */
-static void ir_emit_keyup(unsigned long parm)
+static void ir_emit_keyup(struct timer_list *t)
 {
-	struct infrared *ir = (struct infrared *) parm;
+	struct infrared *ir = from_timer(ir, t, keyup_timer);
 
 	if (!ir || !test_bit(ir->last_key, ir->input_dev->key))
 		return;
@@ -203,9 +203,7 @@ int saa716x_ir_init(struct saa716x_dev *saa716x)
 	if (!ir)
 		return -ENOMEM;
 
-	init_timer(&ir->keyup_timer);
-	ir->keyup_timer.function = ir_emit_keyup;
-	ir->keyup_timer.data = (unsigned long) ir;
+	timer_setup(&ir->keyup_timer, ir_emit_keyup, 0);
 
 	input_dev = input_allocate_device();
 	if (!input_dev)
@@ -237,8 +235,8 @@ int saa716x_ir_init(struct saa716x_dev *saa716x)
 	ir_register_keys(ir);
 
 	/* override repeat timer */
-	input_dev->timer.function = ir_repeat_key;
-	input_dev->timer.data = (unsigned long) ir;
+//	input_dev->timer.function = ir_repeat_key;
+//	input_dev->timer.data = (unsigned long) ir;
 
 	tasklet_init(&ir->tasklet, ir_emit_key, (unsigned long) saa716x);
 	saa716x->ir_priv = ir;
