@@ -506,6 +506,8 @@ static struct stv090x_config earda_config = {
 	.tuner_set_bandwidth    = stb6100_set_bandwidth,
 	.tuner_get_bandwidth    = stb6100_get_bandwidth,
 	.name			= "STV090x TBS QBox2 CI",
+	.tun1_iqswap            = 1,
+	.tun2_iqswap            = 1,
 	.set_lock_led		= tbsqbox2ci_led_ctrl,
 };
 
