@@ -30,9 +30,7 @@
 #define FE_DEBUG				3
 #define FE_DEBUGREG				4
 
-#define dprintk(__y, __z, format, arg...) do {						\
-			printk(KERN_DEBUG "%s: " format "\n", __func__ , ##arg);						\
-} while (0)
+#define dprintk(fmt, arg...)	printk(KERN_INFO "%s: " fmt "\n",  __func__, ##arg)
 
 #define STV090x_READ_DEMOD(__state, __reg) ((			\
 	(__state)->demod == STV090x_DEMODULATOR_1)	?	\

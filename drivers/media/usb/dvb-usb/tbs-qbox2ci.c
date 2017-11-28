@@ -41,7 +41,7 @@ struct tbsqbox2ci_state {
 /* debug */
 static int dvb_usb_tbsqbox2ci_debug;
 module_param_named(debug, dvb_usb_tbsqbox2ci_debug, int, 0644);
-MODULE_PARM_DESC(debug, "set debugging level (1=info 2=xfer (or-able))." 
+MODULE_PARM_DESC(debug, "set debugging level (1=info 2=xfer (or-able))."
 							DVB_USB_DEBUG_STATUS);
 
 DVB_DEFINE_MOD_OPT_ADAPTER_NR(adapter_nr);
@@ -72,7 +72,7 @@ static int tbsqbox2ci_op_rw(struct usb_device *dev, u8 request, u16 value,
 }
 
 static int tbsqbox2ci_read_attribute_mem(struct dvb_ca_en50221 *ca,
-                                                	int slot, int address)
+							int slot, int address)
 {
 	struct dvb_usb_device *d = (struct dvb_usb_device *)ca->data;
 	struct tbsqbox2ci_state *state = (struct tbsqbox2ci_state *)d->priv;
@@ -142,7 +142,7 @@ static int tbsqbox2ci_write_attribute_mem(struct dvb_ca_en50221 *ca,
 	return 0;
 }
 
-static int tbsqbox2ci_read_cam_control(struct dvb_ca_en50221 *ca, int slot, 
+static int tbsqbox2ci_read_cam_control(struct dvb_ca_en50221 *ca, int slot,
 								u8 address)
 {
 	struct dvb_usb_device *d = (struct dvb_usb_device *)ca->data;
@@ -176,7 +176,7 @@ static int tbsqbox2ci_read_cam_control(struct dvb_ca_en50221 *ca, int slot,
 	return rbuf[0];
 }
 
-static int tbsqbox2ci_write_cam_control(struct dvb_ca_en50221 *ca, int slot, 
+static int tbsqbox2ci_write_cam_control(struct dvb_ca_en50221 *ca, int slot,
 							u8 address, u8 value)
 {
 	struct dvb_usb_device *d = (struct dvb_usb_device *)ca->data;
@@ -211,7 +211,7 @@ static int tbsqbox2ci_write_cam_control(struct dvb_ca_en50221 *ca, int slot,
 	return 0;
 }
 
-static int tbsqbox2ci_set_video_port(struct dvb_ca_en50221 *ca, 
+static int tbsqbox2ci_set_video_port(struct dvb_ca_en50221 *ca,
 							int slot, int enable)
 {
 	struct dvb_usb_device *d = (struct dvb_usb_device *)ca->data;
@@ -374,7 +374,7 @@ static int tbsqbox2ci_init(struct dvb_usb_adapter *a)
 }
 
 /* I2C */
-static int tbsqbox2ci_i2c_transfer(struct i2c_adapter *adap, 
+static int tbsqbox2ci_i2c_transfer(struct i2c_adapter *adap,
 					struct i2c_msg msg[], int num)
 {
 	struct dvb_usb_device *d = i2c_get_adapdata(adap);
@@ -496,7 +496,7 @@ static struct stv090x_config earda_config = {
 
 	.ts1_mode       = STV090x_TSMODE_DVBCI,
 	.ts2_mode       = STV090x_TSMODE_SERIAL_CONTINUOUS,
-	
+
 	.repeater_level         = STV090x_RPTLEVEL_16,
 	.adc1_range		= STV090x_ADC_2Vpp,
 	.tuner_bbgain		= 8,
@@ -548,7 +548,7 @@ static int tbsqbox2ci_read_mac_address(struct dvb_usb_device *d, u8 mac[6])
 				eepromline[i%16] = ibuf[0];
 				eeprom[i] = ibuf[0];
 			}
-			
+
 			if ((i % 16) == 15) {
 				deb_xfer("%02x: ", i - 15);
 				debug_dump(eepromline, 16, deb_xfer);
@@ -558,7 +558,7 @@ static int tbsqbox2ci_read_mac_address(struct dvb_usb_device *d, u8 mac[6])
 	return 0;
 };
 
-static int tbsqbox2ci_set_voltage(struct dvb_frontend *fe, 
+static int tbsqbox2ci_set_voltage(struct dvb_frontend *fe,
 						enum fe_sec_voltage voltage)
 {
 	static u8 command_13v[1] = {0x00};
@@ -567,7 +567,7 @@ static int tbsqbox2ci_set_voltage(struct dvb_frontend *fe,
 		{.addr = TBSQBOX_VOLTAGE_CTRL, .flags = 0,
 			.buf = command_13v, .len = 1},
 	};
-	
+
 	struct dvb_usb_adapter *udev_adap =
 		(struct dvb_usb_adapter *)(fe->dvb->priv);
 	if (voltage == SEC_VOLTAGE_18)
@@ -602,7 +602,7 @@ static int tbsqbox2ci_frontend_attach(struct dvb_usb_adapter *d)
 			buf[1] = 1;
 			tbsqbox2ci_op_rw(u->udev, 0x8a, 0, 0,
 					buf, 2, TBSQBOX_WRITE_MSG);
-			
+
 			buf[0] = 6;
 			buf[1] = 1;
 			tbsqbox2ci_op_rw(u->udev, 0x8a, 0, 0,
@@ -621,7 +621,7 @@ static int tbsqbox2ci_frontend_attach(struct dvb_usb_adapter *d)
 static void tbsqbox2ci2_usb_disconnect (struct usb_interface * intf)
 {
 	struct dvb_usb_device *d = usb_get_intfdata (intf);
-	
+
 	tbsqbox2ci_uninit (d);
 	dvb_usb_device_exit (intf);
 }
@@ -686,7 +686,7 @@ static int tbsqbox2ci_rc_query(struct dvb_usb_device *d, u32 *event, int *state)
 
 	*state = REMOTE_NO_KEY_PRESSED;
 	if (tbsqbox2ci_i2c_transfer(&d->i2c_adap, msg, 1) == 1) {
-		//info("key: %x %x\n",msg[0].buf[0],msg[0].buf[1]); 
+		//info("key: %x %x\n",msg[0].buf[0],msg[0].buf[1]);
 		for (i = 0; i < keymap_size; i++) {
 			if (rc5_data(&keymap[i]) == msg[0].buf[1]) {
 				*state = REMOTE_KEY_PRESSED;
@@ -698,7 +698,7 @@ static int tbsqbox2ci_rc_query(struct dvb_usb_device *d, u32 *event, int *state)
 		st->last_key_pressed = 0;
 		}
 	}
-	 
+
 	return 0;
 }
 
