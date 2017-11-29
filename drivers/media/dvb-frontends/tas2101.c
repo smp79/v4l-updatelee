@@ -272,6 +272,10 @@ static int tas2101_read_status(struct dvb_frontend *fe, enum fe_status *status)
 		tas2101_read_snr(fe, &snr);
 	}
 
+	if (priv->algo == TAS2101_NOTUNE) {
+		*status |= FE_TIMEDOUT;
+	}
+
 //	dprintk("status = 0x%02x", *status);
 	return ret;
 }
@@ -565,6 +569,8 @@ static int tas2101_initfe(struct dvb_frontend *fe)
 
 	dprintk("");
 
+	priv->algo = TAS2101_NOTUNE;
+
 	if (priv->cfg->id == ID_TAS2101) {
 		t = tas2101_initfe0;
 		size = ARRAY_SIZE(tas2101_initfe0);
@@ -610,7 +616,11 @@ static int tas2101_initfe(struct dvb_frontend *fe)
 
 static int tas2101_sleep(struct dvb_frontend *fe)
 {
+	struct tas2101_priv *priv = fe->demodulator_priv;
+
 	dprintk("");
+
+	priv->algo = TAS2101_NOTUNE;
 
 	return 0;
 }
@@ -619,8 +629,7 @@ static int tas2101_set_frontend(struct dvb_frontend *fe)
 {
 	struct tas2101_priv *priv = fe->demodulator_priv;
 	struct dtv_frontend_properties *c = &fe->dtv_property_cache;
-	enum fe_status tunerstat;
-	int ret, i;
+	int ret;
 	u32 s;
 	u8 buf[3];
 
@@ -673,13 +682,7 @@ static int tas2101_set_frontend(struct dvb_frontend *fe)
 	if (ret)
 		return ret;
 
-	for (i = 0; i<15; i++) {
-		ret = tas2101_read_status(fe, &tunerstat);
-		if (tunerstat & FE_HAS_LOCK)
-			return 0;
-		msleep(20);
-	}
-	return -EINVAL;
+	return 0;
 }
 
 static int tas2101_get_frontend(struct dvb_frontend *fe, struct dtv_frontend_properties *c)
@@ -735,7 +738,67 @@ static int tas2101_tune(struct dvb_frontend *fe, bool re_tune, unsigned int mode
 
 static int tas2101_get_algo(struct dvb_frontend *fe)
 {
-	return DVBFE_ALGO_HW;
+	struct tas2101_priv *priv = fe->demodulator_priv;
+
+	if (priv->algo == TAS2101_NOTUNE) {
+		return DVBFE_ALGO_NOTUNE;
+	} else {
+		return DVBFE_ALGO_CUSTOM;
+	}
+}
+
+static int tas2101_dtv_tune(struct dvb_frontend *fe)
+{
+	struct tas2101_priv *priv = fe->demodulator_priv;
+
+	priv->algo = TAS2101_TUNE;
+
+	return 0;
+}
+
+static int tas2101_search(struct dvb_frontend *fe)
+{
+	struct tas2101_priv *priv = fe->demodulator_priv;
+	enum fe_status status = 0;
+	int ret, i;
+
+	priv->algo = TAS2101_TUNE;
+
+	/* set frontend */
+	ret = tas2101_set_frontend(fe);
+	if (ret)
+		goto error;
+
+	/* wait frontend lock */
+	for (i = 0; i < 5; i++) {
+		dprintk("loop=%d", i);
+		msleep(200);
+		ret = tas2101_read_status(fe, &status);
+		if (ret)
+			goto error;
+
+		if (status & FE_HAS_LOCK)
+			break;
+		if (status & FE_TIMEDOUT) {
+			priv->algo = TAS2101_NOTUNE;
+			return DVBFE_ALGO_SEARCH_FAILED;
+		}
+	}
+
+	/* check if we have a valid signal */
+	if (status & FE_HAS_LOCK) {
+		dprintk("DVBFE_ALGO_SEARCH_SUCCESS");
+		return DVBFE_ALGO_SEARCH_SUCCESS;
+	} else {
+		dprintk("DVBFE_ALGO_SEARCH_FAILED");
+		priv->algo = TAS2101_NOTUNE;
+		return DVBFE_ALGO_SEARCH_FAILED;
+	}
+
+error:
+	dprintk("ERROR");
+	priv->algo = TAS2101_NOTUNE;
+	return DVBFE_ALGO_SEARCH_ERROR;
 }
 
 static int tas2101_get_spectrum_scan(struct dvb_frontend *fe, struct dvb_fe_spectrum_scan *s)
@@ -746,6 +809,8 @@ static int tas2101_get_spectrum_scan(struct dvb_frontend *fe, struct dvb_fe_spec
 	int ret, x;
 	u32 sr;
 	u8 buf[3];
+
+	priv->algo = TAS2101_NOTUNE;
 
 	ret = tas2101_wrtable(priv, tas2101_setfe, ARRAY_SIZE(tas2101_setfe));
 	if (ret)
@@ -836,6 +901,8 @@ static struct dvb_frontend_ops tas2101_ops = {
 	.spi_read	= tas2101_spi_read,
 	.spi_write	= tas2101_spi_write,
 
+	.search = tas2101_search,
+	.dtv_tune = tas2101_dtv_tune,
 	.get_spectrum_scan = tas2101_get_spectrum_scan,
 };
 
