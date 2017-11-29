@@ -116,6 +116,9 @@ obj-$(CONFIG_DVB_USB_TBS5520) += dvb-usb-tbs5520.o
 dvb-usb-tbs5520se-objs = tbs5520se.o
 obj-$(CONFIG_DVB_USB_TBS5520se) += dvb-usb-tbs5520se.o
 
+dvb-usb-tbs5580-objs = tbs5580.o
+obj-$(CONFIG_DVB_USB_TBS5580) += dvb-usb-tbs5580.o
+
 dvb-usb-tbs5927-objs = tbs5927.o
 obj-$(CONFIG_DVB_USB_TBS5927) += dvb-usb-tbs5927.o
 
