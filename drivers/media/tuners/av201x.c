@@ -21,7 +21,7 @@
 #include "av201x.h"
 #include "av201x_priv.h"
 
-#define dprintk(fmt, arg...)	printk(KERN_INFO pr_fmt("%s: " fmt "\n"),  __func__, ##arg)
+#define dprintk(fmt, arg...)	printk(KERN_INFO "%s: " fmt "\n",  __func__, ##arg)
 
 /* write multiple (continuous) registers */
 static int av201x_wrm(struct av201x_priv *priv, u8 *buf, int len)
@@ -66,7 +66,6 @@ static int av201x_rdm(struct av201x_priv *priv, u8 addr, u8 *buf, int len)
 	}
 
 //	dprintk("addr: %02x, buf = %*ph", addr, len, buf);
-
 	return 0;
 }
 
