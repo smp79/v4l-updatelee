@@ -181,7 +181,7 @@ static const struct stv090x_tab stv090x_s1cn_tab[] = {
 /* DVBS2 C/N Lookup table */
 static const struct stv090x_tab stv090x_s2cn_tab[] = {
 	{ -30, 13348 }, /* -3.0dB */
-	{ -20, 12640 }, /* -2d.0B */
+	{ -20, 12640 }, /* -2.0dB */
 	{ -10, 11883 }, /* -1.0dB */
 	{   0, 11101 }, /* -0.0dB */
 	{   5, 10718 }, /*  0.5dB */
