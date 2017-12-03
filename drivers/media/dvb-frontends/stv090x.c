@@ -1274,6 +1274,10 @@ static int stv090x_delivery_search(struct stv090x_state *state)
 	case STV090x_SEARCH_DVBS2:
 		reg = STV090x_READ_DEMOD(state, DMDCFGMD);
 		STV090x_SETFIELD_Px(reg, DVBS1_ENABLE_FIELD, 0);
+		STV090x_SETFIELD_Px(reg, DVBS2_ENABLE_FIELD, 0);
+		if (STV090x_WRITE_DEMOD(state, DMDCFGMD, reg) < 0)
+			goto err;
+		STV090x_SETFIELD_Px(reg, DVBS1_ENABLE_FIELD, 1);
 		STV090x_SETFIELD_Px(reg, DVBS2_ENABLE_FIELD, 1);
 		if (STV090x_WRITE_DEMOD(state, DMDCFGMD, reg) < 0)
 			goto err;
@@ -1307,6 +1311,10 @@ static int stv090x_delivery_search(struct stv090x_state *state)
 	default:
 		/* enable DVB-S2 and DVB-S2 in Auto MODE */
 		reg = STV090x_READ_DEMOD(state, DMDCFGMD);
+		STV090x_SETFIELD_Px(reg, DVBS1_ENABLE_FIELD, 0);
+		STV090x_SETFIELD_Px(reg, DVBS2_ENABLE_FIELD, 0);
+		if (STV090x_WRITE_DEMOD(state, DMDCFGMD, reg) < 0)
+			goto err;
 		STV090x_SETFIELD_Px(reg, DVBS1_ENABLE_FIELD, 1);
 		STV090x_SETFIELD_Px(reg, DVBS2_ENABLE_FIELD, 1);
 		if (STV090x_WRITE_DEMOD(state, DMDCFGMD, reg) < 0)
@@ -1937,13 +1945,13 @@ static int stv090x_blind_search(struct stv090x_state *state)
 {
 	u32 agc2, reg, srate_coarse;
 	s32 cpt_fail, agc2_ovflw, i;
-	s8 k_ref, k_max, k_min;
+	u8 k_ref, k_max, k_min;
 	int coarse_fail = 0;
 	int lock;
 
 	dprintk("");
 
-	k_max = 110;
+	k_max = 130;
 	k_min = 10;
 
 	agc2 = stv090x_get_agc2_min_level(state);
@@ -1992,6 +2000,7 @@ static int stv090x_blind_search(struct stv090x_state *state)
 
 		k_ref = k_max;
 		do {
+			k_ref -= 20;
 			dprintk("k_ref = %d, k_min = %d", k_ref, k_min);
 
 			if (STV090x_WRITE_DEMOD(state, KREFTMG, k_ref) < 0)
@@ -2024,9 +2033,8 @@ static int stv090x_blind_search(struct stv090x_state *state)
 
 				lock = 0;
 			}
-			k_ref -= 20;
 			dprintk("lock = %d", lock);
-		} while ((k_ref >= k_min) && (!lock) && (!coarse_fail));
+		} while ((k_ref > k_min) && (!lock) && (!coarse_fail));
 	}
 
 	if (state->internal->dev_ver >= 0x30) {
