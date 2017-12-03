@@ -822,9 +822,9 @@ static int stv091x_get_dmdlock(struct stv091x_state *state)
 			break;
 		}
 		if (!lock)
-			msleep(10);
+			msleep(50);
+		timer += 50;
 		pr_info("%s: %s\n", __func__, lock ? "LOCKED" : "SEARCHING");
-		timer += 10;
 	}
 
 	return lock;
@@ -939,35 +939,43 @@ start:
 	p->frequency   += offset;
 	p->symbol_rate  = stv091x_get_SR(state);
 
-	switch(STV091X_READ_FIELD(state, ROLLOFF_STATUS)) {
-	case 0x03:
-		rolloff = 115;
-		break;
-	case 0x02:
-		rolloff = 120;
-		break;
-	case 0x01:
-		rolloff = 125;
-		break;
-	case 0x00:
-	default:
-		rolloff = 135;
-		break;
-	}
-
-	p->bandwidth_hz = (p->symbol_rate * rolloff) / 100;
 	if (offset > 1000 || offset < -1000) {
 		pr_info("%s: corrected frequency: %d RESTARTING\n", __func__, p->frequency);
 		goto start;
 	}
-	pr_info("%s: corrected bandwidth: %d\n", __func__, p->bandwidth_hz);
-	stv091x_i2c_gate_ctrl(fe, 1);
-	config->tuner_set_bandwidth(fe, p->bandwidth_hz);
-	stv091x_i2c_gate_ctrl(fe, 0);
 
-	pr_info("%s: SR: %d\n", __func__, stv091x_get_SR(state));
+	pr_info("%s: SR: %d, BW: %d\n", __func__, p->symbol_rate, p->bandwidth_hz);
 
-	return stv091x_get_dmdlock(state);
+	if (stv091x_get_dmdlock(state)) {
+		p->symbol_rate  = stv091x_get_SR(state);
+
+		switch(STV091X_READ_FIELD(state, ROLLOFF_STATUS)) {
+		case 0x03:
+			rolloff = 115;
+			break;
+		case 0x02:
+			rolloff = 120;
+			break;
+		case 0x01:
+			rolloff = 125;
+			break;
+		case 0x00:
+		default:
+			rolloff = 135;
+			break;
+		}
+
+		p->bandwidth_hz = (p->symbol_rate * rolloff) / 100;
+
+		pr_info("%s: SR: %d, BW: %d\n", __func__, p->symbol_rate, p->bandwidth_hz);
+		stv091x_i2c_gate_ctrl(fe, 1);
+		config->tuner_set_bandwidth(fe, p->bandwidth_hz);
+		stv091x_i2c_gate_ctrl(fe, 0);
+
+		return 1;
+	} else {
+		return 0;
+	}
 }
 
 static int stv091x_init_diseqc(struct stv091x_state *state)
