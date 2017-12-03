@@ -5363,12 +5363,12 @@ static int stv090x_get_spectrum_scan(struct dvb_frontend *fe, struct dvb_fe_spec
 	// stop demod
 	stv090x_write_reg(state, STV090x_P1_DMDISTATE, 0x5c);
 
-	reg = STV090x_READ_DEMOD(state, DMDISTATE);
-	STV090x_SETFIELD_Px(reg, I2C_DEMOD_MODE_FIELD, 0x1c);
-	STV090x_WRITE_DEMOD(state, DMDISTATE, reg);
-
 	for (x = 0 ; x < s->num_freq ; x++)
 	{
+		reg = STV090x_READ_DEMOD(state, DMDISTATE);
+		STV090x_SETFIELD_Px(reg, I2C_DEMOD_MODE_FIELD, 0x1c);
+		STV090x_WRITE_DEMOD(state, DMDISTATE, reg);
+
 		if (stv090x_i2c_gate_ctrl(state, 1) < 0) {
 			printk("%s: ERROR stv090x_i2c_gate_ctrl(1)\n", __func__);
 			return 0;
