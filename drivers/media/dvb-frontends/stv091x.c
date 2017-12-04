@@ -519,8 +519,8 @@ static int stv091x_get_signal_parameters(struct stv091x_state *state)
 		FEC_3_4,
 		FEC_4_5,
 		FEC_5_6,
-		FEC_8_9,
-		FEC_9_10,
+		FEC_6_7,
+		FEC_7_8,
 		FEC_NONE,
 		FEC_NONE,
 		FEC_NONE,
@@ -663,7 +663,7 @@ static int stv091x_get_signal_parameters(struct stv091x_state *state)
 			break;
 		}
 
-		p->fec_inner = FE_STV091X_fec_dvbs[STV091X_READ_FIELD(state, DEMOD_MODCOD)];
+//		p->fec_inner = FE_STV091X_fec_dvbs[STV091X_READ_FIELD(state, DEMOD_MODCOD)];
 		break;
 	default:
 		p->delivery_system = SYS_UNDEFINED;
