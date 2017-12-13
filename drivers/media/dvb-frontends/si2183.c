@@ -17,6 +17,7 @@
 #include <linux/firmware.h>
 #include <linux/i2c-mux.h>
 #include <linux/delay.h>
+#include <linux/math64.h>
 
 #define dprintk(fmt, arg...)	printk(KERN_INFO pr_fmt("%s: " fmt "\n"),  __func__, ##arg)
 
@@ -1268,7 +1269,7 @@ static int si2183_get_spectrum_scan(struct dvb_frontend *fe, struct dvb_fe_spect
 
 			strength = cmd.args[1];
 			fe->ops.tuner_ops.get_rf_strength(fe, &strength);
-			*(s->rf_level + x) = (s16)(p->strength.stat[0].svalue/10);
+			*(s->rf_level + x) = div_s64(p->strength.stat[0].svalue, 10);
 		}
 	}
 
