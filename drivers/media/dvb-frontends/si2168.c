@@ -14,8 +14,9 @@
  *    GNU General Public License for more details.
  */
 
-#include "si2168_priv.h"
 #include <linux/delay.h>
+
+#include "si2168_priv.h"
 
 static const struct dvb_frontend_ops si2168_ops;
 
@@ -493,7 +494,7 @@ static int si2168_set_frontend(struct dvb_frontend *fe)
 	memcpy(cmd.args, "\x14\x00\x08\x10\xd7\x05", 6);
 	cmd.args[4] = dev->ts_clock_inv ? 0xd7 : 0xcf;
 	cmd.args[5] = dev->ts_clock_inv ? 0x05 : 0x33;
-
+//	cmd.args[5] |= dev->ts_clock_inv ? 0x00 : 0x10;
 	cmd.wlen = 6;
 	cmd.rlen = 4;
 	ret = si2168_cmd_execute(client, &cmd);
@@ -629,9 +630,7 @@ static int si2168_init(struct dvb_frontend *fe)
 	memcpy(cmd.args, "\xc0\x12\x00\x0c\x00\x0d\x16\x00\x00\x00\x00\x00\x00", 13);
 	cmd.wlen = 13;
 	cmd.rlen = 0;
-	dprintk("1");
 	ret = si2168_cmd_execute(client, &cmd);
-	dprintk("2");
 	if (ret)
 		goto err;
 
@@ -640,9 +639,7 @@ static int si2168_init(struct dvb_frontend *fe)
 		memcpy(cmd.args, "\xc0\x06\x08\x0f\x00\x20\x21\x01", 8);
 		cmd.wlen = 8;
 		cmd.rlen = 1;
-		dprintk("3");
 		ret = si2168_cmd_execute(client, &cmd);
-		dprintk("4");
 		if (ret)
 			goto err;
 
@@ -651,9 +648,7 @@ static int si2168_init(struct dvb_frontend *fe)
 		memcpy(cmd.args, "\x85", 1);
 		cmd.wlen = 1;
 		cmd.rlen = 1;
-		dprintk("5");
 		ret = si2168_cmd_execute(client, &cmd);
-		dprintk("6");
 		if (ret)
 			goto err;
 
@@ -664,9 +659,7 @@ static int si2168_init(struct dvb_frontend *fe)
 	memcpy(cmd.args, "\xc0\x06\x01\x0f\x00\x20\x20\x01", 8);
 	cmd.wlen = 8;
 	cmd.rlen = 1;
-	dprintk("7");
 	ret = si2168_cmd_execute(client, &cmd);
-	dprintk("8");
 	if (ret)
 		goto err;
 
@@ -682,11 +675,11 @@ static int si2168_init(struct dvb_frontend *fe)
 
 		if (ret == 0) {
 			dev_notice(&client->dev,
-					"please install firmware file '%s'",
+					"please install firmware file '%s'\n",
 					SI2168_B40_FIRMWARE);
 		} else {
-			dprintk(
-					"firmware file '%s' not found",
+			dev_err(&client->dev,
+					"firmware file '%s' not found\n",
 					dev->firmware_name);
 			goto err_release_firmware;
 		}
@@ -973,7 +966,6 @@ static int si2168_probe(struct i2c_client *client,
 	dev = kzalloc(sizeof(*dev), GFP_KERNEL);
 	if (!dev) {
 		ret = -ENOMEM;
-		dprintk("kzalloc() failed");
 		goto err;
 	}
 
