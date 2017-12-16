@@ -1628,6 +1628,48 @@ static enum dvbfe_algo stb0899_frontend_algo(struct dvb_frontend *fe)
 	return DVBFE_ALGO_CUSTOM;
 }
 
+static int stb0899_get_constellation_samples(struct dvb_frontend *fe, struct dvb_fe_constellation_samples *s)
+{
+        struct stb0899_state *state             = fe->demodulator_priv;
+
+        u32 x;
+        u8 buf[2];
+        //u32 reg;
+
+	switch (state->delsys) {
+            case SYS_DVBS:
+            case SYS_DSS:
+
+            for (x = 0 ; x < s->num ; x++)
+            {
+                stb0899_read_regs(state, STB0899_ISYMB, buf, 2);
+                s->samples[x].real= buf[0]; 
+                s->samples[x].imaginary = buf[1];
+            }
+		break;
+		/* based on published registers, don't think we can sample the IQ symbols
+   		in the S2 demod, like we can for the S1 demod, so just playin here */
+	    case SYS_DVBS2:
+
+            for (x = 0 ; x < s->num ; x++)
+	    {
+                stb0899_read_regs(state, STB0899_ISYMB, buf, 2); 
+                s->samples[x].real= buf[0]; 
+                s->samples[x].imaginary = buf[1];
+		//reg = STB0899_READ_S2REG(STB0899_S2DEMOD, DC_OFFSET); 
+        	//s->samples[x].imaginary= STB0899_GETFIELD(I, reg); 
+        	//reg = STB0899_READ_S2REG(STB0899_S2DEMOD, DC_OFFSET);
+        	//s->samples[x].real= STB0899_GETFIELD(Q, reg); 
+	    }
+		break;
+            default:
+                dprintk(state->verbose, FE_DEBUG, 1, "Unsupported delivery system");
+                return -EINVAL;
+	}
+        return 0;
+}
+
+
 static const struct dvb_frontend_ops stb0899_ops = {
 	.delsys = { SYS_DVBS, SYS_DVBS2, SYS_DSS },
 	.info = {
@@ -1642,7 +1684,14 @@ static const struct dvb_frontend_ops stb0899_ops = {
 		.caps 			= FE_CAN_INVERSION_AUTO	|
 					  FE_CAN_FEC_AUTO	|
 					  FE_CAN_2G_MODULATION	|
-					  FE_CAN_QPSK
+					  FE_CAN_QPSK	|
+                                          FE_HAS_EXTENDED_CAPS
+        },
+        .extended_info = {
+                .extended_caps          = FE_CAN_SPECTRUMSCAN |
+                                          FE_CAN_IQ
+
+
 	},
 
 	.detach				= stb0899_detach,
@@ -1669,6 +1718,7 @@ static const struct dvb_frontend_ops stb0899_ops = {
 	.diseqc_send_master_cmd		= stb0899_send_diseqc_msg,
 	.diseqc_recv_slave_reply	= stb0899_recv_slave_reply,
 	.diseqc_send_burst		= stb0899_send_diseqc_burst,
+	.get_constellation_samples	= stb0899_get_constellation_samples,
 };
 
 struct dvb_frontend *stb0899_attach(struct stb0899_config *config, struct i2c_adapter *i2c)
