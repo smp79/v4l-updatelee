@@ -306,19 +306,20 @@ u32 _stb0899_read_s2reg(struct stb0899_state *state,
 		.len	= 6
 	};
 
-	struct i2c_msg msg_1 = {
-		.addr	= state->config->demod_address,
-		.flags	= 0,
-		.buf	= buf_1,
-		.len	= 2
+	struct i2c_msg msg[] = {
+		{
+			.addr	= state->config->demod_address,
+			.flags	= 0,
+			.buf	= buf_1,
+			.len	= 2
+		}, {
+			.addr	= state->config->demod_address,
+			.flags	= I2C_M_RD,
+			.buf	= buf,
+			.len	= 4
+		}
 	};
 
-	struct i2c_msg msg_r = {
-		.addr	= state->config->demod_address,
-		.flags	= I2C_M_RD,
-		.buf	= buf,
-		.len	= 4
-	};
 
 	tmpaddr = stb0899_reg_offset & 0xff00;
 	if (!(stb0899_reg_offset & 0x8))
@@ -327,6 +328,7 @@ u32 _stb0899_read_s2reg(struct stb0899_state *state,
 	buf_1[0] = GETBYTE(tmpaddr, BYTE1);
 	buf_1[1] = GETBYTE(tmpaddr, BYTE0);
 
+	/* Write address	*/
 	status = i2c_transfer(state->i2c, &msg_0, 1);
 	if (status < 1) {
 		if (status != -ERESTARTSYS)
@@ -337,28 +339,16 @@ u32 _stb0899_read_s2reg(struct stb0899_state *state,
 	}
 
 	/* Dummy	*/
-	status = i2c_transfer(state->i2c, &msg_1, 1);
-	if (status < 1)
-		goto err;
-
-	status = i2c_transfer(state->i2c, &msg_r, 1);
-	if (status < 1)
+	status = i2c_transfer(state->i2c, msg, 2);
+	if (status < 2)
 		goto err;
 
 	buf_1[0] = GETBYTE(stb0899_reg_offset, BYTE1);
 	buf_1[1] = GETBYTE(stb0899_reg_offset, BYTE0);
 
 	/* Actual	*/
-	status = i2c_transfer(state->i2c, &msg_1, 1);
-	if (status < 1) {
-		if (status != -ERESTARTSYS)
-			printk(KERN_ERR "%s ERR(2), Device=[0x%04x], Base address=[0x%08x], Offset=[0x%04x], Status=%d\n",
-			       __func__, stb0899_i2cdev, stb0899_base_addr, stb0899_reg_offset, status);
-		goto err;
-	}
-
-	status = i2c_transfer(state->i2c, &msg_r, 1);
-	if (status < 1) {
+	status = i2c_transfer(state->i2c, msg, 2);
+	if (status < 2) {
 		if (status != -ERESTARTSYS)
 			printk(KERN_ERR "%s ERR(3), Device=[0x%04x], Base address=[0x%08x], Offset=[0x%04x], Status=%d\n",
 			       __func__, stb0899_i2cdev, stb0899_base_addr, stb0899_reg_offset, status);
@@ -957,14 +947,15 @@ static int stb0899_table_lookup(const struct stb0899_tab *tab, int max, int val)
 	return res;
 }
 
-static int stb0899_read_signal_strength(struct dvb_frontend *fe, u16 *strength)
+static int stb0899_read_rflevel(struct dvb_frontend *fe)
 {
 	struct stb0899_state *state		= fe->demodulator_priv;
 	struct stb0899_internal *internal	= &state->internal;
+	struct dtv_frontend_properties *p = &fe->dtv_property_cache;
 
 	int val;
 	u32 reg;
-	*strength = 0;
+	s32 rflevel = -90;
 	switch (state->delsys) {
 	case SYS_DVBS:
 	case SYS_DSS:
@@ -975,10 +966,7 @@ static int stb0899_read_signal_strength(struct dvb_frontend *fe, u16 *strength)
 				reg = stb0899_read_reg(state, STB0899_AGCIQIN);
 				val = (s32)(s8)STB0899_GETFIELD(AGCIQVALUE, reg);
 
-				*strength = stb0899_table_lookup(stb0899_dvbsrf_tab, ARRAY_SIZE(stb0899_dvbsrf_tab) - 1, val);
-				*strength += 750;
-				dprintk(state->verbose, FE_DEBUG, 1, "AGCIQVALUE = 0x%02x, C = %d * 0.1 dBm",
-					val & 0xff, *strength);
+				rflevel = stb0899_table_lookup(stb0899_dvbsrf_tab, ARRAY_SIZE(stb0899_dvbsrf_tab) - 1, val) / 10;
 			}
 		}
 		break;
@@ -987,30 +975,38 @@ static int stb0899_read_signal_strength(struct dvb_frontend *fe, u16 *strength)
 			reg = STB0899_READ_S2REG(STB0899_S2DEMOD, IF_AGC_GAIN);
 			val = STB0899_GETFIELD(IF_AGC_GAIN, reg);
 
-			*strength = stb0899_table_lookup(stb0899_dvbs2rf_tab, ARRAY_SIZE(stb0899_dvbs2rf_tab) - 1, val);
-			*strength += 950;
-			dprintk(state->verbose, FE_DEBUG, 1, "IF_AGC_GAIN = 0x%04x, C = %d * 0.1 dBm",
-				val & 0x3fff, *strength);
+			rflevel = stb0899_table_lookup(stb0899_dvbs2rf_tab, ARRAY_SIZE(stb0899_dvbs2rf_tab) - 1, val) / 10;
 		}
 		break;
 	default:
+		p->strength.len = 1;
+		p->strength.stat[0].scale = FE_SCALE_NOT_AVAILABLE;
 		dprintk(state->verbose, FE_DEBUG, 1, "Unsupported delivery system");
 		return -EINVAL;
 	}
+	
+	p->strength.len = 2;
+	p->strength.stat[0].scale = FE_SCALE_DECIBEL;
+	p->strength.stat[0].svalue = rflevel * 1000;
+
+	p->strength.stat[1].scale = FE_SCALE_RELATIVE;
+	p->strength.stat[1].uvalue = (100 + rflevel) * 656;
+
 
 	return 0;
 }
 
-static int stb0899_read_snr(struct dvb_frontend *fe, u16 *snr)
+static int stb0899_read_cnr(struct dvb_frontend *fe)
 {
 	struct stb0899_state *state		= fe->demodulator_priv;
 	struct stb0899_internal *internal	= &state->internal;
+	struct dtv_frontend_properties *p = &fe->dtv_property_cache;
 
 	unsigned int val, quant, quantn = -1, est, estn = -1;
 	u8 buf[2];
 	u32 reg;
 
-	*snr = 0;
+	s32 cnr = 0;
 	reg  = stb0899_read_reg(state, STB0899_VSTATUS);
 	switch (state->delsys) {
 	case SYS_DVBS:
@@ -1021,9 +1017,9 @@ static int stb0899_read_snr(struct dvb_frontend *fe, u16 *snr)
 				stb0899_read_regs(state, STB0899_NIRM, buf, 2);
 				val = MAKEWORD16(buf[0], buf[1]);
 
-				*snr = stb0899_table_lookup(stb0899_cn_tab, ARRAY_SIZE(stb0899_cn_tab) - 1, val);
+				cnr = stb0899_table_lookup(stb0899_cn_tab, ARRAY_SIZE(stb0899_cn_tab) - 1, val);
 				dprintk(state->verbose, FE_DEBUG, 1, "NIR = 0x%02x%02x = %u, C/N = %d * 0.1 dBm\n",
-					buf[0], buf[1], val, *snr);
+					buf[0], buf[1], val, cnr);
 			}
 		}
 		break;
@@ -1039,21 +1035,90 @@ static int stb0899_read_snr(struct dvb_frontend *fe, u16 *snr)
 				val = 270; /* C/N = 27.0 dB */
 			else {
 				/* quantn = 100 * log(quant^2) */
-				quantn = stb0899_table_lookup(stb0899_quant_tab, ARRAY_SIZE(stb0899_quant_tab) - 1, quant * 100);
+				quantn = stb0899_table_lookup(stb0899_quant_tab, ARRAY_SIZE(stb0899_quant_tab) - 1, quant * 10);
 				/* estn = 100 * log(est) */
 				estn = stb0899_table_lookup(stb0899_est_tab, ARRAY_SIZE(stb0899_est_tab) - 1, est);
 				/* snr(dBm/10) = -10*(log(est)-log(quant^2)) => snr(dBm/10) = (100*log(quant^2)-100*log(est))/10 */
-				val = (quantn - estn) / 10;
+				val = (estn - quantn) / 10;
 			}
-			*snr = val;
+			cnr = val;
 			dprintk(state->verbose, FE_DEBUG, 1, "Es/N0 quant = %d (%d) estimate = %u (%d), C/N = %d * 0.1 dBm",
-				quant, quantn, est, estn, val);
+				quant, quantn, est, estn, cnr);
 		}
 		break;
 	default:
+		p->cnr.len = 1;
+		p->cnr.stat[0].scale = FE_SCALE_NOT_AVAILABLE;
 		dprintk(state->verbose, FE_DEBUG, 1, "Unsupported delivery system");
 		return -EINVAL;
 	}
+
+	p->cnr.len = 2;
+	p->cnr.stat[0].scale = FE_SCALE_DECIBEL;
+	p->cnr.stat[0].svalue = 100 * cnr;
+
+	p->cnr.stat[1].scale = FE_SCALE_RELATIVE;
+	p->cnr.stat[1].uvalue = cnr*328;
+	if (p->cnr.stat[1].uvalue > 0xffff)
+		p->cnr.stat[1].uvalue = 0xffff;
+
+	return 0;
+}
+
+/*
+ * stb0899_read_ber
+ * viterbi error for DVB-S/DSS
+ * packet error for DVB-S2
+ * Bit Error Rate or Packet Error Rate * 10 ^ 7
+ */
+static int stb0899_read_ber(struct dvb_frontend *fe, u32 *ber)
+{
+	struct stb0899_state *state		= fe->demodulator_priv;
+	struct stb0899_internal *internal	= &state->internal;
+	struct dtv_frontend_properties *p = &fe->dtv_property_cache;
+
+	u8  lsb, msb;
+
+	*ber = 0;
+
+	switch (state->delsys) {
+	case SYS_DVBS:
+	case SYS_DSS:
+		if (internal->lock) {
+			lsb = stb0899_read_reg(state, STB0899_ECNT1L);
+			msb = stb0899_read_reg(state, STB0899_ECNT1M);
+			*ber = MAKEWORD16(msb, lsb);
+			/* Viterbi Check	*/
+			if (STB0899_GETFIELD(VSTATUS_PRFVIT, internal->v_status)) {
+				/* Error Rate		*/
+				*ber *= 9766;
+				/* ber = ber * 10 ^ 7	*/
+				*ber /= (-1 + (1 << (2 * STB0899_GETFIELD(NOE, internal->err_ctrl))));
+				*ber /= 8;
+			}
+		}
+		break;
+	case SYS_DVBS2:
+		if (internal->lock) {
+			lsb = stb0899_read_reg(state, STB0899_ECNT1L);
+			msb = stb0899_read_reg(state, STB0899_ECNT1M);
+			*ber = MAKEWORD16(msb, lsb);
+			/* ber = ber * 10 ^ 7	*/
+			*ber *= 10000000;
+			*ber /= (-1 + (1 << (4 + 2 * STB0899_GETFIELD(NOE, internal->err_ctrl))));
+		}
+		break;
+	default:
+		p->post_bit_error.len = 1;
+		p->post_bit_error.stat[0].scale = FE_SCALE_NOT_AVAILABLE;
+		dprintk(state->verbose, FE_DEBUG, 1, "Unsupported delivery system");
+		return -EINVAL;
+	}
+	
+	p->post_bit_error.len = 1;
+	p->post_bit_error.stat[0].scale = FE_SCALE_COUNTER;
+	p->post_bit_error.stat[0].uvalue = *ber;
+
 
 	return 0;
 }
@@ -1064,6 +1129,9 @@ static int stb0899_read_status(struct dvb_frontend *fe, enum fe_status *status)
 	struct stb0899_internal *internal	= &state->internal;
 	u8 reg;
 	*status = 0;
+
+	stb0899_read_rflevel(fe);
+	stb0899_read_cnr(fe);
 
 	switch (state->delsys) {
 	case SYS_DVBS:
@@ -1120,54 +1188,35 @@ static int stb0899_read_status(struct dvb_frontend *fe, enum fe_status *status)
 		dprintk(state->verbose, FE_DEBUG, 1, "Unsupported delivery system");
 		return -EINVAL;
 	}
+
 	return 0;
 }
 
-/*
- * stb0899_get_error
- * viterbi error for DVB-S/DSS
- * packet error for DVB-S2
- * Bit Error Rate or Packet Error Rate * 10 ^ 7
- */
-static int stb0899_read_ber(struct dvb_frontend *fe, u32 *ber)
+static int stb0899_read_snr(struct dvb_frontend *fe, u16 *snr)
 {
-	struct stb0899_state *state		= fe->demodulator_priv;
-	struct stb0899_internal *internal	= &state->internal;
+	struct dtv_frontend_properties *p = &fe->dtv_property_cache;
+	int i;
 
-	u8  lsb, msb;
+	*snr = 0;
+	for (i=0; i < p->cnr.len; i++)
+		if (p->cnr.stat[i].scale == FE_SCALE_RELATIVE)
+		  *snr = (u16)p->cnr.stat[i].uvalue;
 
-	*ber = 0;
+	return 0;
+}
 
-	switch (state->delsys) {
-	case SYS_DVBS:
-	case SYS_DSS:
-		if (internal->lock) {
-			lsb = stb0899_read_reg(state, STB0899_ECNT1L);
-			msb = stb0899_read_reg(state, STB0899_ECNT1M);
-			*ber = MAKEWORD16(msb, lsb);
-			/* Viterbi Check	*/
-			if (STB0899_GETFIELD(VSTATUS_PRFVIT, internal->v_status)) {
-				/* Error Rate		*/
-				*ber *= 9766;
-				/* ber = ber * 10 ^ 7	*/
-				*ber /= (-1 + (1 << (2 * STB0899_GETFIELD(NOE, internal->err_ctrl))));
-				*ber /= 8;
-			}
-		}
-		break;
-	case SYS_DVBS2:
-		if (internal->lock) {
-			lsb = stb0899_read_reg(state, STB0899_ECNT1L);
-			msb = stb0899_read_reg(state, STB0899_ECNT1M);
-			*ber = MAKEWORD16(msb, lsb);
-			/* ber = ber * 10 ^ 7	*/
-			*ber *= 10000000;
-			*ber /= (-1 + (1 << (4 + 2 * STB0899_GETFIELD(NOE, internal->err_ctrl))));
-		}
-		break;
-	default:
-		dprintk(state->verbose, FE_DEBUG, 1, "Unsupported delivery system");
-		return -EINVAL;
+static int stb0899_read_signal_strength(struct dvb_frontend *fe, u16 *strength)
+{
+	struct dtv_frontend_properties *p = &fe->dtv_property_cache;
+	int i;
+
+	*strength = 0;
+	for (i=0; i < p->strength.len; i++)
+	{
+		if (p->strength.stat[i].scale == FE_SCALE_RELATIVE)
+			*strength = (u16)p->strength.stat[i].uvalue;
+		else if (p->strength.stat[i].scale == FE_SCALE_DECIBEL)
+			*strength = ((100000 + (s32)p->strength.stat[i].svalue)/1000) * 656;
 	}
 
 	return 0;
@@ -1580,6 +1629,48 @@ static enum dvbfe_algo stb0899_frontend_algo(struct dvb_frontend *fe)
 	return DVBFE_ALGO_CUSTOM;
 }
 
+static int stb0899_get_constellation_samples(struct dvb_frontend *fe, struct dvb_fe_constellation_samples *s)
+{
+        struct stb0899_state *state             = fe->demodulator_priv;
+
+        u32 x;
+        u8 buf[2];
+        //u32 reg;
+
+	switch (state->delsys) {
+            case SYS_DVBS:
+            case SYS_DSS:
+
+            for (x = 0 ; x < s->num ; x++)
+            {
+                stb0899_read_regs(state, STB0899_ISYMB, buf, 2);
+                s->samples[x].real= buf[0]; 
+                s->samples[x].imaginary = buf[1];
+            }
+		break;
+		/* based on published registers, don't think we can sample the IQ symbols
+   		in the S2 demod, like we can for the S1 demod, so just playin here */
+	    case SYS_DVBS2:
+
+            for (x = 0 ; x < s->num ; x++)
+	    {
+                stb0899_read_regs(state, STB0899_ISYMB, buf, 2); 
+                s->samples[x].real= buf[0]; 
+                s->samples[x].imaginary = buf[1];
+		//reg = STB0899_READ_S2REG(STB0899_S2DEMOD, DC_OFFSET); 
+        	//s->samples[x].imaginary= STB0899_GETFIELD(I, reg); 
+        	//reg = STB0899_READ_S2REG(STB0899_S2DEMOD, DC_OFFSET);
+        	//s->samples[x].real= STB0899_GETFIELD(Q, reg); 
+	    }
+		break;
+            default:
+                dprintk(state->verbose, FE_DEBUG, 1, "Unsupported delivery system");
+                return -EINVAL;
+	}
+        return 0;
+}
+
+
 static const struct dvb_frontend_ops stb0899_ops = {
 	.delsys = { SYS_DVBS, SYS_DVBS2, SYS_DSS },
 	.info = {
@@ -1594,7 +1685,14 @@ static const struct dvb_frontend_ops stb0899_ops = {
 		.caps 			= FE_CAN_INVERSION_AUTO	|
 					  FE_CAN_FEC_AUTO	|
 					  FE_CAN_2G_MODULATION	|
-					  FE_CAN_QPSK
+					  FE_CAN_QPSK	|
+                                          FE_HAS_EXTENDED_CAPS
+        },
+        .extended_info = {
+                .extended_caps          = FE_CAN_SPECTRUMSCAN |
+                                          FE_CAN_IQ
+
+
 	},
 
 	.detach				= stb0899_detach,
@@ -1621,6 +1719,7 @@ static const struct dvb_frontend_ops stb0899_ops = {
 	.diseqc_send_master_cmd		= stb0899_send_diseqc_msg,
 	.diseqc_recv_slave_reply	= stb0899_recv_slave_reply,
 	.diseqc_send_burst		= stb0899_send_diseqc_burst,
+	.get_constellation_samples	= stb0899_get_constellation_samples,
 };
 
 struct dvb_frontend *stb0899_attach(struct stb0899_config *config, struct i2c_adapter *i2c)
