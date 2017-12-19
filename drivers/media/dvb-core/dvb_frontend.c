@@ -984,6 +984,7 @@ static int dvb_frontend_clear_cache(struct dvb_frontend *fe)
 	}
 
 	c->stream_id = NO_STREAM_ID_FILTER;
+	c->scrambling_sequence_index = 0;/* default sequence */
 	c->enable_modcod = 0x0fffffff;
 
 	switch (c->delivery_system) {
@@ -1075,6 +1076,7 @@ static struct dtv_cmds_h dtv_cmds[DTV_MAX_COMMAND + 1] = {
 
 	_DTV_CMD(DTV_STREAM_ID, 1, 0),
 	_DTV_CMD(DTV_DVBT2_PLP_ID_LEGACY, 1, 0),
+	_DTV_CMD(DTV_SCRAMBLING_SEQUENCE_INDEX, 1, 0),
 	_DTV_CMD(DTV_MATYPE, 1, 0),
 	_DTV_CMD(DTV_ENABLE_MODCOD, 1, 0),
 	_DTV_CMD(DTV_LNA, 1, 0),
@@ -1420,6 +1422,10 @@ static int dtv_property_process_get(struct dvb_frontend *fe,
 	case DTV_STREAM_ID:
 	case DTV_DVBT2_PLP_ID_LEGACY:
 		tvp->u.data = c->stream_id;
+		break;
+	/* Physical layer scrambling support */
+	case DTV_SCRAMBLING_SEQUENCE_INDEX:
+		tvp->u.data = c->scrambling_sequence_index;
 		break;
 	case DTV_ENABLE_MODCOD:
 		tvp->u.data = c->enable_modcod;
@@ -1915,6 +1921,11 @@ static int dtv_property_process_set(struct dvb_frontend *fe,
 	case DTV_STREAM_ID:
 	case DTV_DVBT2_PLP_ID_LEGACY:
 		c->stream_id = data;
+		break;
+
+	/* Physical layer scrambling support */
+	case DTV_SCRAMBLING_SEQUENCE_INDEX:
+		c->scrambling_sequence_index = data;
 		break;
 
 	case DTV_ENABLE_MODCOD:

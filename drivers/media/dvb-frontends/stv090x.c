@@ -3588,19 +3588,14 @@ err:
 	return -1;
 }
 
-static int stv090x_set_pls(struct stv090x_state *state, u8 pls_mode, u32 pls_code)
+static int stv090x_set_pls(struct stv090x_state *state, u32 pls_code)
 {
-	if (pls_mode == 0 && pls_code == 0)
-		pls_code = 1;
-	pls_mode &= 0x03;
-	pls_code &= 0x3FFFF;
-
-	dprintk("Set PLS code %d (mode %d)", pls_code, pls_mode);
-	if (STV090x_WRITE_DEMOD(state, PLROOT2, (pls_mode<<2) | (pls_code>>16)) < 0)
+	dprintk("Set Gold PLS code %d", pls_code);
+	if (STV090x_WRITE_DEMOD(state, PLROOT0, pls_code & 0xff) < 0)
 		goto err;
-	if (STV090x_WRITE_DEMOD(state, PLROOT1, pls_code>>8) < 0)
+	if (STV090x_WRITE_DEMOD(state, PLROOT1, (pls_code >> 8) & 0xff) < 0)
 		goto err;
-	if (STV090x_WRITE_DEMOD(state, PLROOT0, pls_code) < 0)
+	if (STV090x_WRITE_DEMOD(state, PLROOT2, 0x04 | (pls_code >> 16)) < 0)
 		goto err;
 	return 0;
 err:
@@ -3612,16 +3607,14 @@ static int stv090x_set_mis(struct stv090x_state *state, int mis)
 {
 	u32 reg;
 
-	if (mis == NO_STREAM_ID_FILTER) {
+	if (mis == NO_STREAM_ID_FILTER || mis < 0 || mis > 255) {
 		dprintk("Disable MIS filtering");
-		stv090x_set_pls(state, 0, 0);
 		reg = STV090x_READ_DEMOD(state, PDELCTRL1);
 		STV090x_SETFIELD_Px(reg, FILTER_EN_FIELD, 0x00);
 		if (STV090x_WRITE_DEMOD(state, PDELCTRL1, reg) < 0)
 			goto err;
 	} else {
 		dprintk("Enable MIS filtering - %d", mis);
-		stv090x_set_pls(state, (mis>>26) & 0x3, (mis>>8) & 0x3FFFF);
 		reg = STV090x_READ_DEMOD(state, PDELCTRL1);
 		STV090x_SETFIELD_Px(reg, FILTER_EN_FIELD, 0x01);
 		if (STV090x_WRITE_DEMOD(state, PDELCTRL1, reg) < 0)
@@ -3653,8 +3646,10 @@ static enum dvbfe_search stv090x_search(struct dvb_frontend *fe)
 	state->search_mode = STV090x_SEARCH_AUTO;
 	state->fec = STV090x_PRERR;
 	state->enable_modcod = props->enable_modcod;
-
 	props->enable_modcod = 0x0fffffff;
+
+	stv090x_set_pls(state, props->scrambling_sequence_index);
+	stv090x_set_mis(state, props->stream_id);
 
 	if (props->enable_modcod == 0x0fffffff) {
 		state->algo = STV090x_BLIND_SEARCH;
@@ -3671,8 +3666,6 @@ static enum dvbfe_search stv090x_search(struct dvb_frontend *fe)
 	}
 
 	dprintk("Search started...");
-
-	stv090x_set_mis(state, props->stream_id);
 
 	if (stv090x_algo(state) == STV090x_RANGEOK) {
 		stv090x_get_sig_params(state);
