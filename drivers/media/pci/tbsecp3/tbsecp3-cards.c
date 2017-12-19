@@ -19,6 +19,48 @@
 
 struct tbsecp3_board tbsecp3_boards[] = {
 
+    // added by pzw in 2017,12,12
+	[TBSECP3_BOARD_TBS6304] = {
+ 	 	.name		= "TurboSight TBS 6304 HDMI Capture ",
+		.adapters	= 4,
+		.i2c_speed	= 39,
+		.eeprom_i2c	= 0,
+		.adap_config	= {
+ 			{ 
+ 			 	.ts_in = 0,
+				.i2c_bus_nr = 3,
+				.gpio.demod_reset.lvl = TBSECP3_GPIODEF_LOW,
+				.gpio.demod_reset.nr  = TBSECP3_GPIO_PIN(3, 0),
+				.gpio.lnb_power.lvl   = TBSECP3_GPIODEF_LOW,
+				.gpio.lnb_power.nr    = TBSECP3_GPIO_PIN(3, 2),
+			}, 
+ 			{ 
+ 			 	.ts_in = 1,
+				.i2c_bus_nr = 2,
+				.gpio.demod_reset.lvl = TBSECP3_GPIODEF_LOW,
+				.gpio.demod_reset.nr  = TBSECP3_GPIO_PIN(2, 0),
+				.gpio.lnb_power.lvl   = TBSECP3_GPIODEF_LOW,
+				.gpio.lnb_power.nr    = TBSECP3_GPIO_PIN(2, 2),
+			}, 
+ 			{ 
+ 			 	.ts_in = 2,
+				.i2c_bus_nr = 1,
+				.gpio.demod_reset.lvl = TBSECP3_GPIODEF_LOW,
+				.gpio.demod_reset.nr  = TBSECP3_GPIO_PIN(1, 0),
+				.gpio.lnb_power.lvl   = TBSECP3_GPIODEF_LOW,
+				.gpio.lnb_power.nr    = TBSECP3_GPIO_PIN(1, 2),
+			}, 
+ 			{ 
+ 			 	.ts_in = 3,
+				.i2c_bus_nr = 0,
+				.gpio.demod_reset.lvl = TBSECP3_GPIODEF_LOW,
+				.gpio.demod_reset.nr  = TBSECP3_GPIO_PIN(0, 0),
+				.gpio.lnb_power.lvl   = TBSECP3_GPIODEF_LOW,
+				.gpio.lnb_power.nr    = TBSECP3_GPIO_PIN(0, 2),
+			}, 
+			
+		}
+	},
 	[TBSECP3_BOARD_TBS6301] = {
 		.name		= "TurboSight TBS 6301 HDMI Capture ",
 		.adapters	= 1,
