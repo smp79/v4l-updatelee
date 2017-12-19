@@ -994,7 +994,7 @@ static int stb0899_read_rflevel(struct dvb_frontend *fe)
 	p->strength.stat[1].uvalue = (100 + rflevel) * 656;
 
 
-	return 0;
+	return rflevel;
 }
 
 static int stb0899_read_cnr(struct dvb_frontend *fe)
@@ -1670,7 +1670,57 @@ static int stb0899_get_constellation_samples(struct dvb_frontend *fe, struct dvb
 	}
         return 0;
 }
+static int stb0899_get_spectrum_scan(struct dvb_frontend *fe, struct dvb_fe_spectrum_scan *s)
+{
+        struct stb0899_state *state = fe->demodulator_priv;
 
+        struct dvb_frontend_ops *frontend_ops = NULL;
+        struct dvb_tuner_ops *tuner_ops = NULL;
+
+        u32 x, gain;
+        //u32 reg;
+        u32 bw = 1000000;
+        state->delsys = SYS_DVBS;
+        stb0899_set_delivery(state);
+        if (&fe->ops)
+                frontend_ops = &fe->ops;
+        if (&frontend_ops->tuner_ops)
+                tuner_ops = &frontend_ops->tuner_ops;
+        /* enable tuner I/O */
+        if (stb0899_i2c_gate_ctrl(&state->frontend, 1) < 0) {
+                printk("%s: ERROR stb0899_i2c_gate_ctrl(1)\n", __func__);
+                return 0;
+        }
+        state->config->tuner_set_bandwidth(fe, bw);
+        /* disable tuner I/O */
+        if (stb0899_i2c_gate_ctrl(&state->frontend, 0) < 0) {
+                printk("%s: ERROR stb0899_i2c_gate_ctrl(1)\n", __func__);
+                return 0;
+        }
+        //stb0899_set_srate(state, bw);
+        if (state->config->tuner_set_rfsiggain) {
+                gain = 14; /*  1Mb < srate <  5Mb, gain = 14db  */
+                state->config->tuner_set_rfsiggain(fe, gain);
+                }
+        //stb0899_set_mclk(state, config->lo_clk);
+        *s->type = SC_DBM;
+        for (x = 0 ; x < s->num_freq ; x++)
+        {
+                if (stb0899_i2c_gate_ctrl(&state->frontend, 1) < 0) {
+                        printk("%s: ERROR stb0899_i2c_gate_ctrl(1)\n", __func__);
+                        return 0;
+                }
+                state->config->tuner_set_frequency(fe, *(s->freq + x));
+                if (stb0899_i2c_gate_ctrl(&state->frontend, 0) < 0) {
+                        printk("%s: ERROR stb0899_i2c_gate_ctrl(1)\n", __func__);
+                        return 0;
+                }
+
+                //*(s->rf_level + x) = stb0899_read_rflevel(fe) *100; // for dBm x 100
+                *(s->rf_level + x) = stb0899_read_rflevel(fe); // for dBm,  floor of -90 dBm
+        }
+        return 0;
+}
 
 static const struct dvb_frontend_ops stb0899_ops = {
 	.delsys = { SYS_DVBS, SYS_DVBS2, SYS_DSS },
@@ -1721,6 +1771,7 @@ static const struct dvb_frontend_ops stb0899_ops = {
 	.diseqc_recv_slave_reply	= stb0899_recv_slave_reply,
 	.diseqc_send_burst		= stb0899_send_diseqc_burst,
 	.get_constellation_samples	= stb0899_get_constellation_samples,
+	.get_spectrum_scan		= stb0899_get_spectrum_scan,
 };
 
 struct dvb_frontend *stb0899_attach(struct stb0899_config *config, struct i2c_adapter *i2c)
