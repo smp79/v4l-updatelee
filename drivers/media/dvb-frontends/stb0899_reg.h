@@ -32,6 +32,12 @@
 #define STB0899_WIDTH_CHIP_REL			4
 
 #define STB0899_DEMOD				0xf40e
+#define STB0899_OFFST_IQSYMBSEL                 4
+#define STB0899_WIDTH_IQSYMBSEL                 2
+#define STB0899_IQSYMBSEL_INPUT                 (3 << 4)
+#define STB0899_IQSYMBSEL_DEROTATOR             (2 << 4)
+#define STB0899_IQSYMBSEL_EQUALIZER             (1 << 4)
+#define STB0899_IQSYMBSEL_DEMOD                 (0 << 4)
 #define STB0899_MODECOEFF			(0x01 << 0)
 #define STB0899_OFFST_MODECOEFF			0
 #define STB0899_WIDTH_MODECOEFF			1
