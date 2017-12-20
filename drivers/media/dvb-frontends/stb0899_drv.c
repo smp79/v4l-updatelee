@@ -951,7 +951,6 @@ static int stb0899_table_lookup(const struct stb0899_tab *tab, int max, int val)
 static int stb0899_read_rflevel(struct dvb_frontend *fe)
 {
 	struct stb0899_state *state		= fe->demodulator_priv;
-	struct stb0899_internal *internal	= &state->internal;
 	struct dtv_frontend_properties *p = &fe->dtv_property_cache;
 
 	int val;
@@ -960,24 +959,14 @@ static int stb0899_read_rflevel(struct dvb_frontend *fe)
 	switch (state->delsys) {
 	case SYS_DVBS:
 	case SYS_DSS:
-		//if (internal->lock) {
-			//reg  = stb0899_read_reg(state, STB0899_VSTATUS);
-			//if (STB0899_GETFIELD(VSTATUS_LOCKEDVIT, reg)) {
-
-				reg = stb0899_read_reg(state, STB0899_AGCIQIN);
-				val = (s32)(s8)STB0899_GETFIELD(AGCIQVALUE, reg);
-
-				rflevel = stb0899_table_lookup(stb0899_dvbsrf_tab, ARRAY_SIZE(stb0899_dvbsrf_tab) - 1, val) / 10;
-			//}
-		//}
+		reg = stb0899_read_reg(state, STB0899_AGCIQIN);
+		val = (s32)(s8)STB0899_GETFIELD(AGCIQVALUE, reg);
+		rflevel = stb0899_table_lookup(stb0899_dvbsrf_tab, ARRAY_SIZE(stb0899_dvbsrf_tab) - 1, val) / 10;
 		break;
 	case SYS_DVBS2:
-		//if (internal->lock) {
-			reg = STB0899_READ_S2REG(STB0899_S2DEMOD, IF_AGC_GAIN);
-			val = STB0899_GETFIELD(IF_AGC_GAIN, reg);
-
-			rflevel = stb0899_table_lookup(stb0899_dvbs2rf_tab, ARRAY_SIZE(stb0899_dvbs2rf_tab) - 1, val) / 10;
-		//}
+		reg = STB0899_READ_S2REG(STB0899_S2DEMOD, IF_AGC_GAIN);
+		val = STB0899_GETFIELD(IF_AGC_GAIN, reg);
+		rflevel = stb0899_table_lookup(stb0899_dvbs2rf_tab, ARRAY_SIZE(stb0899_dvbs2rf_tab) - 1, val) / 10;
 		break;
 	default:
 		p->strength.len = 1;
@@ -985,14 +974,11 @@ static int stb0899_read_rflevel(struct dvb_frontend *fe)
 		dprintk(state->verbose, FE_DEBUG, 1, "Unsupported delivery system");
 		return -EINVAL;
 	}
-	
 	p->strength.len = 2;
 	p->strength.stat[0].scale = FE_SCALE_DECIBEL;
 	p->strength.stat[0].svalue = rflevel * 1000;
-
 	p->strength.stat[1].scale = FE_SCALE_RELATIVE;
 	p->strength.stat[1].uvalue = (100 + rflevel) * 656;
-
 
 	return rflevel;
 }
@@ -1012,40 +998,32 @@ static int stb0899_read_cnr(struct dvb_frontend *fe)
 	switch (state->delsys) {
 	case SYS_DVBS:
 	case SYS_DSS:
-		//if (internal->lock) {
-			//if (STB0899_GETFIELD(VSTATUS_LOCKEDVIT, reg)) {
-
-				stb0899_read_regs(state, STB0899_NIRM, buf, 2);
-				val = MAKEWORD16(buf[0], buf[1]);
-
-				cnr = stb0899_table_lookup(stb0899_cn_tab, ARRAY_SIZE(stb0899_cn_tab) - 1, val);
-				dprintk(state->verbose, FE_DEBUG, 1, "NIR = 0x%02x%02x = %u, C/N = %d * 0.1 dBm\n",
-					buf[0], buf[1], val, cnr);
-			//}
-		//}
+		stb0899_read_regs(state, STB0899_NIRM, buf, 2);
+		val = MAKEWORD16(buf[0], buf[1]);
+		cnr = stb0899_table_lookup(stb0899_cn_tab, ARRAY_SIZE(stb0899_cn_tab) - 1, val);
+		dprintk(state->verbose, FE_DEBUG, 1, "NIR = 0x%02x%02x = %u, C/N = %d * 0.1 dBm\n",
+			buf[0], buf[1], val, cnr);
 		break;
 	case SYS_DVBS2:
-		//if (internal->lock) {
-			reg = STB0899_READ_S2REG(STB0899_S2DEMOD, UWP_CNTRL1);
-			quant = STB0899_GETFIELD(UWP_ESN0_QUANT, reg);
-			reg = STB0899_READ_S2REG(STB0899_S2DEMOD, UWP_STAT2);
-			est = STB0899_GETFIELD(ESN0_EST, reg);
-			if (est == 1)
-				val = 301; /* C/N = 30.1 dB */
-			else if (est == 2)
-				val = 270; /* C/N = 27.0 dB */
-			else {
-				/* quantn = 100 * log(quant^2) */
-				quantn = stb0899_table_lookup(stb0899_quant_tab, ARRAY_SIZE(stb0899_quant_tab) - 1, quant * 10);
-				/* estn = 100 * log(est) */
-				estn = stb0899_table_lookup(stb0899_est_tab, ARRAY_SIZE(stb0899_est_tab) - 1, est);
-				/* snr(dBm/10) = -10*(log(est)-log(quant^2)) => snr(dBm/10) = (100*log(quant^2)-100*log(est))/10 */
-				val = (estn - quantn) / 10;
-			}
-			cnr = val;
-			dprintk(state->verbose, FE_DEBUG, 1, "Es/N0 quant = %d (%d) estimate = %u (%d), C/N = %d * 0.1 dBm",
+		reg = STB0899_READ_S2REG(STB0899_S2DEMOD, UWP_CNTRL1);
+		quant = STB0899_GETFIELD(UWP_ESN0_QUANT, reg);
+		reg = STB0899_READ_S2REG(STB0899_S2DEMOD, UWP_STAT2);
+		est = STB0899_GETFIELD(ESN0_EST, reg);
+		if (est == 1) {
+			val = 301; /* C/N = 30.1 dB */
+		} else if (est == 2) {
+			val = 270; /* C/N = 27.0 dB */
+		} else {
+		/* quantn = 100 * log(quant^2) */
+		quantn = stb0899_table_lookup(stb0899_quant_tab, ARRAY_SIZE(stb0899_quant_tab) - 1, quant * 10);
+		/* estn = 100 * log(est) */
+		estn = stb0899_table_lookup(stb0899_est_tab, ARRAY_SIZE(stb0899_est_tab) - 1, est);
+		/* snr(dBm/10) = -10*(log(est)-log(quant^2)) => snr(dBm/10) = (100*log(quant^2)-100*log(est))/10 */
+		val = (estn - quantn) / 10;
+		}
+		cnr = val;
+		dprintk(state->verbose, FE_DEBUG, 1, "Es/N0 quant = %d (%d) estimate = %u (%d), C/N = %d * 0.1 dBm",
 				quant, quantn, est, estn, cnr);
-		//}
 		break;
 	default:
 		p->cnr.len = 1;
