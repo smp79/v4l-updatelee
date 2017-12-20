@@ -986,7 +986,6 @@ static int stb0899_read_rflevel(struct dvb_frontend *fe)
 static int stb0899_read_cnr(struct dvb_frontend *fe)
 {
 	struct stb0899_state *state		= fe->demodulator_priv;
-	struct stb0899_internal *internal	= &state->internal;
 	struct dtv_frontend_properties *p = &fe->dtv_property_cache;
 
 	unsigned int val, quant, quantn = -1, est, estn = -1;
