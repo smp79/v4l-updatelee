@@ -1613,7 +1613,12 @@ static int stb0899_get_constellation_samples(struct dvb_frontend *fe, struct dvb
 
         u32 x;
         u8 buf[2];
-        //u32 reg;
+        u32 reg;
+
+        /* set the IQ monitoring point        */
+        reg = stb0899_read_reg(state, STB0899_DEMOD);
+        STB0899_SETFIELD_VAL(IQSYMBSEL, reg, 1);
+        stb0899_write_reg(state, STB0899_DEMOD, reg);
 
 	switch (state->delsys) {
             case SYS_DVBS:
@@ -1659,28 +1664,34 @@ static int stb0899_get_spectrum_scan(struct dvb_frontend *fe, struct dvb_fe_spec
         u32 bw = 1000000;
         state->delsys = SYS_DVBS;
         stb0899_set_delivery(state);
+
         if (&fe->ops)
                 frontend_ops = &fe->ops;
         if (&frontend_ops->tuner_ops)
                 tuner_ops = &frontend_ops->tuner_ops;
+
         /* enable tuner I/O */
         if (stb0899_i2c_gate_ctrl(&state->frontend, 1) < 0) {
                 printk("%s: ERROR stb0899_i2c_gate_ctrl(1)\n", __func__);
                 return 0;
         }
         state->config->tuner_set_bandwidth(fe, bw);
+
         /* disable tuner I/O */
         if (stb0899_i2c_gate_ctrl(&state->frontend, 0) < 0) {
                 printk("%s: ERROR stb0899_i2c_gate_ctrl(1)\n", __func__);
                 return 0;
         }
-        //stb0899_set_srate(state, bw);
         if (state->config->tuner_set_rfsiggain) {
                 gain = 14; /*  1Mb < srate <  5Mb, gain = 14db  */
                 state->config->tuner_set_rfsiggain(fe, gain);
                 }
-        //stb0899_set_mclk(state, config->lo_clk);
+
+	/* Set DVB-S1 AGC 0x11, S2 0x1c, reset 0x95     	*/
+	stb0899_write_reg(state, STB0899_AGCRFCFG, 0x11);
+
         *s->type = SC_DBM;
+
         for (x = 0 ; x < s->num_freq ; x++)
         {
                 if (stb0899_i2c_gate_ctrl(&state->frontend, 1) < 0) {
