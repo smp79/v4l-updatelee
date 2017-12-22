@@ -1021,7 +1021,7 @@ static int stb0899_read_cnr(struct dvb_frontend *fe)
 		val = (estn - quantn) / 10;
 		}
 		cnr = val;
-		dprintk(state->verbose, FE_DEBUG, 1, "Es/N0 quant = %d (%d) estimate = %u (%d), C/N = %d * 0.1 dBm",
+		dprintk(state->verbose, FE_DEBUG, 1, "Es/N0 quant = %d (%d) estimate = %u (%d), C/N = %d * 0.1 dB",
 				quant, quantn, est, estn, cnr);
 		break;
 	default:
@@ -1675,17 +1675,20 @@ static int stb0899_get_spectrum_scan(struct dvb_frontend *fe, struct dvb_fe_spec
                 printk("%s: ERROR stb0899_i2c_gate_ctrl(1)\n", __func__);
                 return 0;
         }
-        state->config->tuner_set_bandwidth(fe, bw);
+        if (state->config->tuner_set_bandwidth) {
+                state->config->tuner_set_bandwidth(fe, bw);
+        }
+	msleep(100);
+        if (state->config->tuner_set_rfsiggain) {
+                gain = 17; /* possible gain -10 to + 17 dB gain ??   */
+                state->config->tuner_set_rfsiggain(fe, gain);
+        }
 
         /* disable tuner I/O */
         if (stb0899_i2c_gate_ctrl(&state->frontend, 0) < 0) {
                 printk("%s: ERROR stb0899_i2c_gate_ctrl(1)\n", __func__);
                 return 0;
         }
-        if (state->config->tuner_set_rfsiggain) {
-                gain = 14; /*  1Mb < srate <  5Mb, gain = 14db  */
-                state->config->tuner_set_rfsiggain(fe, gain);
-                }
 
 	/* Set DVB-S1 AGC 0x11, S2 0x1c, reset 0x95     	*/
 	stb0899_write_reg(state, STB0899_AGCRFCFG, 0x11);
