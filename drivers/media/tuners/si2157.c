@@ -95,9 +95,7 @@ static int si2157_init(struct dvb_frontend *fe)
 	memcpy(cmd.args, "\x15\x00\x06\x07", 4);
 	cmd.wlen = 4;
 	cmd.rlen = 4;
-	dprintk("1");
 	ret = si2157_cmd_execute(client, &cmd);
-	dprintk("2");
 	if (ret)
 		goto err;
 
@@ -120,9 +118,7 @@ static int si2157_init(struct dvb_frontend *fe)
 		cmd.wlen = 15;
 	}
 	cmd.rlen = 1;
-	dprintk("3");
 	ret = si2157_cmd_execute(client, &cmd);
-	dprintk("4");
 	if (ret)
 		goto err;
 
@@ -130,9 +126,7 @@ static int si2157_init(struct dvb_frontend *fe)
 	if (dev->chiptype == SI2157_CHIPTYPE_SI2141) {
 		memcpy(cmd.args, "\xc0\x08\x01\x02\x00\x00\x01", 7);
 		cmd.wlen = 7;
-		dprintk("5");
 		ret = si2157_cmd_execute(client, &cmd);
-		dprintk("6");
 		if (ret)
 			goto err;
 	}
@@ -141,9 +135,7 @@ static int si2157_init(struct dvb_frontend *fe)
 	memcpy(cmd.args, "\x02", 1);
 	cmd.wlen = 1;
 	cmd.rlen = 13;
-	dprintk("7");
 	ret = si2157_cmd_execute(client, &cmd);
-	dprintk("8");
 	if (ret)
 		goto err;
 
