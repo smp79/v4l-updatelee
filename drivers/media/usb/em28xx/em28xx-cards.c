@@ -3253,7 +3253,7 @@ static void em28xx_release_resources(struct em28xx *dev)
 		em28xx_i2c_unregister(dev, 1);
 	em28xx_i2c_unregister(dev, 0);
 
-	if(dev->ts == PRIMARY_TS)
+	if (dev->ts == PRIMARY_TS)
 		usb_put_dev(udev);
 
 	/* Mark device as unused */
@@ -3489,7 +3489,7 @@ static int em28xx_usb_probe(struct usb_interface *interface,
 	struct em28xx *dev = NULL;
 	int retval;
 	bool has_vendor_audio = false, has_video = false;
-	bool has_dvb = false, has_dvb_ts2 = false;
+	bool has_dvb = false;
 	int i, nr, try_bulk;
 	const int ifnum = interface->altsetting[0].desc.bInterfaceNumber;
 	char *speed;
@@ -3598,17 +3598,14 @@ static int em28xx_usb_probe(struct usb_interface *interface,
 				case 0x85:
 					if (usb_endpoint_xfer_isoc(e)) {
 						if (size > dev->dvb_max_pkt_size_isoc_ts2) {
-							has_dvb_ts2 = true; /* see NOTE (~) */
 							dev->dvb_ep_isoc_ts2 = e->bEndpointAddress;
 							dev->dvb_max_pkt_size_isoc_ts2 = size;
 							dev->dvb_alt_isoc = i;
 						}
 					} else {
-						has_dvb_ts2 = true;
 						dev->dvb_ep_bulk_ts2 = e->bEndpointAddress;
 					}
-					break;
-				}
+					break;				}
 			}
 			/* NOTE:
 			 * Old logic with support for isoc transfers only was:
@@ -3622,6 +3619,8 @@ static int em28xx_usb_probe(struct usb_interface *interface,
 			 *  0x83	isoc*		=> audio
 			 *  0x84	isoc		=> digital
 			 *  0x84	bulk		=> analog or digital**
+			 *  0x85	isoc		=> digital TS2
+			 *  0x85	bulk		=> digital TS2
 			 * (*: audio should always be isoc)
 			 * (**: analog, if ep 0x82 is isoc, otherwise digital)
 			 *

@@ -199,13 +199,12 @@ static int em28xx_start_streaming(struct em28xx_dvb *dvb)
 	int rc;
 	struct em28xx_i2c_bus *i2c_bus = dvb->adapter.priv;
 	struct em28xx *dev = i2c_bus->dev;
-//	struct usb_device *udev = interface_to_usbdev(dev->intf);
 	int dvb_max_packet_size, packet_multiplier, dvb_alt;
 
 	if (dev->dvb_xfer_bulk) {
 		if (!dev->dvb_ep_bulk)
 			return -ENODEV;
-		dvb_max_packet_size = 512; /* USB 2.0 spec */
+		dvb_max_packet_size = 188;
 		packet_multiplier = EM28XX_DVB_BULK_PACKET_MULTIPLIER;
 		dvb_alt = 0;
 	} else { /* isoc */
@@ -218,8 +217,6 @@ static int em28xx_start_streaming(struct em28xx_dvb *dvb)
 		dvb_alt = dev->dvb_alt_isoc;
 	}
 
-	/* moved to em28xx_dvb_init*/
-	//usb_set_interface(udev, dev->ifnum, dvb_alt);
 	rc = em28xx_set_mode(dev, EM28XX_DIGITAL_MODE);
 	if (rc < 0)
 		return rc;
@@ -1159,7 +1156,7 @@ static int em28xx_dvb_init(struct em28xx *dev)
 		result = em28xx_alloc_urbs(dev, EM28XX_DIGITAL_MODE,
 					   dev->dvb_xfer_bulk,
 					   EM28XX_DVB_NUM_BUFS,
-					   512,
+					   188,
 					   EM28XX_DVB_BULK_PACKET_MULTIPLIER);
 	} else {
 		result = em28xx_alloc_urbs(dev, EM28XX_DIGITAL_MODE,
@@ -1918,8 +1915,10 @@ static int em28xx_dvb_init(struct em28xx *dev)
 			si2168_config.ts_mode = SI2168_TS_SERIAL;
 			memset(&info, 0, sizeof(struct i2c_board_info));
 			strlcpy(info.type, "si2168", I2C_NAME_SIZE);
-			if(dev->ts == PRIMARY_TS) info.addr = 0x64;
-			else info.addr = 0x67;
+			if (dev->ts == PRIMARY_TS)
+				info.addr = 0x64;
+			else
+				info.addr = 0x67;
 			info.platform_data = &si2168_config;
 			request_module(info.type);
 			client = i2c_new_device(&dev->i2c_adap[dev->def_i2c_bus], &info);
@@ -1945,8 +1944,10 @@ static int em28xx_dvb_init(struct em28xx *dev)
 #endif
 			memset(&info, 0, sizeof(struct i2c_board_info));
 			strlcpy(info.type, "si2157", I2C_NAME_SIZE);
-			if(dev->ts == PRIMARY_TS) info.addr = 0x60;
-			else info.addr = 0x63;
+			if (dev->ts == PRIMARY_TS)
+				info.addr = 0x60;
+			else
+				info.addr = 0x63;
 			info.platform_data = &si2157_config;
 			request_module(info.type);
 			client = i2c_new_device(adapter, &info);
@@ -1982,8 +1983,10 @@ static int em28xx_dvb_init(struct em28xx *dev)
 			lgdt3306a_config.fe = &dvb->fe[0];
 			lgdt3306a_config.i2c_adapter = &adapter;
 			strlcpy(info.type, "lgdt3306a", sizeof(info.type));
-			if(dev->ts == PRIMARY_TS) info.addr = 0x59;
-			else info.addr = 0x0e;
+			if (dev->ts == PRIMARY_TS)
+				info.addr = 0x59;
+			else
+				info.addr = 0x0e;
 			info.platform_data = &lgdt3306a_config;
 			request_module(info.type);
 			client = i2c_new_device(&dev->i2c_adap[dev->def_i2c_bus],
@@ -2010,8 +2013,10 @@ static int em28xx_dvb_init(struct em28xx *dev)
 #endif
 			memset(&info, 0, sizeof(struct i2c_board_info));
 			strlcpy(info.type, "si2157", sizeof(info.type));
-			if(dev->ts == PRIMARY_TS) info.addr = 0x60;
-			else info.addr = 0x62;
+			if (dev->ts == PRIMARY_TS)
+				info.addr = 0x60;
+			else
+				info.addr = 0x62;
 			info.platform_data = &si2157_config;
 			request_module(info.type);
 

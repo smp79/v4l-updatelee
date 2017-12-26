@@ -524,7 +524,11 @@ static int lgdt3306a_set_qam(struct lgdt3306a_state *state, int modulation)
 	/* 3. : 64QAM/256QAM detection(manual, auto) */
 	ret = lgdt3306a_read_reg(state, 0x0009, &val);
 	val &= 0xfc;
-	val |= 0x02; /* STDOPDETCMODE[1:0]=1=Manual 2=Auto */
+	if (modulation != QAM_AUTO){
+		val |= 0x01; /* STDOPDETCMODE[1:0]= 1=Manual */
+	} else {
+		val |= 0x02; /* STDOPDETCMODE[1:0]= 2=Auto */
+	}
 	ret = lgdt3306a_write_reg(state, 0x0009, val);
 	if (lg_chkerr(ret))
 		goto fail;
@@ -574,10 +578,9 @@ static int lgdt3306a_set_modulation(struct lgdt3306a_state *state,
 		ret = lgdt3306a_set_vsb(state);
 		break;
 	case QAM_64:
-		ret = lgdt3306a_set_qam(state, QAM_64);
-		break;
 	case QAM_256:
-		ret = lgdt3306a_set_qam(state, QAM_256);
+	case QAM_AUTO:
+		ret = lgdt3306a_set_qam(state, p->modulation);
 		break;
 	default:
 		return -EINVAL;
@@ -602,6 +605,7 @@ static int lgdt3306a_agc_setup(struct lgdt3306a_state *state,
 		break;
 	case QAM_64:
 	case QAM_256:
+	case QAM_AUTO:
 		break;
 	default:
 		return -EINVAL;
@@ -651,6 +655,7 @@ static int lgdt3306a_spectral_inversion(struct lgdt3306a_state *state,
 		break;
 	case QAM_64:
 	case QAM_256:
+	case QAM_AUTO:
 		/* Auto ok for QAM */
 		ret = lgdt3306a_set_inversion_auto(state, 1);
 		break;
@@ -674,6 +679,7 @@ static int lgdt3306a_set_if(struct lgdt3306a_state *state,
 		break;
 	case QAM_64:
 	case QAM_256:
+	case QAM_AUTO:
 		if_freq_khz = state->cfg->qam_if_khz;
 		break;
 	default:
@@ -1522,6 +1528,7 @@ static int lgdt3306a_read_status(struct dvb_frontend *fe,
 		switch (state->current_modulation) {
 		case QAM_256:
 		case QAM_64:
+		case QAM_AUTO:
 			if (lgdt3306a_qam_lock_poll(state) == LG3306_LOCK) {
 				*status |= FE_HAS_VITERBI;
 				*status |= FE_HAS_SYNC;
@@ -1566,6 +1573,7 @@ static int lgdt3306a_read_signal_strength(struct dvb_frontend *fe,
 	 * Calculate some sort of "strength" from SNR
 	 */
 	struct lgdt3306a_state *state = fe->demodulator_priv;
+	u8 val;
 	u16 snr; /* snr_x10 */
 	int ret;
 	u32 ref_snr; /* snr*100 */
@@ -1578,11 +1586,15 @@ static int lgdt3306a_read_signal_strength(struct dvb_frontend *fe,
 		 ref_snr = 1600; /* 16dB */
 		 break;
 	case QAM_64:
-		 ref_snr = 2200; /* 22dB */
-		 break;
 	case QAM_256:
-		 ref_snr = 2800; /* 28dB */
-		 break;
+	case QAM_AUTO:
+		/* need to know actual modulation to set proper SNR baseline */
+		lgdt3306a_read_reg(state, 0x00a6, &val);
+		if(val & 0x04)
+			ref_snr = 2800; /* QAM-256 28dB */
+		else
+			ref_snr = 2200; /* QAM-64  22dB */
+		break;
 	default:
 		return -EINVAL;
 	}
@@ -2152,7 +2164,7 @@ static const struct dvb_frontend_ops lgdt3306a_ops = {
 		.frequency_min      = 54000000,
 		.frequency_max      = 858000000,
 		.frequency_stepsize = 62500,
-		.caps = FE_CAN_8VSB | FE_CAN_QAM_64 | FE_CAN_QAM_256 | FE_HAS_EXTENDED_CAPS
+		.caps = FE_CAN_8VSB | FE_CAN_QAM_AUTO | FE_CAN_QAM_64 | FE_CAN_QAM_256 | FE_HAS_EXTENDED_CAPS
 	},
 	.extended_info = {
 		.extended_caps          = FE_CAN_SPECTRUMSCAN |

@@ -191,7 +191,7 @@
    USB 2.0 spec says bulk packet size is always 512 bytes
  */
 #define EM28XX_BULK_PACKET_MULTIPLIER 384
-#define EM28XX_DVB_BULK_PACKET_MULTIPLIER 384
+#define EM28XX_DVB_BULK_PACKET_MULTIPLIER (384 * 2)
 
 #define EM28XX_INTERLACED_DEFAULT 1
 
@@ -687,8 +687,8 @@ struct em28xx {
 	u8 ifnum;		/* number of the assigned usb interface */
 	u8 analog_ep_isoc;	/* address of isoc endpoint for analog */
 	u8 analog_ep_bulk;	/* address of bulk endpoint for analog */
-	u8 dvb_ep_isoc_ts2;		/* address of isoc endpoint for DVB TS2*/
-	u8 dvb_ep_bulk_ts2;		/* address of bulk endpoint for DVB TS2*/
+	u8 dvb_ep_isoc_ts2;	/* address of isoc endpoint for DVB TS2*/
+	u8 dvb_ep_bulk_ts2;	/* address of bulk endpoint for DVB TS2*/
 	u8 dvb_ep_isoc;		/* address of isoc endpoint for DVB */
 	u8 dvb_ep_bulk;		/* address of bulk endpoint for DVB */
 	int alt;		/* alternate setting */
