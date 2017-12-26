@@ -181,8 +181,6 @@ static int lgdt3306a_soft_reset(struct lgdt3306a_state *state)
 {
 	int ret;
 
-	dprintk("");
-
 	ret = lgdt3306a_set_reg_bit(state, 0x0000, 7, 0);
 	if (lg_chkerr(ret))
 		goto fail;
@@ -201,7 +199,6 @@ static int lgdt3306a_mpeg_mode(struct lgdt3306a_state *state,
 	u8 val;
 	int ret;
 
-	dprintk("(%d)", mode);
 	/* transport packet format - TPSENB=0x80 */
 	ret = lgdt3306a_set_reg_bit(state, 0x0071, 7,
 				     mode == LGDT3306A_MPEG_PARALLEL ? 1 : 0);
@@ -239,8 +236,6 @@ static int lgdt3306a_mpeg_mode_polarity(struct lgdt3306a_state *state,
 	u8 val;
 	int ret;
 
-	dprintk("edge=%d, valid=%d", edge, valid);
-
 	ret = lgdt3306a_read_reg(state, 0x0070, &val);
 	if (lg_chkerr(ret))
 		goto fail;
@@ -263,8 +258,6 @@ static int lgdt3306a_mpeg_tristate(struct lgdt3306a_state *state, int mode)
 {
 	u8 val;
 	int ret;
-
-	dprintk("(%d)", mode);
 
 	if (mode) {
 		ret = lgdt3306a_read_reg(state, 0x0070, &val);
@@ -308,18 +301,13 @@ static int lgdt3306a_ts_bus_ctrl(struct dvb_frontend *fe, int acquire)
 {
 	struct lgdt3306a_state *state = fe->demodulator_priv;
 
-	dprintk("acquire=%d", acquire);
-
 	return lgdt3306a_mpeg_tristate(state, acquire ? 0 : 1);
-
 }
 
 static int lgdt3306a_power(struct lgdt3306a_state *state,
 				     int mode)
 {
 	int ret;
-
-	dprintk("(%d)", mode);
 
 	if (mode == 0) {
 		/* into reset */
@@ -356,8 +344,6 @@ static int lgdt3306a_set_vsb(struct lgdt3306a_state *state)
 {
 	u8 val;
 	int ret;
-
-	dprintk("");
 
 	/* 0. Spectrum inversion detection manual; spectrum inverted */
 	ret = lgdt3306a_read_reg(state, 0x0002, &val);
@@ -506,8 +492,6 @@ static int lgdt3306a_set_vsb(struct lgdt3306a_state *state)
 	ret = lgdt3306a_soft_reset(state);
 	if (lg_chkerr(ret))
 		goto fail;
-
-	dprintk("complete");
 fail:
 	return ret;
 }
@@ -516,8 +500,6 @@ static int lgdt3306a_set_qam(struct lgdt3306a_state *state, int modulation)
 {
 	u8 val;
 	int ret;
-
-	dprintk("modulation=%d", modulation);
 
 	/* 1. Selection of standard mode(0x08=QAM, 0x80=VSB) */
 	ret = lgdt3306a_write_reg(state, 0x0008, 0x08);
@@ -578,8 +560,6 @@ static int lgdt3306a_set_qam(struct lgdt3306a_state *state, int modulation)
 	ret = lgdt3306a_soft_reset(state);
 	if (lg_chkerr(ret))
 		goto fail;
-
-	dprintk("complete");
 fail:
 	return ret;
 }
@@ -588,8 +568,6 @@ static int lgdt3306a_set_modulation(struct lgdt3306a_state *state,
 				   struct dtv_frontend_properties *p)
 {
 	int ret;
-
-	dprintk("");
 
 	switch (p->modulation) {
 	case VSB_8:
@@ -619,8 +597,6 @@ static int lgdt3306a_agc_setup(struct lgdt3306a_state *state,
 			      struct dtv_frontend_properties *p)
 {
 	/* TODO: anything we want to do here??? */
-	dprintk("");
-
 	switch (p->modulation) {
 	case VSB_8:
 		break;
@@ -640,8 +616,6 @@ static int lgdt3306a_set_inversion(struct lgdt3306a_state *state,
 {
 	int ret;
 
-	dprintk("(%d)", inversion);
-
 	ret = lgdt3306a_set_reg_bit(state, 0x0002, 2, inversion ? 1 : 0);
 	return ret;
 }
@@ -650,8 +624,6 @@ static int lgdt3306a_set_inversion_auto(struct lgdt3306a_state *state,
 				       int enabled)
 {
 	int ret;
-
-	dprintk("(%d)", enabled);
 
 	/* 0=Manual 1=Auto(QAM only) - SPECINVAUTO=0x04 */
 	ret = lgdt3306a_set_reg_bit(state, 0x0002, 3, enabled);
@@ -664,7 +636,6 @@ static int lgdt3306a_spectral_inversion(struct lgdt3306a_state *state,
 {
 	int ret = 0;
 
-	dprintk("(%d)", inversion);
 #if 0
 	/*
 	 * FGR - spectral_inversion defaults already set for VSB and QAM;
@@ -711,8 +682,7 @@ static int lgdt3306a_set_if(struct lgdt3306a_state *state,
 
 	switch (if_freq_khz) {
 	default:
-		pr_warn("IF=%d KHz is not supported, 3250 assumed",
-			if_freq_khz);
+		dprintk("IF=%d KHz is not supported, 3250 assumed", if_freq_khz);
 		/* fallthrough */
 	case 3250: /* 3.25Mhz */
 		nco1 = 0x34;
@@ -742,8 +712,6 @@ static int lgdt3306a_set_if(struct lgdt3306a_state *state,
 	if (ret)
 		return ret;
 
-	dprintk("if_freq=%d KHz->[%04x]", if_freq_khz, nco1<<8 | nco2);
-
 	return 0;
 }
 
@@ -757,7 +725,6 @@ static int lgdt3306a_i2c_gate_ctrl(struct dvb_frontend *fe, int enable)
 		dprintk("deny_i2c_rptr=%d", state->cfg->deny_i2c_rptr);
 		return 0;
 	}
-	dprintk("(%d)", enable);
 
 	/* NI2CRPTEN=0x80 */
 	return lgdt3306a_set_reg_bit(state, 0x0002, 7, enable ? 0 : 1);
@@ -767,7 +734,6 @@ static int lgdt3306a_sleep(struct lgdt3306a_state *state)
 {
 	int ret;
 
-	dprintk("");
 	state->algo = LG3306_NOTUNE;
 
 	state->current_frequency = -1; /* force re-tune, when we wake */
@@ -796,7 +762,6 @@ static int lgdt3306a_init(struct dvb_frontend *fe)
 	u8 val;
 	int ret;
 
-	dprintk("");
 	state->algo = LG3306_NOTUNE;
 
 	/* 1. Normal operation mode */
@@ -1029,11 +994,9 @@ static int lgdt3306a_get_frontend(struct dvb_frontend *fe,
 {
 	struct lgdt3306a_state *state = fe->demodulator_priv;
 
-	dprintk("(%u, %d)",
-		 state->current_frequency, state->current_modulation);
-
 	p->modulation = state->current_modulation;
 	p->frequency = state->current_frequency;
+
 	return 0;
 }
 
@@ -1150,7 +1113,7 @@ lgdt3306a_check_oper_mode(struct lgdt3306a_state *state)
 		return LG3306_QAM64;
 	}
 err:
-	pr_warn("UNKNOWN");
+	dprintk("UNKNOWN");
 	return LG3306_UNKNOWN_MODE;
 }
 
@@ -1233,7 +1196,7 @@ lgdt3306a_check_lock_status(struct lgdt3306a_state *state,
 
 	default:
 		lockStatus = LG3306_UNKNOWN_LOCK;
-		pr_warn("UNKNOWN whatLock=%d", whatLock);
+		dprintk("UNKNOWN whatLock=%d", whatLock);
 		break;
 	}
 
@@ -1251,8 +1214,6 @@ lgdt3306a_check_neverlock_status(struct lgdt3306a_state *state)
 	if (ret)
 		return ret;
 	lockStatus = (enum lgdt3306a_neverlock_status)(val & 0x03);
-
-	dprintk("NeverLock=%d", lockStatus);
 
 	return lockStatus;
 }
@@ -1395,7 +1356,6 @@ lgdt3306a_neverlock_poll(struct lgdt3306a_state *state)
 
 		msleep(30);
 	}
-	dprintk("NLLockStatus=%d", NLLockStatus);
 
 	return NLLockStatus;
 }
@@ -1552,11 +1512,6 @@ static int lgdt3306a_read_status(struct dvb_frontend *fe,
 
 	if (fe->ops.tuner_ops.get_rf_strength) {
 		ret = fe->ops.tuner_ops.get_rf_strength(fe, &strength);
-		if (ret == 0) {
-			dprintk("strength=%d", strength);
-		} else {
-			dprintk("failed");
-		}
 	}
 
 	*status = 0;
@@ -1649,7 +1604,6 @@ static int lgdt3306a_read_signal_strength(struct dvb_frontend *fe,
 		str = (0xffff * str) / 100;
 	}
 	*strength = (u16)str;
-	dprintk("strength=%u", *strength);
 
 fail:
 	return ret;
@@ -1671,7 +1625,6 @@ static int lgdt3306a_read_ber(struct dvb_frontend *fe, u32 *ber)
 	tmp = (tmp << 8) | read_reg(state, 0x00fe); /* NBERVALUE[8-15] */
 	tmp = (tmp << 8) | read_reg(state, 0x00ff); /* NBERVALUE[0-7] */
 	*ber = tmp;
-	dprintk("ber=%u", tmp);
 #endif
 	return 0;
 }
@@ -1685,7 +1638,6 @@ static int lgdt3306a_read_ucblocks(struct dvb_frontend *fe, u32 *ucblocks)
 	/* FGR - FIXME - I don't know what value is expected by dvb_core
 	 * what happens when value wraps? */
 	*ucblocks = read_reg(state, 0x00f4); /* TPIFTPERRCNT[0-7] */
-	dprintk("ucblocks=%u", *ucblocks);
 #endif
 
 	return 0;
@@ -1698,8 +1650,6 @@ static int lgdt3306a_tune(struct dvb_frontend *fe, bool re_tune,
 	int ret = 0;
 	struct lgdt3306a_state *state = fe->demodulator_priv;
 	state->algo = LG3306_TUNE;
-
-	dprintk("re_tune=%u", re_tune);
 
 	if (re_tune) {
 		state->current_frequency = -1; /* force re-tune */
@@ -1718,7 +1668,6 @@ static int lgdt3306a_get_tune_settings(struct dvb_frontend *fe,
 				       *fe_tune_settings)
 {
 	fe_tune_settings->min_delay_ms = 100;
-	dprintk("");
 	return 0;
 }
 
@@ -1814,7 +1763,7 @@ struct dvb_frontend *lgdt3306a_attach(const struct lgdt3306a_config *config,
 	if (lg_chkerr(ret))
 		goto fail;
 	if ((val & 0x74) != 0x74) {
-		pr_warn("expected 0x74, got 0x%x", (val & 0x74));
+		dprintk("expected 0x74, got 0x%x", (val & 0x74));
 #if 0
 		/* FIXME - re-enable when we know this is right */
 		goto fail;
@@ -1824,7 +1773,7 @@ struct dvb_frontend *lgdt3306a_attach(const struct lgdt3306a_config *config,
 	if (lg_chkerr(ret))
 		goto fail;
 	if ((val & 0xf6) != 0xc6) {
-		pr_warn("expected 0xc6, got 0x%x", (val & 0xf6));
+		dprintk("expected 0xc6, got 0x%x", (val & 0xf6));
 #if 0
 		/* FIXME - re-enable when we know this is right */
 		goto fail;
@@ -1834,7 +1783,7 @@ struct dvb_frontend *lgdt3306a_attach(const struct lgdt3306a_config *config,
 	if (lg_chkerr(ret))
 		goto fail;
 	if ((val & 0x73) != 0x03) {
-		pr_warn("expected 0x03, got 0x%x", (val & 0x73));
+		dprintk("expected 0x03, got 0x%x", (val & 0x73));
 #if 0
 		/* FIXME - re-enable when we know this is right */
 		goto fail;
@@ -1849,7 +1798,7 @@ struct dvb_frontend *lgdt3306a_attach(const struct lgdt3306a_config *config,
 	return &state->frontend;
 
 fail:
-	pr_warn("unable to detect LGDT3306A hardware");
+	dprintk("unable to detect LGDT3306A hardware");
 	kfree(state);
 	return NULL;
 }
@@ -1893,7 +1842,7 @@ static int lgdt3306a_get_spectrum_scan(struct dvb_frontend *fe, struct dvb_fe_sp
 			ret = fe->ops.tuner_ops.set_params(fe);
 			state->current_frequency = p->frequency;
 
-			msleep(20);
+			msleep(35);
 
 			ret = fe->ops.tuner_ops.get_rf_strength(fe, (s->rf_level + x));
 		}
