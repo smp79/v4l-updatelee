@@ -387,6 +387,7 @@ static int si2157_get_rf_strength(struct dvb_frontend *fe,
 				       u16 *signal_strength)
 {
 	struct i2c_client *client = fe->tuner_priv;
+	struct dtv_frontend_properties *c = &fe->dtv_property_cache;
 	struct si2157_cmd cmd;
 	int ret;
 
@@ -399,7 +400,9 @@ static int si2157_get_rf_strength(struct dvb_frontend *fe,
 		return -1;
 	}
 
-	*signal_strength = (s8)cmd.args[3] * 1000;
+	c->strength.stat[0].scale = FE_SCALE_DECIBEL;
+	c->strength.stat[0].svalue = (s8) cmd.args[3] * 1000;
+	*signal_strength = (s8) cmd.args[3] * 1000;
 
 	return 0;
 }
