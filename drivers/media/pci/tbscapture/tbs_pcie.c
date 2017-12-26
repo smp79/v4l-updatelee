@@ -26,8 +26,8 @@ u8 fw7611[]=
 	0x98, 0x02, 0xF5 , //Auto CSC, YCrCb out, Set op_656 bit
 	0x98, 0x03, 0x80 , //24 bit SDR 444 Mode 0
 	0x98, 0x05, 0x28 , //AV Codes Off  28
-	0x98, 0x06, 0xA4 ,// A4 Invert VS,HS pins
-	//0x98, 0x06, 0x26, //eric mark, field;
+	//0x98, 0x06, 0xA4 ,// A4 Invert VS,HS pins
+	0x98, 0x06, 0x26, //eric mark, field;
 	0x98, 0x0B, 0x44 , //Power up part
 	0x98, 0x0C, 0x42 , //Power up part
 	0x98, 0x14, 0x7F , //Max Drive Strength
@@ -276,7 +276,7 @@ static int tbs_buffer_count(unsigned int size, unsigned int count)
 {
 	unsigned int maxcount;
 
-	maxcount = (8 * 1024 * 1024) / roundup(size, PAGE_SIZE);
+	maxcount = (32 * 1024 * 1024) / roundup(size, PAGE_SIZE);
 	if (count > maxcount)
 		count = maxcount;
 	return count;
@@ -871,7 +871,7 @@ int tbs_video_register(struct tbs_pcie_dev *dev)
 			printk(KERN_ERR " v4l2_device_register failed!\n");
 			goto fail;
 		}else{
-			printk(" TBS 6302 HDMI Capture %d register OK! \n",i);
+			printk(" TBS 6312 HDMI Capture %d register OK! \n",i);
 		}
 	}
 	return 0;
@@ -1218,7 +1218,7 @@ fail0:
 }
 
 static const struct pci_device_id tbs_pci_table[] = {
-	MAKE_ENTRY(0x544d, 0x6178, 0x6302, 0x0002, NULL),
+	MAKE_ENTRY(0x544d, 0x6178, 0x6312, 0x0002, NULL),
 	{ }
 };
 MODULE_DEVICE_TABLE(pci, tbs_pci_table);

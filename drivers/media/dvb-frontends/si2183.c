@@ -74,6 +74,9 @@ struct si2183_dev {
 	void (*RF_switch)(struct i2c_adapter * i2c, u8 rf_in, u8 flag);
 	u8 rf_in;
 	u8 active_fe;
+
+	void (*write_properties) (struct i2c_adapter *i2c,u8 reg, u32 buf);
+	void (*read_properties) (struct i2c_adapter *i2c,u8 reg, u32 *buf);
 };
 
 /* Own I2C adapter locking is needed because of I2C gate logic. */
@@ -1375,6 +1378,26 @@ err:
 	return ret;
 }
 
+static void si2183_spi_read(struct dvb_frontend *fe, struct ecp3_info *ecp3inf)
+{
+	struct i2c_client *client = fe->demodulator_priv;
+	struct si2183_dev *dev = i2c_get_clientdata(client);
+
+
+	dev->read_properties(client->adapter, ecp3inf->reg, &(ecp3inf->data));
+
+	return ;
+}
+
+static void si2183_spi_write(struct dvb_frontend *fe, struct ecp3_info *ecp3inf)
+{
+	struct i2c_client *client = fe->demodulator_priv;
+	struct si2183_dev *dev = i2c_get_clientdata(client);
+
+	dev->write_properties(client->adapter, ecp3inf->reg, ecp3inf->data);
+	return ;
+}
+
 static const struct dvb_frontend_ops si2183_ops = {
 	.delsys = {SYS_DVBT, SYS_DVBT2,
 		   SYS_ISDBT,
@@ -1432,6 +1455,9 @@ static const struct dvb_frontend_ops si2183_ops = {
 	.set_tone		= si2183_set_tone,
 	.diseqc_send_burst	= si2183_diseqc_send_burst,
 	.diseqc_send_master_cmd	= si2183_diseqc_send_msg,
+
+	.spi_read		= si2183_spi_read,
+	.spi_write		= si2183_spi_write,
 };
 
 
@@ -1507,6 +1533,9 @@ static int si2183_probe(struct i2c_client *client,
 	dev->stat_resp = 0;
 
 	dev->active_fe = 0;
+
+	dev->write_properties = config->write_properties;
+	dev->read_properties = config->read_properties;
 
 	i2c_set_clientdata(client, dev);
 	mutex_init(&dev->i2c_mutex);

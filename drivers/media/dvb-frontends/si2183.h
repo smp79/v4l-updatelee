@@ -59,6 +59,10 @@ struct si2183_config {
 	u8 rf_in;
 
 	enum si2183_algo algo;
+
+	//update the FW.
+	void (*write_properties) (struct i2c_adapter *i2c,u8 reg, u32 buf);
+	void (*read_properties) (struct i2c_adapter *i2c,u8 reg, u32 *buf);
 };
 
 #endif

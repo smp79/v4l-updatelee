@@ -20,6 +20,9 @@ struct stv091x_cfg {
 	int (*tuner_set_params) (struct dvb_frontend *fe);
 	int (*tuner_set_frequency) (struct dvb_frontend *fe, u32 frequency);
 	int (*tuner_set_bandwidth) (struct dvb_frontend *fe, u32 bandwidth);
+
+	void (*write_properties) (struct i2c_adapter *i2c,u8 reg, u32 buf);
+	void (*read_properties) (struct i2c_adapter *i2c,u8 reg, u32 *buf);
 };
 
 enum stv091x_algo {
