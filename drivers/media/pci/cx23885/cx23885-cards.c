@@ -325,8 +325,7 @@ struct cx23885_board cx23885_boards[] = {
 		.name		= "Hauppauge WinTV-HVR1255",
 		.porta		= CX23885_ANALOG_VIDEO,
 		.portc		= CX23885_MPEG_DVB,
-		.tuner_type	= TUNER_ABSENT,
-		.tuner_addr	= 0x42, /* 0x84 >> 1 */
+		.tuner_type	= TUNER_NXP_TDA18271,
 		.force_bff	= 1,
 		.input          = {{
 			.type   = CX23885_VMUX_TELEVISION,
@@ -354,8 +353,7 @@ struct cx23885_board cx23885_boards[] = {
 		.name		= "Hauppauge WinTV-HVR1255",
 		.porta		= CX23885_ANALOG_VIDEO,
 		.portc		= CX23885_MPEG_DVB,
-		.tuner_type	= TUNER_ABSENT,
-		.tuner_addr	= 0x42, /* 0x84 >> 1 */
+		.tuner_type	= TUNER_NXP_TDA18271,
 		.force_bff	= 1,
 		.input          = {{
 			.type   = CX23885_VMUX_TELEVISION,
@@ -1026,6 +1024,10 @@ struct cx23885_subid cx23885_subids[] = {
 	}, {
 		.subvendor = 0x0070,
 		.subdevice = 0x7133,
+		.card      = CX23885_BOARD_HAUPPAUGE_IMPACTVCBE,
+	}, {
+		.subvendor = 0x0070,
+		.subdevice = 0x7137,
 		.card      = CX23885_BOARD_HAUPPAUGE_IMPACTVCBE,
 	}, {
 		.subvendor = 0x18ac,
