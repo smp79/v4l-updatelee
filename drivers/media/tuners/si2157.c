@@ -89,21 +89,22 @@ static int si2157_init(struct dvb_frontend *fe)
 	struct si2157_cmd cmd;
 	const struct firmware *fw;
 	const char *fw_name;
-	unsigned int uitmp, chip_id;
+	unsigned int chip_id, xtal_trim;
 
-	/* Returned IF frequency is garbage when firmware is not running */
-	memcpy(cmd.args, "\x15\x00\x06\x07", 4);
+	/* Try to get Xtal trim property setting, to verify tuner still running;
+	 * replaces previous test of IF freq
+	 */
+	memcpy(cmd.args, "\x15\x00\x04\x02", 4);
 	cmd.wlen = 4;
 	cmd.rlen = 4;
 	ret = si2157_cmd_execute(client, &cmd);
-	if (ret)
-		goto err;
 
-	uitmp = cmd.args[2] << 0 | cmd.args[3] << 8;
-	dprintk("if_frequency kHz=%u", uitmp);
+	xtal_trim = cmd.args[2] | (cmd.args[3] << 8);
 
-	if (uitmp == dev->if_frequency / 1000)
+	if ((ret == 0) && (xtal_trim < 16))
 		goto warm;
+
+	dev->if_frequency = 0; /* we no longer know current tuner state */
 
 	/* power up */
 	if (dev->chiptype == SI2157_CHIPTYPE_SI2146) {
@@ -249,25 +250,25 @@ static int si2157_sleep(struct dvb_frontend *fe)
 {
 	struct i2c_client *client = fe->tuner_priv;
 	struct si2157_dev *dev = i2c_get_clientdata(client);
-//	int ret;
-//	struct si2157_cmd cmd;
+	int ret;
+	struct si2157_cmd cmd;
 
 	dprintk("");
 
 	dev->active = false;
 
 	/* standby */
-//	memcpy(cmd.args, "\x16\x00", 2);
-//	cmd.wlen = 2;
-//	cmd.rlen = 1;
-//	ret = si2157_cmd_execute(client, &cmd);
-//	if (ret)
-//		goto err;
+	memcpy(cmd.args, "\x16\x00", 2);
+	cmd.wlen = 2;
+	cmd.rlen = 1;
+	ret = si2157_cmd_execute(client, &cmd);
+	if (ret)
+		goto err;
 
 	return 0;
-//err:
-//	dprintk("failed=%d", ret);
-//	return ret;
+err:
+	dprintk("failed=%d", ret);
+	return ret;
 }
 
 static int si2157_set_params(struct dvb_frontend *fe)
