@@ -204,7 +204,7 @@ static int em28xx_start_streaming(struct em28xx_dvb *dvb)
 	if (dev->dvb_xfer_bulk) {
 		if (!dev->dvb_ep_bulk)
 			return -ENODEV;
-		dvb_max_packet_size = 188;
+		dvb_max_packet_size = 512; /* USB 2.0 spec */
 		packet_multiplier = EM28XX_DVB_BULK_PACKET_MULTIPLIER;
 		dvb_alt = 0;
 	} else { /* isoc */
