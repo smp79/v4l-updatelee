@@ -932,6 +932,18 @@ static const struct m88ds3103_config hauppauge_hvr5525_m88ds3103_config = {
 	.agc = 0x99,
 };
 
+static struct lgdt3306a_config hauppauge_hvr1265k4_config = {
+	.i2c_addr               = 0x59,
+	.qam_if_khz             = 4000,
+	.vsb_if_khz             = 3250,
+	.deny_i2c_rptr          = 1, /* Disabled */
+	.spectral_inversion     = 0, /* Disabled */
+	.mpeg_mode              = LGDT3306A_MPEG_SERIAL,
+	.tpclk_edge             = LGDT3306A_TPCLK_RISING_EDGE,
+	.tpvalid_polarity       = LGDT3306A_TP_VALID_HIGH,
+	.xtalMHz                = 25, /* 24 or 25 */
+};
+
 static int netup_altera_fpga_rw(void *device, int flag, int data, int read)
 {
 	struct cx23885_dev *dev = (struct cx23885_dev *)device;
@@ -1196,6 +1208,8 @@ static int dvb_register(struct cx23885_tsport *port)
 	struct si2157_config si2157_config;
 	struct ts2020_config ts2020_config;
 	struct m88ds3103_platform_data m88ds3103_pdata;
+	struct m88rs6000t_config m88rs6000t_config = {};
+	struct a8293_platform_data a8293_pdata = {};
 	struct i2c_board_info info;
 	struct i2c_adapter *adapter;
 	struct i2c_client *client_demod = NULL, *client_tuner = NULL;
@@ -2223,9 +2237,10 @@ static int dvb_register(struct cx23885_tsport *port)
 		}
 		port->i2c_client_tuner = client_tuner;
 		break;
-	case CX23885_BOARD_HAUPPAUGE_HVR5525: {
-		struct m88rs6000t_config m88rs6000t_config;
-		struct a8293_platform_data a8293_pdata = {};
+	case CX23885_BOARD_HAUPPAUGE_STARBURST2:
+	case CX23885_BOARD_HAUPPAUGE_HVR5525:
+		i2c_bus = &dev->i2c_bus[0];
+		i2c_bus2 = &dev->i2c_bus[1];
 
 		switch (port->nr) {
 
@@ -2234,7 +2249,7 @@ static int dvb_register(struct cx23885_tsport *port)
 			/* attach frontend */
 			fe0->dvb.frontend = dvb_attach(m88ds3103_attach,
 					&hauppauge_hvr5525_m88ds3103_config,
-					&dev->i2c_bus[0].i2c_adap, &adapter);
+					&i2c_bus->i2c_adap, &adapter);
 			if (fe0->dvb.frontend == NULL)
 				break;
 
@@ -2245,7 +2260,7 @@ static int dvb_register(struct cx23885_tsport *port)
 			info.addr = 0x0b;
 			info.platform_data = &a8293_pdata;
 			request_module("a8293");
-			client_sec = i2c_new_device(&dev->i2c_bus[0].i2c_adap, &info);
+			client_sec = i2c_new_device(&i2c_bus->i2c_adap, &info);
 			if (!client_sec || !client_sec->dev.driver)
 				goto frontend_detach;
 			if (!try_module_get(client_sec->dev.driver->owner)) {
@@ -2287,7 +2302,7 @@ static int dvb_register(struct cx23885_tsport *port)
 			info.addr = 0x64;
 			info.platform_data = &si2168_config;
 			request_module("%s", info.type);
-			client_demod = i2c_new_device(&dev->i2c_bus[0].i2c_adap, &info);
+			client_demod = i2c_new_device(&i2c_bus->i2c_adap, &info);
 			if (!client_demod || !client_demod->dev.driver)
 				goto frontend_detach;
 			if (!try_module_get(client_demod->dev.driver->owner)) {
@@ -2305,7 +2320,7 @@ static int dvb_register(struct cx23885_tsport *port)
 			info.addr = 0x60;
 			info.platform_data = &si2157_config;
 			request_module("%s", info.type);
-			client_tuner = i2c_new_device(&dev->i2c_bus[1].i2c_adap, &info);
+			client_tuner = i2c_new_device(&i2c_bus2->i2c_adap, &info);
 			if (!client_tuner || !client_tuner->dev.driver) {
 				module_put(client_demod->dev.driver->owner);
 				i2c_unregister_device(client_demod);
@@ -2323,8 +2338,10 @@ static int dvb_register(struct cx23885_tsport *port)
 			break;
 		}
 		break;
-	}
 	case CX23885_BOARD_HAUPPAUGE_QUADHD_DVB:
+	case CX23885_BOARD_HAUPPAUGE_QUADHD_DVB_885:
+		pr_info("%s(): board=%d port=%d\n", __func__,
+			dev->board, port->nr);
 		switch (port->nr) {
 		/* port b - Terrestrial/cable */
 		case 1:
@@ -2371,6 +2388,16 @@ static int dvb_register(struct cx23885_tsport *port)
 				goto frontend_detach;
 			}
 			port->i2c_client_tuner = client_tuner;
+
+			/* we only attach tuner for analog on the 888 version */
+			if (dev->board == CX23885_BOARD_HAUPPAUGE_QUADHD_DVB) {
+				pr_info("%s(): QUADHD_DVB analog setup\n",
+					__func__);
+				dev->ts1.analog_fe.tuner_priv = client_tuner;
+				dvb_attach(si2157_attach, &dev->ts1.analog_fe,
+					info.addr, &dev->i2c_bus[1].i2c_adap,
+					&si2157_config);
+			}
 			break;
 
 		/* port c - terrestrial/cable */
@@ -2422,6 +2449,9 @@ static int dvb_register(struct cx23885_tsport *port)
 		}
 		break;
 	case CX23885_BOARD_HAUPPAUGE_QUADHD_ATSC:
+	case CX23885_BOARD_HAUPPAUGE_QUADHD_ATSC_885:
+		pr_info("%s(): board=%d port=%d\n", __func__,
+			dev->board, port->nr);
 		switch (port->nr) {
 		/* port b - Terrestrial/cable */
 		case 1:
@@ -2457,6 +2487,16 @@ static int dvb_register(struct cx23885_tsport *port)
 				goto frontend_detach;
 			}
 			port->i2c_client_tuner = client_tuner;
+
+			/* we only attach tuner for analog on the 888 version */
+			if (dev->board == CX23885_BOARD_HAUPPAUGE_QUADHD_ATSC) {
+				pr_info("%s(): QUADHD_ATSC analog setup\n",
+					__func__);
+				dev->ts1.analog_fe.tuner_priv = client_tuner;
+				dvb_attach(si2157_attach, &dev->ts1.analog_fe,
+					info.addr, &dev->i2c_bus[1].i2c_adap,
+					&si2157_config);
+			}
 			break;
 
 		/* port c - terrestrial/cable */
@@ -2496,6 +2536,48 @@ static int dvb_register(struct cx23885_tsport *port)
 			break;
 		}
 		break;
+	case CX23885_BOARD_HAUPPAUGE_HVR1265_K4:
+		pr_info("%s(): port=%d\n", __func__, port->nr);
+		switch (port->nr) {
+		/* port c - Terrestrial/cable */
+		case 2:
+			/* attach frontend */
+			i2c_bus = &dev->i2c_bus[0];
+			fe0->dvb.frontend = dvb_attach(lgdt3306a_attach,
+			&hauppauge_hvr1265k4_config, &i2c_bus->i2c_adap);
+			if (fe0->dvb.frontend == NULL)
+				break;
+
+			/* attach tuner */
+			memset(&si2157_config, 0, sizeof(si2157_config));
+			si2157_config.fe = fe0->dvb.frontend;
+			si2157_config.if_port = 1;
+			si2157_config.inversion = 1;
+			memset(&info, 0, sizeof(struct i2c_board_info));
+			strlcpy(info.type, "si2157", I2C_NAME_SIZE);
+			info.addr = 0x60;
+			info.platform_data = &si2157_config;
+			request_module("%s", info.type);
+			client_tuner = i2c_new_device(&dev->i2c_bus[1].i2c_adap, &info);
+			if (!client_tuner || !client_tuner->dev.driver) {
+				goto frontend_detach;
+			}
+			if (!try_module_get(client_tuner->dev.driver->owner)) {
+				i2c_unregister_device(client_tuner);
+				client_tuner = NULL;
+				goto frontend_detach;
+			}
+			port->i2c_client_tuner = client_tuner;
+
+			dev->ts1.analog_fe.tuner_priv = client_tuner;
+			dvb_attach(si2157_attach, &dev->ts1.analog_fe,
+				0x60, &dev->i2c_bus[1].i2c_adap,
+				&si2157_config);
+			pr_info("%s(): HVR1265_K4 setup\n", __func__);
+			break;
+		}
+		break;
+
 
 	default:
 		pr_info("%s: The frontend of your DVB/ATSC card  isn't supported yet\n",

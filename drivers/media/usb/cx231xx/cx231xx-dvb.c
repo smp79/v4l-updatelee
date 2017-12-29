@@ -631,9 +631,7 @@ static int register_dvb(struct cx231xx_dvb *dvb,
 		       dev->name, result);
 		goto fail_adapter;
 	}
-#if 0
-	dvb_register_media_controller(&dvb->adapter, dev->media_dev);
-#endif
+//	dvb_register_media_controller(&dvb->adapter, dev->media_dev);
 
 	/* Ensure all frontends negotiate bus access */
 	dvb->frontend->ops.ts_bus_ctrl = cx231xx_dvb_bus_ctrl;
@@ -713,12 +711,10 @@ static int register_dvb(struct cx231xx_dvb *dvb,
 
 	/* register network adapter */
 	dvb_net_init(&dvb->adapter, &dvb->net, &dvb->demux.dmx);
-#if 0
-	result = dvb_create_media_graph(&dvb->adapter,
-					dev->tuner_type == TUNER_ABSENT);
-	if (result < 0)
-		goto fail_create_graph;
-#endif
+//	result = dvb_create_media_graph(&dvb->adapter,
+//					dev->tuner_type == TUNER_ABSENT);
+//	if (result < 0)
+//		goto fail_create_graph;
 
 	return 0;
 
@@ -1133,9 +1129,183 @@ static int dvb_init(struct cx231xx *dev)
 		dev->dvb[i]->i2c_client_tuner = client;
 		break;
 	}
+	case CX231XX_BOARD_HAUPPAUGE_935C:
+	{
+		struct i2c_client *client;
+		struct i2c_board_info info;
+		struct si2157_config si2157_config = {};
+		struct si2168_config si2168_config = {};
+		struct i2c_adapter *adapter;
+
+		memset(&info, 0, sizeof(struct i2c_board_info));
+
+		/* attach demodulator chip */
+		memset(&si2168_config, 0, sizeof(si2168_config));
+		si2168_config.ts_mode = SI2168_TS_SERIAL;
+		si2168_config.fe = &dev->dvb[i]->frontend;
+		si2168_config.i2c_adapter = &adapter;
+		si2168_config.ts_clock_inv = true;
+
+		strlcpy(info.type, "si2168", sizeof(info.type));
+		info.addr = dev->board.demod_addr;
+		info.platform_data = &si2168_config;
+
+		request_module(info.type);
+		client = i2c_new_device(demod_i2c, &info);
+
+		if (client == NULL || client->dev.driver == NULL) {
+			result = -ENODEV;
+			goto out_free;
+		}
+
+		if (!try_module_get(client->dev.driver->owner)) {
+			i2c_unregister_device(client);
+			result = -ENODEV;
+			goto out_free;
+		}
+
+		dvb->i2c_client_demod = client;
+		dev->dvb[i]->frontend->ops.i2c_gate_ctrl = NULL;
+
+		/* define general-purpose callback pointer */
+		dvb->frontend->callback = cx231xx_tuner_callback;
+
+		/* attach tuner */
+		memset(&si2157_config, 0, sizeof(si2157_config));
+		si2157_config.fe = dev->dvb[i]->frontend;
+#ifdef CONFIG_MEDIA_CONTROLLER_DVB
+		si2157_config.mdev = dev->media_dev;
+#endif
+		si2157_config.if_port = 1;
+		si2157_config.inversion = true;
+		strlcpy(info.type, "si2157", I2C_NAME_SIZE);
+		info.addr = 0x60;
+		info.platform_data = &si2157_config;
+		request_module("si2157");
+
+		client = i2c_new_device(tuner_i2c, &info);
+		if (client == NULL || client->dev.driver == NULL) {
+			module_put(dvb->i2c_client_demod->dev.driver->owner);
+			i2c_unregister_device(dvb->i2c_client_demod);
+			result = -ENODEV;
+			goto out_free;
+		}
+
+		if (!try_module_get(client->dev.driver->owner)) {
+			i2c_unregister_device(client);
+			module_put(dvb->i2c_client_demod->dev.driver->owner);
+			i2c_unregister_device(dvb->i2c_client_demod);
+			result = -ENODEV;
+			goto out_free;
+		}
+
+		dev->cx231xx_reset_analog_tuner = NULL;
+		dev->dvb[i]->i2c_client_tuner = client;
+		break;
+	}
+	case CX231XX_BOARD_HAUPPAUGE_975:
+	{
+		struct i2c_client *client;
+		struct i2c_board_info info;
+		struct si2157_config si2157_config = {};
+		struct si2168_config si2168_config = {};
+		struct i2c_adapter *adapter;
+
+		memset(&info, 0, sizeof(struct i2c_board_info));
+
+		/* attach demodulator chip */
+		dev->dvb[0]->frontend = dvb_attach(lgdt3306a_attach,
+			&hauppauge_955q_lgdt3306a_config,
+			demod_i2c
+			);
+
+		if (dev->dvb[0]->frontend == NULL) {
+			dev_err(dev->dev,
+				"Failed to attach LGDT3306A frontend.\n");
+			result = -EINVAL;
+			goto out_free;
+		}
+
+		/* attach demodulator chip */
+		memset(&si2168_config, 0, sizeof(si2168_config));
+		si2168_config.ts_mode = SI2168_TS_SERIAL; /* from *.inf file */
+		si2168_config.fe = &dev->dvb[1]->frontend;
+		si2168_config.i2c_adapter = &adapter;
+		si2168_config.ts_clock_inv = true;
+
+		strlcpy(info.type, "si2168", sizeof(info.type));
+		info.addr = dev->board.demod_addr;
+		info.platform_data = &si2168_config;
+
+		request_module(info.type);
+		client = i2c_new_device(demod_i2c, &info);
+		if (client == NULL || client->dev.driver == NULL) {
+			dvb_frontend_detach(dev->dvb[0]->frontend);
+			result = -ENODEV;
+			goto out_free;
+		}
+
+		if (!try_module_get(client->dev.driver->owner)) {
+			dvb_frontend_detach(dev->dvb[0]->frontend);
+			i2c_unregister_device(client);
+			result = -ENODEV;
+			goto out_free;
+		}
+
+		dvb->i2c_client_demod = client;
+		dev->dvb[1]->frontend->id = 1;
+
+		/* TODO: INSPECT THIS! Required for multiple frontends? */
+		dev->dvb[0]->frontend->ops.i2c_gate_ctrl = NULL;
+		dev->dvb[1]->frontend->ops.i2c_gate_ctrl = NULL;
+
+		/* define general-purpose callback pointer */
+		dvb->frontend->callback = cx231xx_tuner_callback;
+
+		/* attach tuner */
+		memset(&si2157_config, 0, sizeof(si2157_config));
+		si2157_config.fe = dev->dvb[0]->frontend;
+#ifdef CONFIG_MEDIA_CONTROLLER_DVB
+		si2157_config.mdev = dev->media_dev;
+#endif
+		si2157_config.if_port = 1;
+		si2157_config.inversion = true;
+		strlcpy(info.type, "si2157", I2C_NAME_SIZE);
+		info.addr = 0x60;
+		info.platform_data = &si2157_config;
+		request_module("si2157");
+
+		client = i2c_new_device(tuner_i2c, &info);
+		if (client == NULL || client->dev.driver == NULL) {
+			module_put(dvb->i2c_client_demod->dev.driver->owner);
+			i2c_unregister_device(dvb->i2c_client_demod);
+			dvb_frontend_detach(dev->dvb[0]->frontend);
+			result = -ENODEV;
+			goto out_free;
+		}
+
+		if (!try_module_get(client->dev.driver->owner)) {
+			i2c_unregister_device(client);
+			module_put(dvb->i2c_client_demod->dev.driver->owner);
+			i2c_unregister_device(dvb->i2c_client_demod);
+			dvb_frontend_detach(dev->dvb[0]->frontend);
+			result = -ENODEV;
+			goto out_free;
+		}
+
+		dev->dvb[1]->frontend->tuner_priv =
+			dev->dvb[0]->frontend->tuner_priv;
+
+		dvb_attach(si2157_attach, dev->dvb[1]->frontend, info.addr,
+			client->adapter, &si2157_config);
+
+		dev->cx231xx_reset_analog_tuner = NULL;
+
+		dev->dvb[i]->i2c_client_tuner = client;
+		break;
+	}
 	case CX231XX_BOARD_PV_PLAYTV_USB_HYBRID:
 	case CX231XX_BOARD_KWORLD_UB430_USB_HYBRID:
-
 		dev_info(dev->dev,
 			 "%s: looking for demod on i2c bus: %d\n",
 			 __func__, i2c_adapter_id(tuner_i2c));

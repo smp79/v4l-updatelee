@@ -46,4 +46,18 @@ struct si2157_config {
 	u8 if_port;
 };
 
+#if IS_REACHABLE(CONFIG_MEDIA_TUNER_SI2157)
+extern struct dvb_frontend *si2157_attach(struct dvb_frontend *fe, u8 addr,
+					    struct i2c_adapter *i2c,
+					    struct si2157_config *cfg);
+#else
+static inline struct dvb_frontend *si2157_attach(struct dvb_frontend *fe,
+						   u8 addr,
+						   struct i2c_adapter *i2c,
+						   struct si2157_config *cfg)
+{
+	pr_err("%s: driver disabled by Kconfig\n", __func__);
+	return NULL;
+}
+#endif
 #endif

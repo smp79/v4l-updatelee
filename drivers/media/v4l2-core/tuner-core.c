@@ -40,6 +40,7 @@
 #include "xc5000.h"
 #include "tda18271.h"
 #include "xc4000.h"
+#include "si2157.h"
 
 #define UNSET (-1U)
 
@@ -393,6 +394,26 @@ static void set_type(struct i2c_client *c, unsigned int type,
 		if (!dvb_attach(xc4000_attach,
 				&t->fe, t->i2c->adapter, &xc4000_cfg))
 			goto attach_failed;
+		tune_now = 0;
+		break;
+	}
+	case TUNER_SILABS_SI2157:
+	{
+		static struct si2157_config silabs_config = {
+			.inversion = true,
+			.if_port   = 1, /* selects the digital IF port */
+					/* analog assumed to be other port */
+		};
+
+		dprintk("%s: looking for si2157 tuner on i2c bus: %d\n",
+		       __func__, i2c_adapter_id(t->i2c->adapter));
+
+		if (!dvb_attach(si2157_attach, &t->fe, t->i2c->addr,
+				t->i2c->adapter, &silabs_config)) {
+			dprintk("%s: attaching si2157 tuner failed\n", __func__);
+			goto attach_failed;
+		}
+		dprintk("%s: si2157 tuner attached\n", __func__);
 		tune_now = 0;
 		break;
 	}

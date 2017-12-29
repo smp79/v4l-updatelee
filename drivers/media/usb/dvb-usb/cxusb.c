@@ -275,8 +275,6 @@ static int cxusb_power_ctrl(struct dvb_usb_device *d, int onoff)
 {
 	u8 b = 0;
 
-	dprintk("onoff: %d", onoff);
-
 	if (onoff)
 		return cxusb_ctrl_msg(d, CMD_POWER_ON, &b, 1, NULL, 0);
 	else
@@ -346,25 +344,20 @@ static int cxusb_nano2_power_ctrl(struct dvb_usb_device *d, int onoff)
 
 static int cxusb_d680_dmb_power_ctrl(struct dvb_usb_device *d, int onoff)
 {
-	int ret = 0;
+	int ret;
 //	u8  b;
 
-	dprintk("onoff: %d", onoff);
-
-	if (onoff) {
-		msleep(100);
-		ret = cxusb_power_ctrl(d, 1);
-		msleep(100);
-	}
+	ret = cxusb_power_ctrl(d, 1);
+	return ret;
 
 //	ret = cxusb_power_ctrl(d, onoff);
 //	if (!onoff)
 //		return ret;
-
+//
 //	msleep(128);
 //	cxusb_ctrl_msg(d, CMD_DIGITAL, NULL, 0, &b, 1);
 //	msleep(100);
-	return ret;
+//	return ret;
 }
 
 static int cxusb_streaming_ctrl(struct dvb_usb_adapter *adap, int onoff)

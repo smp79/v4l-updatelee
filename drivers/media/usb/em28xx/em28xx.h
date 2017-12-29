@@ -166,7 +166,7 @@
 #define EM28XX_STOP_AUDIO       0
 
 /* maximum number of em28xx boards */
-#define EM28XX_MAXBOARDS 4 /*FIXME: should be bigger */
+#define EM28XX_MAXBOARDS DVB_MAX_ADAPTERS /* All adapters could be em28xx */
 
 /* maximum number of frames that can be queued */
 #define EM28XX_NUM_FRAMES 5
@@ -191,7 +191,7 @@
    USB 2.0 spec says bulk packet size is always 512 bytes
  */
 #define EM28XX_BULK_PACKET_MULTIPLIER 384
-#define EM28XX_DVB_BULK_PACKET_MULTIPLIER 94   /* mod 47 for 188 alignment */
+#define EM28XX_DVB_BULK_PACKET_MULTIPLIER 94
 
 #define EM28XX_INTERLACED_DEFAULT 1
 

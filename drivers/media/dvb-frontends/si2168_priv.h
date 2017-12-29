@@ -68,6 +68,7 @@ struct si2168_dev {
 #define SI2168_ARGLEN      30
 struct si2168_cmd {
 	u8 args[SI2168_ARGLEN];
+	u8 w_args[SI2168_ARGLEN];
 	unsigned wlen;
 	unsigned rlen;
 };

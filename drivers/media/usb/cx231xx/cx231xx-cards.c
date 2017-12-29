@@ -725,6 +725,7 @@ struct cx231xx_board cx231xx_boards[] = {
 		.tuner_i2c_master = I2C_1_MUX_3,
 		.demod_i2c_master = { I2C_1_MUX_3 },
 		.has_dvb = 1,
+		.adap_cnt = 1,
 		.demod_addr = 0x0e,
 		.norm = V4L2_STD_PAL,
 
@@ -764,6 +765,7 @@ struct cx231xx_board cx231xx_boards[] = {
 		.tuner_i2c_master = I2C_1_MUX_3,
 		.demod_i2c_master = { I2C_1_MUX_3 },
 		.has_dvb = 1,
+		.adap_cnt = 1,
 		.demod_addr = 0x0e,
 		.norm = V4L2_STD_PAL,
 
@@ -858,6 +860,7 @@ struct cx231xx_board cx231xx_boards[] = {
 		.demod_addr = 0x64, /* 0xc8 >> 1 */
 		.demod_i2c_master = { I2C_1_MUX_3 },
 		.has_dvb = 1,
+		.adap_cnt = 1,
 		.decoder = CX231XX_AVDECODER,
 		.norm = V4L2_STD_PAL,
 		.output_mode = OUT_MODE_VIP11,
@@ -885,6 +888,7 @@ struct cx231xx_board cx231xx_boards[] = {
 		.name = "Astrometa T2hybrid",
 		.tuner_type = TUNER_ABSENT,
 		.has_dvb = 1,
+		.adap_cnt = 1,
 		.decoder = CX231XX_AVDECODER,
 		.output_mode = OUT_MODE_VIP11,
 		.agc_analog_digital_select_gpio = 0x01,
@@ -930,6 +934,86 @@ struct cx231xx_board cx231xx_boards[] = {
 			.type = CX231XX_VMUX_SVIDEO,
 			.vmux = CX231XX_VIN_2_1 |
 				(CX231XX_VIN_2_2 << 8) |
+				CX25840_SVIDEO_ON,
+			.amux = CX231XX_AMUX_LINE_IN,
+			.gpio = NULL,
+		} },
+	},
+	[CX231XX_BOARD_HAUPPAUGE_935C] = {
+		.name = "Hauppauge WinTV-HVR-935C",
+		.tuner_type = TUNER_ABSENT,
+		.tuner_addr = 0x60,
+		.tuner_gpio = RDE250_XCV_TUNER,
+		.tuner_sif_gpio = 0x05,
+		.tuner_scl_gpio = 0x1a,
+		.tuner_sda_gpio = 0x1b,
+		.decoder = CX231XX_AVDECODER,
+		.output_mode = OUT_MODE_VIP11,
+		.demod_xfer_mode = 0,
+		.ctl_pin_status_mask = 0xFFFFFFC4,
+		.agc_analog_digital_select_gpio = 0x0c,
+		.gpio_pin_status_mask = 0x4001000,
+		.tuner_i2c_master = I2C_1_MUX_3,
+		.demod_i2c_master = { I2C_1_MUX_3 },
+		.has_dvb = 1,
+		.adap_cnt = 1,
+		.demod_addr = 0x64, /* 0xc8 >> 1 */
+		.norm = V4L2_STD_PAL,
+
+		.input = {{
+			.type = CX231XX_VMUX_TELEVISION,
+			.vmux = CX231XX_VIN_3_1,
+			.amux = CX231XX_AMUX_VIDEO,
+			.gpio = NULL,
+		}, {
+			.type = CX231XX_VMUX_COMPOSITE1,
+			.vmux = CX231XX_VIN_2_1,
+			.amux = CX231XX_AMUX_LINE_IN,
+			.gpio = NULL,
+		}, {
+			.type = CX231XX_VMUX_SVIDEO,
+			.vmux = CX231XX_VIN_1_1 |
+				(CX231XX_VIN_1_2 << 8) |
+				CX25840_SVIDEO_ON,
+			.amux = CX231XX_AMUX_LINE_IN,
+			.gpio = NULL,
+		} },
+	},
+	[CX231XX_BOARD_HAUPPAUGE_975] = {
+		.name = "Hauppauge WinTV-HVR-975",
+		.tuner_type = TUNER_ABSENT,
+		.tuner_addr = 0x60,
+		.tuner_gpio = RDE250_XCV_TUNER,
+		.tuner_sif_gpio = 0x05,
+		.tuner_scl_gpio = 0x1a,
+		.tuner_sda_gpio = 0x1b,
+		.decoder = CX231XX_AVDECODER,
+		.output_mode = OUT_MODE_VIP11,
+		.demod_xfer_mode = 0,
+		.ctl_pin_status_mask = 0xFFFFFFC4,
+		.agc_analog_digital_select_gpio = 0x0c,
+		.gpio_pin_status_mask = 0x4001000,
+		.tuner_i2c_master = I2C_1_MUX_3,
+		.demod_i2c_master = { I2C_1_MUX_3 },
+		.has_dvb = 1,
+		.adap_cnt = 1, 		// Hauppauge sets up both at the same time, I dont have the hardware to test so Im going to let them do it that way
+		.demod_addr = 0x64, /* 0xc8 >> 1 */
+		.norm = V4L2_STD_ALL,
+
+		.input = {{
+			.type = CX231XX_VMUX_TELEVISION,
+			.vmux = CX231XX_VIN_3_1,
+			.amux = CX231XX_AMUX_VIDEO,
+			.gpio = NULL,
+		}, {
+			.type = CX231XX_VMUX_COMPOSITE1,
+			.vmux = CX231XX_VIN_2_1,
+			.amux = CX231XX_AMUX_LINE_IN,
+			.gpio = NULL,
+		}, {
+			.type = CX231XX_VMUX_SVIDEO,
+			.vmux = CX231XX_VIN_1_1 |
+				(CX231XX_VIN_1_2 << 8) |
 				CX25840_SVIDEO_ON,
 			.amux = CX231XX_AMUX_LINE_IN,
 			.gpio = NULL,
@@ -1083,6 +1167,10 @@ struct usb_device_id cx231xx_id_table[] = {
 	 .driver_info = CX231XX_BOARD_HAUPPAUGE_EXETER},
 	{USB_DEVICE(0x2040, 0xb123),
 	 .driver_info = CX231XX_BOARD_HAUPPAUGE_955Q},
+	{USB_DEVICE(0x2040, 0xb151),
+	 .driver_info = CX231XX_BOARD_HAUPPAUGE_935C},
+	{USB_DEVICE(0x2040, 0xb150),
+	 .driver_info = CX231XX_BOARD_HAUPPAUGE_975},
 	{USB_DEVICE(0x2040, 0xb130),
 	 .driver_info = CX231XX_BOARD_HAUPPAUGE_930C_HD_1113xx},
 	{USB_DEVICE(0x2040, 0xb131),

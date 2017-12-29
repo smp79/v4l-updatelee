@@ -32,6 +32,7 @@ static int si2168_cmd_execute(struct i2c_client *client, struct si2168_cmd *cmd)
 	mutex_lock(&dev->i2c_mutex);
 
 	if (cmd->wlen) {
+		memcpy(cmd->w_args, cmd->args, cmd->wlen);
 		/* write cmd and args for firmware */
 		ret = i2c_master_send(client, cmd->args, cmd->wlen);
 		if (ret < 0) {
@@ -79,11 +80,14 @@ static int si2168_cmd_execute(struct i2c_client *client, struct si2168_cmd *cmd)
 	return 0;
 w_err_mutex_unlock:
 	mutex_unlock(&dev->i2c_mutex);
-	dprintk("W: failed=%d", ret);
+	dprintk("Write: failed=%d", ret);
+	dprintk("W: %*ph", cmd->wlen, cmd->args);
 	return ret;
 r_err_mutex_unlock:
 	mutex_unlock(&dev->i2c_mutex);
-	dprintk("R: failed=%d", ret);
+	dprintk("Read: failed=%d", ret);
+	dprintk("W: %*ph", cmd->wlen, cmd->w_args);
+	dprintk("R: %*ph", cmd->rlen, cmd->args);
 	return ret;
 }
 
@@ -92,7 +96,7 @@ static int si2168_read_status(struct dvb_frontend *fe, enum fe_status *status)
 	struct i2c_client *client = fe->demodulator_priv;
 	struct si2168_dev *dev = i2c_get_clientdata(client);
 	struct dtv_frontend_properties *c = &fe->dtv_property_cache;
-	int ret, i;
+	int ret, i, sys;
 	unsigned int utmp, utmp1, utmp2;
 	struct si2168_cmd cmd;
 
@@ -103,7 +107,22 @@ static int si2168_read_status(struct dvb_frontend *fe, enum fe_status *status)
 		goto err;
 	}
 
-	switch (c->delivery_system) {
+	memcpy(cmd.args, "\x87\x01", 2);
+	cmd.wlen = 2;
+	cmd.rlen = 8;
+	ret = si2168_cmd_execute(client, &cmd);
+	if (ret)
+		goto err;
+
+	sys = c->delivery_system;
+	/* check if we found DVBT2 during DVBT tuning */
+	if (sys == SYS_DVBT) {
+		if ((cmd.args[3] & 0x0f) == 7) {
+			sys = SYS_DVBT2;
+		}
+	}
+
+	switch (sys) {
 	case SYS_DVBT:
 		memcpy(cmd.args, "\xa0\x01", 2);
 		cmd.wlen = 2;
@@ -316,6 +335,7 @@ static int si2168_set_frontend(struct dvb_frontend *fe)
 	struct i2c_client *client = fe->demodulator_priv;
 	struct si2168_dev *dev = i2c_get_clientdata(client);
 	struct dtv_frontend_properties *c = &fe->dtv_property_cache;
+	struct si2168_config *config = client->dev.platform_data;
 	int ret;
 	struct si2168_cmd cmd;
 	u8 bandwidth, delivery_system;
@@ -409,6 +429,16 @@ static int si2168_set_frontend(struct dvb_frontend *fe)
 		ret = si2168_cmd_execute(client, &cmd);
 		if (ret)
 			goto err;
+	} else if (c->delivery_system == SYS_DVBT) {
+		/* select Auto PLP */
+		cmd.args[0] = 0x52;
+		cmd.args[1] = 0;
+		cmd.args[2] = 0; /* Auto PLP */
+		cmd.wlen = 3;
+		cmd.rlen = 1;
+		ret = si2168_cmd_execute(client, &cmd);
+		if (ret)
+			goto err;
 	}
 
 	memcpy(cmd.args, "\x51\x03", 2);
@@ -448,6 +478,10 @@ static int si2168_set_frontend(struct dvb_frontend *fe)
 
 	memcpy(cmd.args, "\x14\x00\x0a\x10\x00\x00", 6);
 	cmd.args[4] = delivery_system | bandwidth;
+	if (delivery_system == 0xf0)
+		cmd.args[5] |= 2; /* Auto detect DVB-T/T2 */
+	if (config->inversion) /* inverted spectrum, eg si2157 */
+		cmd.args[5] |= 1;
 	cmd.wlen = 6;
 	cmd.rlen = 4;
 	ret = si2168_cmd_execute(client, &cmd);
@@ -477,6 +511,8 @@ static int si2168_set_frontend(struct dvb_frontend *fe)
 	}
 
 	memcpy(cmd.args, "\x14\x00\x0f\x10\x10\x00", 6);
+	/* BUGBUG? FW defaults to 1, but windows driver uses 30; above is 0? */
+	cmd.args[5] = 30;
 	cmd.wlen = 6;
 	cmd.rlen = 4;
 	ret = si2168_cmd_execute(client, &cmd);

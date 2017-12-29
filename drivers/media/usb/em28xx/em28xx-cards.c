@@ -2619,6 +2619,8 @@ struct usb_device_id em28xx_id_table[] = {
 			.driver_info = EM28178_BOARD_PCTV_461E },
 	{ USB_DEVICE(0x2013, 0x025f),
 			.driver_info = EM28178_BOARD_PCTV_292E },
+	{ USB_DEVICE(0x2013, 0x0264), /* Hauppauge WinTV-soloHD 292e SE */
+			.driver_info = EM28178_BOARD_PCTV_292E },
 	{ USB_DEVICE(0x2040, 0x0264), /* Hauppauge WinTV-soloHD Isoc */
 			.driver_info = EM28178_BOARD_PCTV_292E },
 	{ USB_DEVICE(0x2040, 0x8264), /* Hauppauge OEM Generic WinTV-soloHD Bulk */
@@ -3451,6 +3453,7 @@ int em28xx_duplicate_dev(struct em28xx *dev)
 {
 	int nr;
 	struct em28xx *sec_dev = kzalloc(sizeof(*sec_dev), GFP_KERNEL);
+
 	if (sec_dev == NULL) {
 		dev->dev_next = NULL;
 		return -ENOMEM;
@@ -3488,8 +3491,7 @@ static int em28xx_usb_probe(struct usb_interface *interface,
 	struct usb_device *udev;
 	struct em28xx *dev = NULL;
 	int retval;
-	bool has_vendor_audio = false, has_video = false;
-	bool has_dvb = false;
+	bool has_vendor_audio = false, has_video = false, has_dvb = false;
 	int i, nr, try_bulk;
 	const int ifnum = interface->altsetting[0].desc.bInterfaceNumber;
 	char *speed;
@@ -3605,7 +3607,8 @@ static int em28xx_usb_probe(struct usb_interface *interface,
 					} else {
 						dev->dvb_ep_bulk_ts2 = e->bEndpointAddress;
 					}
-					break;				}
+					break;
+				}
 			}
 			/* NOTE:
 			 * Old logic with support for isoc transfers only was:
@@ -3771,23 +3774,23 @@ static int em28xx_usb_probe(struct usb_interface *interface,
 			dev->dvb_xfer_bulk ? "bulk" : "isoc");
 	}
 
-	if(dev->board.has_dual_ts && em28xx_duplicate_dev(dev) == 0)
-	{
+	if (dev->board.has_dual_ts && em28xx_duplicate_dev(dev) == 0) {
 		dev->dev_next->ts = SECONDARY_TS;
 		dev->dev_next->alt   = -1;
-		dev->dev_next->is_audio_only = has_vendor_audio && !(has_video || has_dvb);
+		dev->dev_next->is_audio_only = has_vendor_audio &&
+						!(has_video || has_dvb);
 		dev->dev_next->has_video = false;
 		dev->dev_next->ifnum = ifnum;
 		dev->dev_next->model = id->driver_info;
 
 		mutex_init(&dev->dev_next->lock);
-		retval = em28xx_init_dev(dev->dev_next, udev, interface, dev->dev_next->devno);
-		if (retval) {
+		retval = em28xx_init_dev(dev->dev_next, udev, interface,
+					dev->dev_next->devno);
+		if (retval)
 			goto err_free;
-		}
 
-		dev->dev_next->board.ir_codes = NULL; /* No IR for second tuner */
-		dev->dev_next->board.has_ir_i2c = 0; /* No IR for second tuner */
+		dev->dev_next->board.ir_codes = NULL; /* No IR for 2nd tuner */
+		dev->dev_next->board.has_ir_i2c = 0; /* No IR for 2nd tuner */
 
 		if (usb_xfer_mode < 0) {
 			if (dev->dev_next->board.is_webcam)
@@ -3800,10 +3803,11 @@ static int em28xx_usb_probe(struct usb_interface *interface,
 
 		/* Select USB transfer types to use */
 		if (has_dvb) {
-			if (!dev->dvb_ep_isoc_ts2 || (try_bulk && dev->dvb_ep_bulk_ts2))
+			if (!dev->dvb_ep_isoc_ts2 ||
+			   (try_bulk && dev->dvb_ep_bulk_ts2))
 				dev->dev_next->dvb_xfer_bulk = 1;
 			dev_info(&dev->intf->dev, "dvb ts2 set to %s mode.\n",
-					dev->dev_next->dvb_xfer_bulk ? "bulk" : "isoc");
+				dev->dev_next->dvb_xfer_bulk ? "bulk" : "isoc");
 		}
 
 		dev->dev_next->dvb_ep_isoc = dev->dvb_ep_isoc_ts2;
@@ -3812,7 +3816,7 @@ static int em28xx_usb_probe(struct usb_interface *interface,
 		dev->dev_next->dvb_alt_isoc = dev->dvb_alt_isoc;
 
 		/* Configuare hardware to support TS2*/
-		if(dev->dvb_xfer_bulk) {
+		if (dev->dvb_xfer_bulk) {
 			/* The ep4 and ep5 are configuared for BULK */
 			em28xx_write_reg(dev, 0x0b, 0x96);
 			mdelay(100);
@@ -3871,9 +3875,10 @@ static void em28xx_usb_disconnect(struct usb_interface *interface)
 	if (!dev)
 		return;
 
-	if(dev->dev_next!=NULL) {
+	if (dev->dev_next != NULL) {
 		dev->dev_next->disconnected = 1;
-		dev_info(&dev->intf->dev, "Disconnecting %s\n", dev->dev_next->name);
+		dev_info(&dev->intf->dev, "Disconnecting %s\n",
+			dev->dev_next->name);
 		flush_request_modules(dev->dev_next);
 	}
 
@@ -3885,11 +3890,11 @@ static void em28xx_usb_disconnect(struct usb_interface *interface)
 
 	em28xx_close_extension(dev);
 
-	if(dev->dev_next!=NULL)
+	if (dev->dev_next != NULL)
 		em28xx_release_resources(dev->dev_next);
 	em28xx_release_resources(dev);
 
-	if(dev->dev_next!=NULL) {
+	if (dev->dev_next != NULL) {
 		kref_put(&dev->dev_next->ref, em28xx_free_device);
 		dev->dev_next = NULL;
 	}

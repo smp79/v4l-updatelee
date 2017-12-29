@@ -46,6 +46,9 @@ struct si2168_config {
 	/* TS clock gapped */
 	bool ts_clock_gapped;
 
+	/* Spectral Inversion */
+	bool inversion;
+
 	/* Tuner control pins */
 #define SI2168_MP_NOT_USED	1
 #define SI2168_MP_A		2

@@ -143,6 +143,7 @@
 #define TUNER_SONY_BTF_PB463Z		91	/* NTSC */
 
 #define TUNER_NXP_TDA18212		92
+#define TUNER_SILABS_SI2157		93  /* Silicon Labs terrestrial/cable tuner series */
 
 /* tv card specific */
 #define TDA9887_PRESENT			(1<<0)
