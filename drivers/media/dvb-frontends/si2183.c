@@ -1242,10 +1242,12 @@ static int si2183_get_spectrum_scan(struct dvb_frontend *fe, struct dvb_fe_spect
 		for (x = 0; x < s->num_freq; x++)
 		{
 			p->frequency = *(s->freq + x);
-
 			ret = fe->ops.tuner_ops.set_params(fe);
+
 			msleep(35); // same delay tested on 955Q
-			ret = fe->ops.tuner_ops.get_rf_strength(fe, (s->rf_level + x));
+
+			ret = fe->ops.tuner_ops.get_rf_strength(fe, &strength);
+			*(s->rf_level + x) = (s8)strength * 1000;
 		}
 	} else { // Satellite
 		p->frequency		= 0;

@@ -5323,7 +5323,6 @@ err:
 static int stv090x_get_spectrum_scan(struct dvb_frontend *fe, struct dvb_fe_spectrum_scan *s)
 {
 	struct stv090x_state *state = fe->demodulator_priv;
-
 	struct dvb_frontend_ops *frontend_ops = NULL;
 	struct dvb_tuner_ops *tuner_ops = NULL;
 
@@ -5382,7 +5381,7 @@ static int stv090x_get_spectrum_scan(struct dvb_frontend *fe, struct dvb_fe_spec
 			return 0;
 		}
 
-		*(s->rf_level + x) = stv090x_read_dbm(fe) / 10;
+		*(s->rf_level + x) = stv090x_read_dbm(fe);
 	}
 	return 0;
 }

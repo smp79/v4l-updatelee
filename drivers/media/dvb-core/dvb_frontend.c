@@ -1978,7 +1978,7 @@ static int dvb_frontend_ioctl_get_spectrum_scan(struct file *file,
 		s_kernel.freq = memdup_user(s_user->freq, s_user->num_freq * sizeof(__u32));
 		s_kernel.num_freq = s_user->num_freq;
 		s_kernel.rf_level = NULL;
-		s_kernel.rf_level = kmalloc(s_user->num_freq * sizeof(__s16), GFP_KERNEL);
+		s_kernel.rf_level = kmalloc(s_user->num_freq * sizeof(__s32), GFP_KERNEL);
 
 		if (!s_kernel.rf_level || !s_kernel.type) {
 			return -ENOMEM;
@@ -1988,7 +1988,7 @@ static int dvb_frontend_ioctl_get_spectrum_scan(struct file *file,
 		err = fe->ops.get_spectrum_scan(fe, &s_kernel);
 
                 // copy results to userspace
-                if (copy_to_user(s_user->rf_level, s_kernel.rf_level, s_kernel.num_freq * sizeof(__s16))) {
+		if (copy_to_user(s_user->rf_level, s_kernel.rf_level, s_kernel.num_freq * sizeof(__s32))) {
                         err = -EFAULT;
                 }
                 if (copy_to_user(s_user->type, s_kernel.type, sizeof(__u32))) {

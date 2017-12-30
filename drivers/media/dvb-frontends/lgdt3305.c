@@ -1168,6 +1168,7 @@ static int lgdt3305_get_spectrum_scan(struct dvb_frontend *fe, struct dvb_fe_spe
 	struct dtv_frontend_properties *p = &fe->dtv_property_cache;
 	struct lgdt3305_state *state = fe->demodulator_priv;
 	int x, ret;
+	u16 snr;
 
 	p->frequency		= 0;
 	p->bandwidth_hz		= 1000000;
@@ -1231,8 +1232,8 @@ static int lgdt3305_get_spectrum_scan(struct dvb_frontend *fe, struct dvb_fe_spe
 			lgdt3305_soft_reset(state);
 			msleep(800);
 
-                        lgdt3305_read_snr(fe, (s->rf_level + x));
-                        *(s->rf_level + x) *= 10;
+			lgdt3305_read_snr(fe, &snr);
+			*(s->rf_level + x) = snr * 100;
 		}
 	}
 	return 0;

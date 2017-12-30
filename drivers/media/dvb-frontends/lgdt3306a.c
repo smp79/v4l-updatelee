@@ -1839,6 +1839,7 @@ static int lgdt3306a_get_spectrum_scan(struct dvb_frontend *fe, struct dvb_fe_sp
 	struct lgdt3306a_state *state = fe->demodulator_priv;
 	int x, ret;
 	u8 val;
+	u16 lvl;
 
 	p->frequency		= 0;
 	p->bandwidth_hz		= 0;
@@ -1867,13 +1868,12 @@ static int lgdt3306a_get_spectrum_scan(struct dvb_frontend *fe, struct dvb_fe_sp
 		for (x = 0; x < s->num_freq; x++)
 		{
 			p->frequency = *(s->freq + x);
-
 			ret = fe->ops.tuner_ops.set_params(fe);
-			state->current_frequency = p->frequency;
 
 			msleep(35);
 
-			ret = fe->ops.tuner_ops.get_rf_strength(fe, (s->rf_level + x));
+			ret = fe->ops.tuner_ops.get_rf_strength(fe, &lvl);
+			*(s->rf_level + x) = (s8)lvl * 1000;
 		}
 	}
 	return 0;

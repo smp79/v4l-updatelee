@@ -620,6 +620,7 @@ static int si2168_get_spectrum_scan(struct dvb_frontend *fe, struct dvb_fe_spect
 	struct si2168_dev *dev = i2c_get_clientdata(client);
 	struct dtv_frontend_properties *p = &fe->dtv_property_cache;
 	int x, ret;
+	u16 lvl;
 
 	if (!dev->active) {
 		ret = -EAGAIN;
@@ -639,13 +640,12 @@ static int si2168_get_spectrum_scan(struct dvb_frontend *fe, struct dvb_fe_spect
 		for (x = 0; x < s->num_freq; x++)
 		{
 			p->frequency = *(s->freq + x);
-
 			ret = fe->ops.tuner_ops.set_params(fe);
 
-			msleep(50);
+			msleep(35);
 
-			ret = fe->ops.tuner_ops.get_rf_strength(fe, (s->rf_level + x));
-			dprintk("freq: %d strength: %d", p->frequency, *(s->rf_level + x));
+			ret = fe->ops.tuner_ops.get_rf_strength(fe, &lvl);
+			*(s->rf_level + x) = (s8)lvl * 1000;
 		}
 	}
 	return 0;

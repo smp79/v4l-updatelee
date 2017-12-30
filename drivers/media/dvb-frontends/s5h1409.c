@@ -999,8 +999,9 @@ EXPORT_SYMBOL(s5h1409_attach);
 static int s5h1409_get_spectrum_scan(struct dvb_frontend *fe, struct dvb_fe_spectrum_scan *s)
 {
 	struct dtv_frontend_properties *p = &fe->dtv_property_cache;
-
 	int x;
+	u16 lvl;
+
 	p->bandwidth_hz = 1000000;
 	p->delivery_system = SYS_ATSC;
 	p->modulation = VSB_8;
@@ -1019,8 +1020,8 @@ static int s5h1409_get_spectrum_scan(struct dvb_frontend *fe, struct dvb_fe_spec
 			if (fe->ops.i2c_gate_ctrl)
 				fe->ops.i2c_gate_ctrl(fe, 0);
 
-                        s5h1409_read_snr(fe, (s->rf_level + x));
-                        *(s->rf_level + x) *= 10;
+			s5h1409_read_snr(fe, &lvl);
+			*(s->rf_level + x) = lvl * 100;
 		}
 	}
 

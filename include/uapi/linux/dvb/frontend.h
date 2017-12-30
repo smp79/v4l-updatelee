@@ -959,7 +959,7 @@ typedef enum spectrum_scan {
 struct dvb_fe_spectrum_scan {
 	__u32 *freq;
 	__u16 num_freq;
-	__s16 *rf_level;
+	__s32 *rf_level;
 	__u32 *type;
 };
 

@@ -508,41 +508,6 @@ static int stv091x_get_signal_parameters(struct stv091x_state *state)
 	struct dvb_frontend *fe = &state->frontend;
 	struct dtv_frontend_properties *p = &fe->dtv_property_cache;
 
-	u8 FE_STV091X_fec_dvbs[] = {
-		FEC_NONE,
-		FEC_1_4,
-		FEC_1_3,
-		FEC_2_5,
-		FEC_1_2,
-		FEC_3_5,
-		FEC_2_3,
-		FEC_3_4,
-		FEC_4_5,
-		FEC_5_6,
-		FEC_6_7,
-		FEC_7_8,
-		FEC_NONE,
-		FEC_NONE,
-		FEC_NONE,
-		FEC_NONE,
-		FEC_NONE,
-		FEC_NONE,
-		FEC_NONE,
-		FEC_NONE,
-		FEC_NONE,
-		FEC_NONE,
-		FEC_NONE,
-		FEC_NONE,
-		FEC_NONE,
-		FEC_NONE,
-		FEC_NONE,
-		FEC_NONE,
-		FEC_NONE,
-		FEC_NONE,
-		FEC_NONE,
-		FEC_NONE
-	};
-
 	u8 FE_STV091X_fec_dvbs2[] = {
 		FEC_NONE,
 		FEC_1_4,
@@ -1393,6 +1358,7 @@ static int stv091x_get_spectrum_scan(struct dvb_frontend *fe, struct dvb_fe_spec
 	struct stv091x_state *state = fe->demodulator_priv;
 	const struct stv091x_cfg *config = state->config;
 	u32 x;
+	s16 lvl;
 
 	pr_info("%s: demod: %d\n", __func__, state->nr);
 
@@ -1423,7 +1389,8 @@ static int stv091x_get_spectrum_scan(struct dvb_frontend *fe, struct dvb_fe_spec
 
 		usleep_range(3000, 4000);
 
-		stv091x_read_dbm(fe, (s->rf_level + x));
+		stv091x_read_dbm(fe, &lvl);
+		*(s->rf_level + x) = lvl * 10;
 	}
 
 	stv091x_i2c_gate_ctrl(fe, 0);
