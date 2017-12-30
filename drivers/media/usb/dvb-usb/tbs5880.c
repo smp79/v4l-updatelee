@@ -14,7 +14,7 @@
 #include "tda18212.h"
 #include "cxd2820r.h"
 
-#include "dvb_ca_en50221.h"
+#include "media/dvb_ca_en50221.h"
 
 #define TBS5880_READ_MSG 0
 #define TBS5880_WRITE_MSG 1

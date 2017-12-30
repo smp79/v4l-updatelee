@@ -16,7 +16,7 @@
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 
 #include "gp8psk-fe.h"
-#include "dvb_frontend.h"
+#include <media/dvb_frontend.h>
 
 static int debug = 1;
 module_param(debug, int, 0644);

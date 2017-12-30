@@ -10,7 +10,7 @@
 
 #include "cx231xx.h"
 
-#include "dvb_ca_en50221.h"
+#include "media/dvb_ca_en50221.h"
 
 extern int tbscxci_read_attribute_mem(struct dvb_ca_en50221 *en50221, 
 	int slot, int addr);

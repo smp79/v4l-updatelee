@@ -48,11 +48,11 @@ find_async_subdev(struct imx_media_dev *imxmd,
 		asd = &imxasd->asd;
 		switch (asd->match_type) {
 		case V4L2_ASYNC_MATCH_FWNODE:
-			if (fwnode && asd->match.fwnode.fwnode == fwnode)
+			if (fwnode && asd->match.fwnode == fwnode)
 				return asd;
 			break;
 		case V4L2_ASYNC_MATCH_DEVNAME:
-			if (devname && !strcmp(asd->match.device_name.name,
+			if (devname && !strcmp(asd->match.device_name,
 					       devname))
 				return asd;
 			break;
@@ -104,10 +104,10 @@ int imx_media_add_async_subdev(struct imx_media_dev *imxmd,
 
 	if (fwnode) {
 		asd->match_type = V4L2_ASYNC_MATCH_FWNODE;
-		asd->match.fwnode.fwnode = fwnode;
+		asd->match.fwnode = fwnode;
 	} else {
 		asd->match_type = V4L2_ASYNC_MATCH_DEVNAME;
-		asd->match.device_name.name = devname;
+		asd->match.device_name = devname;
 		imxasd->pdev = pdev;
 	}
 

@@ -14,7 +14,7 @@
 #include "si2168.h"
 #include "si2157.h"
 
-#include "dvb_ca_en50221.h"
+#include "media/dvb_ca_en50221.h"
 
 #define TBS5881_READ_MSG 0
 #define TBS5881_WRITE_MSG 1

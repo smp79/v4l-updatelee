@@ -2,7 +2,7 @@
 #define MXL603_PRIV_H
 
 #include "mxl603.h"
-#include "dvb_frontend.h"
+#include "media/dvb_frontend.h"
 
 
 struct mxl603_dev{

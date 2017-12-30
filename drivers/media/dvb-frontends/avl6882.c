@@ -27,7 +27,7 @@
 #include <linux/string.h>
 #include <linux/bitrev.h>
 #include <linux/firmware.h>
-#include "dvb_frontend.h"
+#include "media/dvb_frontend.h"
 #include "avl6882.h"
 #include "avl6882_priv.h"
 

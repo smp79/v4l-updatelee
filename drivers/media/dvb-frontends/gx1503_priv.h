@@ -1,7 +1,7 @@
 #ifndef GX1503_PRIV_H
 #define GX1503_PRIV_H
 
-#include "dvb_frontend.h"
+#include "media/dvb_frontend.h"
 #include "gx1503.h"
 #include <linux/firmware.h>
 #include <linux/i2c-mux.h>

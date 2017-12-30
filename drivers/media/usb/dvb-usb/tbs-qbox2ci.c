@@ -16,7 +16,7 @@
 #include "stb6100.h"
 #include "stb6100_cfg.h"
 
-#include "dvb_ca_en50221.h"
+#include "media/dvb_ca_en50221.h"
 
 #define TBSQBOX_READ_MSG 0
 #define TBSQBOX_WRITE_MSG 1

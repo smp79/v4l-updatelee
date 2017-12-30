@@ -41,7 +41,7 @@
 #include <asm/div64.h>
 #include <asm/unaligned.h>
 
-#include "dvb_frontend.h"
+#include "media/dvb_frontend.h"
 #include "mxl58x.h"
 #include "mxl58x_regs.h"
 #include "mxl58x_defs.h"

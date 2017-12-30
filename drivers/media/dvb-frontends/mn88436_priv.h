@@ -1,7 +1,7 @@
 #ifndef MN88436_PRIV_H
 #define MN88436_PRIV_H
 
-#include "dvb_frontend.h"
+#include "media/dvb_frontend.h"
 #include "mn88436.h"
 #include <linux/regmap.h>
 

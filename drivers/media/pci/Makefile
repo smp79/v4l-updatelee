@@ -15,6 +15,7 @@ obj-y        +=	ttpci/		\
 		saa7146/	\
 		smipcie/	\
 		netup_unidvb/	\
+		intel/		\
 		tbsecp3/	\
 		tbscapture/
 

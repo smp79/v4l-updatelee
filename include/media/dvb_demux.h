@@ -25,7 +25,7 @@
 #include <linux/mutex.h>
 #include "dvb_frontend.h"
 
-#include "demux.h"
+#include <media/demux.h>
 
 /**
  * enum dvb_dmx_filter_type - type of demux feed.

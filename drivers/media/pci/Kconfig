@@ -57,5 +57,7 @@ source "drivers/media/pci/tbsecp3/Kconfig"
 source "drivers/media/pci/tbscapture/Kconfig"
 endif
 
+source "drivers/media/pci/intel/ipu3/Kconfig"
+
 endif #MEDIA_PCI_SUPPORT
 endif #PCI

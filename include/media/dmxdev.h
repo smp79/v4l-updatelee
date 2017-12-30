@@ -32,9 +32,10 @@
 
 #include <linux/dvb/dmx.h>
 
-#include "dvbdev.h"
-#include "demux.h"
-#include "dvb_ringbuffer.h"
+#include <media/dvbdev.h>
+#include <media/demux.h>
+#include <media/dvb_ringbuffer.h>
+#include <media/dvb_vb2.h>
 
 /**
  * enum dmxdev_type - type of demux filter type.
@@ -111,6 +112,7 @@ struct dmxdev_feed {
  * @state:	state of the dmxdev filter, as defined by &enum dmxdev_state.
  * @dev:	pointer to &struct dmxdev.
  * @buffer:	an embedded &struct dvb_ringbuffer buffer.
+ * @vb2_ctx:	control struct for VB2 handler
  * @mutex:	protects the access to &struct dmxdev_filter.
  * @timer:	&struct timer_list embedded timer, used to check for
  *		feed timeouts.
@@ -140,6 +142,7 @@ struct dmxdev_filter {
 	enum dmxdev_state state;
 	struct dmxdev *dev;
 	struct dvb_ringbuffer buffer;
+	struct dvb_vb2_ctx vb2_ctx;
 
 	struct mutex mutex;
 
@@ -163,6 +166,7 @@ struct dmxdev_filter {
  * @exit:		flag to indicate that the demux is being released.
  * @dvr_orig_fe:	pointer to &struct dmx_frontend.
  * @dvr_buffer:		embedded &struct dvb_ringbuffer for DVB output.
+ * @dvr_vb2_ctx:	control struct for VB2 handler
  * @mutex:		protects the usage of this structure.
  * @lock:		protects access to &dmxdev->filter->data.
  */
@@ -182,6 +186,8 @@ struct dmxdev {
 
 	struct dvb_ringbuffer dvr_buffer;
 #define DVR_BUFFER_SIZE (10*188*1024)
+
+	struct dvb_vb2_ctx dvr_vb2_ctx;
 
 	struct mutex mutex;
 	spinlock_t lock;

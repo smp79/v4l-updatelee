@@ -14,7 +14,7 @@
 #include "si2183.h"
 #include "si2157.h"
 #include "av201x.h"
-#include "dvb_ca_en50221.h"
+#include "media/dvb_ca_en50221.h"
 
 #define TBS5580_READ_MSG 0
 #define TBS5580_WRITE_MSG 1

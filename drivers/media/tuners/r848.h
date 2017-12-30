@@ -22,7 +22,7 @@
 #define R848_H
 
 #include <linux/kconfig.h>
-#include "dvb_frontend.h"
+#include "media/dvb_frontend.h"
 
 
 

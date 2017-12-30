@@ -1,7 +1,7 @@
 #ifndef MTV23X_PRIV_H
 #define MTV23X_PRIV_H
 
-#include "dvb_frontend.h"
+#include "media/dvb_frontend.h"
 #include "mtv23x.h"
 #include <linux/regmap.h>
 

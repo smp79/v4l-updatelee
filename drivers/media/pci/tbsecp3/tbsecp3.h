@@ -28,14 +28,14 @@
 #include <linux/dma-mapping.h>
 #include <linux/slab.h>
 
-#include "demux.h"
-#include "dmxdev.h"
-#include "dvb_demux.h"
-#include "dvb_frontend.h"
-#include "dvb_net.h"
-#include "dvbdev.h"
+#include "media/demux.h"
+#include "media/dmxdev.h"
+#include "media/dvb_demux.h"
+#include "media/dvb_frontend.h"
+#include "media/dvb_net.h"
+#include "media/dvbdev.h"
+#include "media/dvb_ca_en50221.h"
 #include "tbsecp3-regs.h"
-#include "dvb_ca_en50221.h"
 
 #define dprintk(fmt, arg...)	printk(KERN_INFO pr_fmt("%s: " fmt "\n"),  __func__, ##arg)
 

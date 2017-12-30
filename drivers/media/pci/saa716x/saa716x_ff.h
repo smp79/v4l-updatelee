@@ -2,7 +2,7 @@
 #define __SAA716x_FF_H
 
 #include <media/ttpci/dvb_filter.h>
-#include "dvb_ringbuffer.h"
+#include "media/dvb_ringbuffer.h"
 #include <linux/version.h>
 #include <linux/workqueue.h>
 
