@@ -980,6 +980,8 @@ static int stb0899_read_rflevel(struct dvb_frontend *fe)
 	p->strength.stat[1].scale = FE_SCALE_RELATIVE;
 	p->strength.stat[1].uvalue = (100 + rflevel) * 656;
 
+	rflevel *= 1000;
+	dprintk(state->verbose, FE_DEBUG, 1, "rflevel = %d ", rflevel);
 	return rflevel;
 }
 
@@ -1707,7 +1709,6 @@ static int stb0899_get_spectrum_scan(struct dvb_frontend *fe, struct dvb_fe_spec
                         return 0;
                 }
 
-                //*(s->rf_level + x) = stb0899_read_rflevel(fe) *100; // for dBm x 100
                 *(s->rf_level + x) = stb0899_read_rflevel(fe); // for dBm,  floor of -90 dBm
         }
         return 0;
