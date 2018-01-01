@@ -5,11 +5,17 @@
 #include <linux/i2c.h>
 #include "stv6110x.h"
 
+enum stv091x_mode {
+	STV091x_DUAL = 0,
+	STV091x_SINGLE
+};
+
 struct stv091x_cfg {
 	u32 clk;
 	u8  adr;
 	u8  parallel;
 	u8  rptlvl;
+	enum stv091x_mode demod_mode;
 
 	char name[128];
 

@@ -2650,17 +2650,18 @@ static struct saa716x_config saa716x_tbs6991se_config = {
 #define SAA716x_DEV_TBS6983	"DVB-S/S2"
 
 static struct stv091x_cfg tbs6983_stv091x_config = {
-       .name     = "STV091X TBS 6983",
-       .adr      = 0x68,
-       .parallel = 1,
-       .rptlvl   = 4,
-       .clk      = 30000000,
+	.name		= "STV091X TBS 6983",
+	.adr		= 0x68,
+	.parallel	= 1,
+	.rptlvl		= 4,
+	.clk		= 30000000,
+	.demod_mode	= STV091x_DUAL,
 
-       .tuner_init             = NULL,
-       .tuner_set_mode         = NULL,
-       .tuner_set_frequency    = NULL,
-       .tuner_set_bandwidth    = NULL,
-       .tuner_set_params       = NULL,
+	.tuner_init             = NULL,
+	.tuner_set_mode         = NULL,
+	.tuner_set_frequency    = NULL,
+	.tuner_set_bandwidth    = NULL,
+	.tuner_set_params       = NULL,
 };
 
 static struct stv6120_config tbs6983_stv6120_0_config = {

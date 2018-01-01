@@ -481,11 +481,12 @@ static struct mxl58x_cfg tbs6909_mxl58x_cfg = {
 };
 
 static struct stv091x_cfg tbs6903_stv091x_cfg = {
-	.name     = "STV091X TBS 6903",
-	.adr      = 0x68,
-	.parallel = 1,
-	.rptlvl   = 3,
-	.clk      = 30000000,
+	.name		= "STV091X TBS 6903",
+	.adr		= 0x68,
+	.parallel	= 1,
+	.rptlvl		= 3,
+	.clk		= 30000000,
+	.demod_mode	= STV091x_DUAL,
 
 	.tuner_init		= NULL,
 	.tuner_set_mode		= NULL,

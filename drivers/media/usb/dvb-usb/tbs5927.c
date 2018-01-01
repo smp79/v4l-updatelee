@@ -179,11 +179,12 @@ static void tbs5927_led_ctrl(struct dvb_frontend *fe, int offon)
 }
 
 static struct stv091x_cfg tbs5927_stv091x_cfg = {
-	.name     = "STV091X TBS 5927",
-	.adr      = 0x68,
-	.parallel = 1,
-	.rptlvl   = 3,
-	.clk      = 30000000,
+	.name		= "STV091X TBS 5927",
+	.adr		= 0x68,
+	.parallel	= 1,
+	.rptlvl		= 3,
+	.clk		= 30000000,
+	.demod_mode	= STV091x_DUAL,
 
 	.set_lock_led = tbs5927_led_ctrl,
 
