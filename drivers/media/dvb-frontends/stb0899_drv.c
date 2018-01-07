@@ -38,7 +38,6 @@
 
 static unsigned int verbose = 0;//1;
 module_param(verbose, int, 0644);
-MODULE_PARM_DESC(verbose, "Set verbosity level (0 thru 5)");
 
 /* C/N in dB/10, NIRM/NIRL */
 static const struct stb0899_tab stb0899_cn_tab[] = {
@@ -320,7 +319,6 @@ u32 _stb0899_read_s2reg(struct stb0899_state *state,
 			.len	= 4
 		}
 	};
-
 
 	tmpaddr = stb0899_reg_offset & 0xff00;
 	if (!(stb0899_reg_offset & 0x8))
@@ -1717,22 +1715,22 @@ static int stb0899_get_spectrum_scan(struct dvb_frontend *fe, struct dvb_fe_spec
 static const struct dvb_frontend_ops stb0899_ops = {
 	.delsys = { SYS_DVBS, SYS_DVBS2, SYS_DSS },
 	.info = {
-		.name 			= "STB0899 Multistandard",
+		.name			= "STB0899 Multistandard",
 		.frequency_min		= 950000,
-		.frequency_max 		= 2150000,
+		.frequency_max		= 2150000,
 		.frequency_stepsize	= 0,
 		.frequency_tolerance	= 0,
-		.symbol_rate_min 	=  1000000,
-		.symbol_rate_max 	= 45000000,
+		.symbol_rate_min	=  5000000,
+		.symbol_rate_max	= 45000000,
 
-		.caps 			= FE_CAN_INVERSION_AUTO	|
+		.caps			= FE_CAN_INVERSION_AUTO	|
 					  FE_CAN_FEC_AUTO	|
 					  FE_CAN_2G_MODULATION	|
-					  FE_CAN_QPSK	|
+					  FE_CAN_QPSK		|
                                           FE_HAS_EXTENDED_CAPS
         },
         .extended_info = {
-                .extended_caps          = FE_CAN_SPECTRUMSCAN |
+                .extended_caps          = FE_CAN_SPECTRUMSCAN	|
                                           FE_CAN_IQ
 
 

@@ -785,7 +785,8 @@ static irqreturn_t cio2_irq(int irq, void *cio2_ptr)
 
 /**************** Videobuf2 interface ****************/
 
-static void cio2_vb2_return_all_buffers(struct cio2_queue *q)
+static void cio2_vb2_return_all_buffers(struct cio2_queue *q,
+					enum vb2_buffer_state state)
 {
 	unsigned int i;
 
@@ -793,7 +794,7 @@ static void cio2_vb2_return_all_buffers(struct cio2_queue *q)
 		if (q->bufs[i]) {
 			atomic_dec(&q->bufs_queued);
 			vb2_buffer_done(&q->bufs[i]->vbb.vb2_buf,
-					VB2_BUF_STATE_ERROR);
+					state);
 		}
 	}
 }
@@ -838,8 +839,9 @@ static int cio2_vb2_buf_init(struct vb2_buffer *vb)
 		container_of(vb, struct cio2_buffer, vbb.vb2_buf);
 	static const unsigned int entries_per_page =
 		CIO2_PAGE_SIZE / sizeof(u32);
-	unsigned int pages = DIV_ROUND_UP(vb->planes[0].length, CIO2_PAGE_SIZE);
-	unsigned int lops = DIV_ROUND_UP(pages + 1, entries_per_page);
+	unsigned int pages = DIV_ROUND_UP(vb->planes[0].length,
+					  CIO2_PAGE_SIZE) + 1;
+	unsigned int lops = DIV_ROUND_UP(pages, entries_per_page);
 	struct sg_table *sg;
 	struct sg_page_iter sg_iter;
 	int i, j;
@@ -869,6 +871,8 @@ static int cio2_vb2_buf_init(struct vb2_buffer *vb)
 
 	i = j = 0;
 	for_each_sg_page(sg->sgl, &sg_iter, sg->nents, 0) {
+		if (!pages--)
+			break;
 		b->lop[i][j] = sg_page_iter_dma_address(&sg_iter) >> PAGE_SHIFT;
 		j++;
 		if (j == entries_per_page) {
@@ -1016,7 +1020,7 @@ fail_hw:
 	media_pipeline_stop(&q->vdev.entity);
 fail_pipeline:
 	dev_dbg(&cio2->pci_dev->dev, "failed to start streaming (%d)\n", r);
-	cio2_vb2_return_all_buffers(q);
+	cio2_vb2_return_all_buffers(q, VB2_BUF_STATE_QUEUED);
 	pm_runtime_put(&cio2->pci_dev->dev);
 
 	return r;
@@ -1032,7 +1036,7 @@ static void cio2_vb2_stop_streaming(struct vb2_queue *vq)
 			"failed to stop sensor streaming\n");
 
 	cio2_hw_exit(cio2, q);
-	cio2_vb2_return_all_buffers(q);
+	cio2_vb2_return_all_buffers(q, VB2_BUF_STATE_ERROR);
 	media_pipeline_stop(&q->vdev.entity);
 	pm_runtime_put(&cio2->pci_dev->dev);
 	cio2->streaming = false;
@@ -1894,20 +1898,17 @@ static void arrange(void *ptr, size_t elem_size, size_t elems, size_t start)
 		{ start, elems - 1 },
 	};
 
-#define arr_size(a) ((a)->end - (a)->begin + 1)
+#define CHUNK_SIZE(a) ((a)->end - (a)->begin + 1)
 
 	/* Loop as long as we have out-of-place entries */
-	while (arr_size(&arr[0]) && arr_size(&arr[1])) {
+	while (CHUNK_SIZE(&arr[0]) && CHUNK_SIZE(&arr[1])) {
 		size_t size0, i;
 
 		/*
 		 * Find the number of entries that can be arranged on this
 		 * iteration.
 		 */
-		if (arr_size(&arr[0]) > arr_size(&arr[1]))
-			size0 = arr_size(&arr[1]);
-		else
-			size0 = arr_size(&arr[0]);
+		size0 = min(CHUNK_SIZE(&arr[0]), CHUNK_SIZE(&arr[1]));
 
 		/* Swap the entries in two parts of the array. */
 		for (i = 0; i < size0; i++) {
@@ -1919,7 +1920,7 @@ static void arrange(void *ptr, size_t elem_size, size_t elems, size_t start)
 				swap(d[j], s[j]);
 		}
 
-		if (arr_size(&arr[0]) > arr_size(&arr[1])) {
+		if (CHUNK_SIZE(&arr[0]) > CHUNK_SIZE(&arr[1])) {
 			/* The end of the first array remains unarranged. */
 			arr[0].begin += size0;
 		} else {
@@ -1964,7 +1965,7 @@ static void cio2_fbpt_rearrange(struct cio2_device *cio2, struct cio2_queue *q)
 		cio2_fbpt_entry_enable(cio2, q->fbpt + i * CIO2_MAX_LOPS);
 }
 
-static int cio2_suspend(struct device *dev)
+static int __maybe_unused cio2_suspend(struct device *dev)
 {
 	struct pci_dev *pci_dev = to_pci_dev(dev);
 	struct cio2_device *cio2 = pci_get_drvdata(pci_dev);
@@ -1990,7 +1991,7 @@ static int cio2_suspend(struct device *dev)
 	return 0;
 }
 
-static int cio2_resume(struct device *dev)
+static int __maybe_unused cio2_resume(struct device *dev)
 {
 	struct pci_dev *pci_dev = to_pci_dev(dev);
 	struct cio2_device *cio2 = pci_get_drvdata(pci_dev);
