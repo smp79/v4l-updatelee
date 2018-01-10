@@ -1407,8 +1407,8 @@ static const struct dvb_frontend_ops si2183_ops = {
 		   SYS_DSS, SYS_DVBS, SYS_DVBS2},
 	.info = {
 		.name = "Silicon Labs Si2183",
-		.symbol_rate_min = 1000000,
-		.symbol_rate_max = 45000000,
+		.symbol_rate_min = 100000,
+		.symbol_rate_max = 67500000,
 		.caps =	FE_CAN_FEC_1_2 |
 			FE_CAN_FEC_2_3 |
 			FE_CAN_FEC_3_4 |
