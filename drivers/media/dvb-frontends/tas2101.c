@@ -864,8 +864,8 @@ static struct dvb_frontend_ops tas2101_ops = {
 		.frequency_max = 2150000,
 		.frequency_stepsize = 1011, /* kHz for QPSK frontends */
 		.frequency_tolerance = 5000,
-		.symbol_rate_min = 1000000,
-		.symbol_rate_max = 45000000,
+		.symbol_rate_min = 100000,
+		.symbol_rate_max = 67500000,
 		.caps = FE_CAN_INVERSION_AUTO |
 			FE_CAN_FEC_1_2 | FE_CAN_FEC_2_3 | FE_CAN_FEC_3_4 |
 			FE_CAN_FEC_4_5 | FE_CAN_FEC_5_6 | FE_CAN_FEC_6_7 |
