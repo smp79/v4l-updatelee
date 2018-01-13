@@ -2434,6 +2434,20 @@ static int dvb_frontend_handle_ioctl(struct file *file,
 		
 		}
 		err = 0;
+		break;	case FE_REGI2C_READ:
+		if (fe->ops.mcu_read) {
+			struct usbi2c_access *info = parg;	
+			fe->ops.reg_i2cread(fe, info);
+		}
+		err = 0;
+		break;
+	case FE_REGI2C_WRITE:
+		if (fe->ops.mcu_write) {
+			struct usbi2c_access *info = parg;	
+			fe->ops.reg_i2cwrite(fe, info);
+		
+		}
+		err = 0;
 		break;
 	case FE_SET_PROPERTY: {
 		struct dtv_properties *tvps = parg;

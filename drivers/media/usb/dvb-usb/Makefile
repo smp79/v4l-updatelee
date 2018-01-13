@@ -122,6 +122,9 @@ obj-$(CONFIG_DVB_USB_TBS5580) += dvb-usb-tbs5580.o
 dvb-usb-tbs5927-objs = tbs5927.o
 obj-$(CONFIG_DVB_USB_TBS5927) += dvb-usb-tbs5927.o
 
+dvb-usb-tbs5301-objs = tbs5301.o
+obj-$(CONFIG_DVB_USB_TBS5301) += dvb-usb-tbs5301.o
+
 ccflags-y += -I$(srctree)/drivers/media/dvb-core
 ccflags-y += -I$(srctree)/drivers/media/dvb-frontends/
 # due to tuner-xc3028

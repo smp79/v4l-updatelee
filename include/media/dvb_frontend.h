@@ -479,6 +479,9 @@ struct dvb_frontend_ops {
 
 	void(*mcu_read)( struct dvb_frontend *fe,struct mcu24cxx_info *mcu24cxxinf);
 	void(*mcu_write)( struct dvb_frontend *fe,struct mcu24cxx_info *mcu24cxxinf);
+
+	void(*reg_i2cread)( struct dvb_frontend *fe,struct usbi2c_access *pi2cinf);
+	void(*reg_i2cwrite)( struct dvb_frontend *fe,struct usbi2c_access *pi2cinf);
 };
 
 #ifdef __DVB_CORE__

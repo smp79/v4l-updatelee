@@ -332,6 +332,24 @@ static void tas2101_mcu_write(struct dvb_frontend *fe,struct mcu24cxx_info *mcu2
 	return ;
 }
 
+static void tas2101_reg_i2c_read(struct dvb_frontend *fe, struct usbi2c_access *pi2cinf)
+{
+
+	struct tas2101_priv *priv = fe->demodulator_priv;
+	struct i2c_adapter *adapter = priv->i2c;
+	if (priv->cfg->i2cRead_properties)
+		priv->cfg->i2cRead_properties(adapter,pi2cinf->chip_addr,pi2cinf->reg, pi2cinf->num, pi2cinf->buf);
+	return;
+}
+static void tas2101_reg_i2c_write(struct dvb_frontend *fe,struct usbi2c_access *pi2cinf)
+{
+	struct tas2101_priv *priv = fe->demodulator_priv;
+	struct i2c_adapter *adapter = priv->i2c;
+	if (priv->cfg->i2cwrite_properties)
+		priv->cfg->i2cwrite_properties(adapter,pi2cinf->chip_addr,pi2cinf->reg, pi2cinf->num, pi2cinf->buf);
+	return ;
+}
+
 static int tas2101_set_voltage(struct dvb_frontend *fe,
 	enum fe_sec_voltage voltage)
 {
@@ -947,6 +965,8 @@ static struct dvb_frontend_ops tas2101_ops = {
 	.spi_write			= tas2101_spi_write,
 	.mcu_read			= tas2101_mcu_read,
 	.mcu_write			= tas2101_mcu_write,
+	.reg_i2cread			= tas2101_reg_i2c_read,
+	.reg_i2cwrite			= tas2101_reg_i2c_write,
 
 };
 

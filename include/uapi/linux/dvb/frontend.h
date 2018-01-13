@@ -1078,10 +1078,21 @@ struct mcu24cxx_info
 	__u32 data;
 };
 
+struct usbi2c_access
+{
+	__u8 chip_addr;
+	__u8 reg;
+	__u8 num;
+	__u8 buf[8];
+};
+
 #define FE_ECP3FW_READ    _IOR('o', 90, struct ecp3_info)
 #define FE_ECP3FW_WRITE   _IOW('o', 91, struct ecp3_info)
 
 #define FE_24CXX_READ    _IOR('o', 92, struct mcu24cxx_info)
 #define FE_24CXX_WRITE   _IOW('o', 93, struct mcu24cxx_info)
+
+#define FE_REGI2C_READ    _IOR('o', 94, struct usbi2c_access)
+#define FE_REGI2C_WRITE   _IOW('o', 95, struct usbi2c_access)
 
 #endif /*_DVBFRONTEND_H_*/
