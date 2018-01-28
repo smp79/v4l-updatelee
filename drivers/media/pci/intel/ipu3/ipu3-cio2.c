@@ -839,9 +839,8 @@ static int cio2_vb2_buf_init(struct vb2_buffer *vb)
 		container_of(vb, struct cio2_buffer, vbb.vb2_buf);
 	static const unsigned int entries_per_page =
 		CIO2_PAGE_SIZE / sizeof(u32);
-	unsigned int pages = DIV_ROUND_UP(vb->planes[0].length,
-					  CIO2_PAGE_SIZE) + 1;
-	unsigned int lops = DIV_ROUND_UP(pages, entries_per_page);
+	unsigned int pages = DIV_ROUND_UP(vb->planes[0].length, CIO2_PAGE_SIZE);
+	unsigned int lops = DIV_ROUND_UP(pages + 1, entries_per_page);
 	struct sg_table *sg;
 	struct sg_page_iter sg_iter;
 	int i, j;
@@ -1850,7 +1849,7 @@ static void cio2_pci_remove(struct pci_dev *pci_dev)
 	mutex_destroy(&cio2->lock);
 }
 
-static int cio2_runtime_suspend(struct device *dev)
+static int __maybe_unused cio2_runtime_suspend(struct device *dev)
 {
 	struct pci_dev *pci_dev = to_pci_dev(dev);
 	struct cio2_device *cio2 = pci_get_drvdata(pci_dev);
@@ -1868,7 +1867,7 @@ static int cio2_runtime_suspend(struct device *dev)
 	return 0;
 }
 
-static int cio2_runtime_resume(struct device *dev)
+static int __maybe_unused cio2_runtime_resume(struct device *dev)
 {
 	struct pci_dev *pci_dev = to_pci_dev(dev);
 	struct cio2_device *cio2 = pci_get_drvdata(pci_dev);

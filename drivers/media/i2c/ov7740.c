@@ -3,7 +3,7 @@
 
 #include <linux/clk.h>
 #include <linux/delay.h>
-#include <linux/gpio.h>
+#include <linux/gpio/consumer.h>
 #include <linux/i2c.h>
 #include <linux/module.h>
 #include <linux/pm_runtime.h>
@@ -1148,9 +1148,7 @@ static int ov7740_remove(struct i2c_client *client)
 
 	mutex_destroy(&ov7740->mutex);
 	v4l2_ctrl_handler_free(ov7740->subdev.ctrl_handler);
-#if defined(CONFIG_MEDIA_CONTROLLER)
 	media_entity_cleanup(&ov7740->subdev.entity);
-#endif
 	v4l2_async_unregister_subdev(sd);
 	ov7740_free_controls(ov7740);
 
