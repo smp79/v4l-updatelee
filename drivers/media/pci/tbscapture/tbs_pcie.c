@@ -348,10 +348,10 @@ static void start_video_dma_transfer(struct tbs_video *videodev)
 	TBS_PCIE_READ(TBS_DMA_BASE(videodev->index), TBS_DMA_STATUS);
 
 	// write picture size
-	TBS_PCIE_WRITE(TBS_DMA_BASE(videodev->index), TBS_DMA_CELL_SIZE, videodev->dmabuf[0].size); 
+	TBS_PCIE_WRITE(TBS_DMA_BASE(videodev->index), TBS_DMA_CELL_SIZE, DMA_VIDEO_CELL); 
 
 	//write dma size
-	TBS_PCIE_WRITE(TBS_DMA_BASE(videodev->index), TBS_DMA_SIZE,videodev->dmabuf[0].size ); 
+	TBS_PCIE_WRITE(TBS_DMA_BASE(videodev->index), TBS_DMA_SIZE,DMA_VIDEO_CELL ); 
 
 	//set dma address:
 	TBS_PCIE_WRITE(TBS_DMA_BASE(videodev->index), TBS_DMA_ADDR_HIGH, 0);
@@ -366,15 +366,23 @@ static void start_video_dma_transfer(struct tbs_video *videodev)
 
 }
 
-static void next_video_dma_transfer(struct tbs_video *videodev)
+static void next_video_dma_transfer(struct tbs_video *videodev,unsigned char flag)
 {
 	struct tbs_pcie_dev *dev =videodev->dev;
 	//write dma size
-	TBS_PCIE_WRITE(TBS_DMA_BASE(videodev->index), TBS_DMA_SIZE,videodev->dmabuf[(videodev->seqnr+1)&1].size ); 
+	TBS_PCIE_WRITE(TBS_DMA_BASE(videodev->index), TBS_DMA_SIZE,DMA_VIDEO_CELL ); 
 
 	//set dma address:
 	TBS_PCIE_WRITE(TBS_DMA_BASE(videodev->index), TBS_DMA_ADDR_HIGH, 0);
-	TBS_PCIE_WRITE(TBS_DMA_BASE(videodev->index), TBS_DMA_ADDR_LOW, videodev->dmabuf[(videodev->seqnr+1)&1].dma);
+	if(videodev->Interlaced){
+		if(flag)
+			TBS_PCIE_WRITE(TBS_DMA_BASE(videodev->index), TBS_DMA_ADDR_LOW, videodev->dmabuf[(videodev->seqnr+1)&1].dma+DMA_VIDEO_CELL);	
+		else
+			TBS_PCIE_WRITE(TBS_DMA_BASE(videodev->index), TBS_DMA_ADDR_LOW, videodev->dmabuf[(videodev->seqnr+1)&1].dma);	
+
+	}else{
+		TBS_PCIE_WRITE(TBS_DMA_BASE(videodev->index), TBS_DMA_ADDR_LOW, videodev->dmabuf[(videodev->seqnr+1)&1].dma);	
+	}
 }
 
 static void stop_video_dma_transfer(struct tbs_video *videodev)
@@ -609,15 +617,17 @@ void video_data_process(struct work_struct *p_work)
 	buf->vb.vb2_buf.timestamp = ktime_get_ns();
 	buf->vb.field = videodev->pixfmt;
 	if(videodev->Interlaced){
-		
-		if(ret&0x1000000){//bottom
-			buf->vb.field = V4L2_FIELD_TOP;
-		}else{//top
-			buf->vb.field = V4L2_FIELD_BOTTOM;
+		int i;
+		for(i=0;i<videodev->height;i+=2){
+			memcpy(buf->mem+(i+1)*videodev->width*2,
+				(u8*)videodev->dmabuf[videodev->seqnr&1].cpu+DMA_VIDEO_CELL+(i>>1)*videodev->width*2,videodev->width*2);
+			memcpy(buf->mem+(i)*videodev->width*2,
+				(u8*)videodev->dmabuf[videodev->seqnr&1].cpu+(i>>1)*videodev->width*2,videodev->width*2);
 		}
+	}else{
+		memcpy(buf->mem,(u8*)videodev->dmabuf[videodev->seqnr&1].cpu,videodev->dmabuf[videodev->seqnr&1].size);
 	}
 	buf->vb.sequence = videodev->seqnr++;
-	memcpy(buf->mem,(u8*)videodev->dmabuf[videodev->seqnr&1].cpu,videodev->dmabuf[videodev->seqnr&1].size);
 	vb2_buffer_done(&buf->vb.vb2_buf, VB2_BUF_STATE_DONE);
 	spin_unlock_irqrestore(&videodev->slock, flags);
 
@@ -674,8 +684,18 @@ static irqreturn_t tbs_pcie_irq(int irq, void *dev_id)
 
 	if (stat & 0x00000020){//video 0
 		ret = TBS_PCIE_READ(TBS_DMA_BASE_1, 0);
-		next_video_dma_transfer(&dev->video[0]);
-		queue_work(wq,&dev->video[0].videowork);
+		if(dev->video[0].Interlaced){
+			if(ret == 0x1010100){
+				next_video_dma_transfer(&dev->video[0],0);
+				queue_work(wq,&dev->video[0].videowork);
+			}else{
+				next_video_dma_transfer(&dev->video[0],1);
+			}
+
+		}else{
+			next_video_dma_transfer(&dev->video[0],1);
+			queue_work(wq,&dev->video[0].videowork);
+		}
 	}
 	if (stat & 0x00000040){ //audio 1
 		ret = TBS_PCIE_READ(TBS_DMA_BASE_2, 0);
@@ -686,8 +706,18 @@ static irqreturn_t tbs_pcie_irq(int irq, void *dev_id)
 
 	if (stat & 0x00000080){//video 1
 		ret = TBS_PCIE_READ(TBS_DMA_BASE_3, 0);
-		next_video_dma_transfer(&dev->video[1]);
-		queue_work(wq,&dev->video[1].videowork);
+		if(dev->video[1].Interlaced){
+			if(ret == 0x1010100){
+				next_video_dma_transfer(&dev->video[1],0);
+				queue_work(wq,&dev->video[1].videowork);
+			}else{
+				next_video_dma_transfer(&dev->video[1],1);
+			}
+
+		}else{
+			next_video_dma_transfer(&dev->video[1],1);
+			queue_work(wq,&dev->video[1].videowork);
+		}
 	}
 	
 	if (stat & 0x00000001) {
@@ -732,25 +762,25 @@ static void tbs_get_video_param(struct tbs_pcie_dev *dev,int index)
 	i2c_read_reg(&tbs_adap->i2c->i2c_adap,0x44,0xb8,tmp,2);
 	tmp_B=((tmp[0]&0x1f)<<8)+tmp[1];
 	if(tmp_B)
-		v_refq = (unsigned char) ((103663 + (tmp_B -1)) / tmp_B);
-	printk("pix:%d line:%d frameRate:%d\n",dev->video[index].width,dev->video[index].height,v_refq);	
+		v_refq = (unsigned char) ((103663 + (tmp_B -1)) / tmp_B);	
 	dev->video[index].fps=v_refq;
 
 	if(v_refq>30 && dev->video[index].width==1920 && dev->video[index].height==1080) 		
 	{
 		printk("HDMI Progressive change to Interlaced Input  \n");
 		dev->video[index].Interlaced = 1;
-		dev->video[index].height>>=1;
 	}else{
 		i2c_read_reg(&tbs_adap->i2c->i2c_adap,0x68,0x0b,tmp,1);
 		if (tmp[0]&0x20){
 			printk("HDMI Interlaced Input  \n");
 			dev->video[index].Interlaced = 1;
+			dev->video[index].height<<=1;
 		}else{
 			printk("HDMI Progressive Input  \n");
 			dev->video[index].Interlaced = 0;
 		}
-	}	
+	}
+	printk("pix:%d line:%d frameRate:%d\n",dev->video[index].width,dev->video[index].height,v_refq);	
 
 }
 
