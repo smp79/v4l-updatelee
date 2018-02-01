@@ -986,9 +986,9 @@ static int stv091x_probe(struct stv091x_state *state)
 	stv091x_write_reg(state, RSTV091X_TSGENERAL, 0x00);  /* TSGENERAL */
 	stv091x_write_reg(state, RSTV091X_CFGEXT,    0x02);  /* CFGEXT */
 
-	if (state->config->demod_mode == STV091x_SINGLE)
-		stv091x_write_reg(state, RSTV091X_GENCFG, 0x14);  /* GENCFG SINGLE */
-	else
+//	if (state->config->demod_mode == STV091x_SINGLE)
+//		stv091x_write_reg(state, RSTV091X_GENCFG, 0x14);  /* GENCFG SINGLE */
+//	else
 		stv091x_write_reg(state, RSTV091X_GENCFG, 0x15);  /* GENCFG DUAL DEMOD */
 
 	stv091x_write_reg(state, RSTV091X_P1_TNRCFG2, 0x02); /* IQSWAP = 0 */
