@@ -825,11 +825,11 @@ start:
 
 	STV091X_WRITE_REG(state, SFRUP1, 0x7B);  /* SR = 65,000 Ksps */
 	STV091X_WRITE_REG(state, SFRUP0, 0x42);
-	STV091X_WRITE_REG(state, SFRLOW1, 0x00); /* SR = 400 Ksps    */
+	STV091X_WRITE_REG(state, SFRLOW1, 0x00); /* SR = 100 Ksps    */
 	STV091X_WRITE_REG(state, SFRLOW0, 0x30);
 
 	/* Set the Init Symbol rate*/
-	SFR = ((u64)p->symbol_rate << 16) / state->base->mclk;
+	SFR = ((u64)p->symbol_rate << 16) / (u64)state->base->mclk;
 	STV091X_WRITE_REG(state, SFRINIT1, (SFR >> 8) & 0x7F);
 	STV091X_WRITE_REG(state, SFRINIT0, SFR & 0xFF);
 
@@ -873,11 +873,10 @@ start:
 
 	STV091X_WRITE_REG(state, CARCFG, 0x46);
 
-	STV091X_WRITE_REG(state, CFRUP1, 0x10);
-	STV091X_WRITE_REG(state, CFRUP0, 0x4e);
-	/*CFR Low Setting*/
-	STV091X_WRITE_REG(state, CFRLOW1, 0xef);
-	STV091X_WRITE_REG(state, CFRLOW0, 0xb2);
+	STV091X_WRITE_REG(state, CFRUP1, 0x12);  /* +10Mhz */
+	STV091X_WRITE_REG(state, CFRUP0, 0xF6);
+	STV091X_WRITE_REG(state, CFRLOW1, 0xED); /* -10Mhz */
+	STV091X_WRITE_REG(state, CFRLOW0, 0x0A);
 
 	/* init the demod frequency offset to 0 */
 	STV091X_WRITE_REG(state, CFRINIT1, 0);
