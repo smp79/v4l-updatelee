@@ -756,11 +756,11 @@ static int stv091x_get_dmdlock(struct stv091x_state *state)
 	} else if (p->symbol_rate <= 5000000) {  /*  2Msps < SR <=  5Msps */
 		timeout = 1000;
 	} else if (p->symbol_rate <= 10000000) { /*  5Msps < SR <= 10Msps */
-		timeout = 700;
+		timeout = 1000;
 	} else if (p->symbol_rate < 20000000) {  /* 10Msps < SR <= 20Msps */
-		timeout = 700;
+		timeout = 1000;
 	} else {                                 /*          SR >= 20Msps */
-		timeout = 700;
+		timeout = 1000;
 	}
 
 	while (timer < timeout && !lock) {
@@ -787,8 +787,8 @@ static int stv091x_get_dmdlock(struct stv091x_state *state)
 			break;
 		}
 		if (!lock)
-			msleep(50);
-		timer += 50;
+			msleep(100);
+		timer += 100;
 		pr_info("%s: %s\n", __func__, lock ? "LOCKED" : "SEARCHING");
 	}
 
@@ -800,7 +800,7 @@ static int stv091x_start(struct stv091x_state *state, struct dtv_frontend_proper
 	struct dvb_frontend *fe = &state->frontend;
 	const struct stv091x_cfg *config = state->config;
 
-	u16 SFR;
+	u64 SFR;
 	int lock;
 	u8  i;
 	s64 CFR;
@@ -823,13 +823,13 @@ start:
 	config->tuner_set_frequency(fe, p->frequency);
 	stv091x_i2c_gate_ctrl(fe, 0);
 
-	STV091X_WRITE_REG(state, SFRUP1, 0x83);  /* SR = 65,000 Ksps */
-	STV091X_WRITE_REG(state, SFRUP0, 0xC0);
-	STV091X_WRITE_REG(state, SFRLOW1, 0x82); /* SR = 400 Ksps    */
-	STV091X_WRITE_REG(state, SFRLOW0, 0xA0);
+	STV091X_WRITE_REG(state, SFRUP1, 0x7B);  /* SR = 65,000 Ksps */
+	STV091X_WRITE_REG(state, SFRUP0, 0x42);
+	STV091X_WRITE_REG(state, SFRLOW1, 0x00); /* SR = 400 Ksps    */
+	STV091X_WRITE_REG(state, SFRLOW0, 0x30);
 
 	/* Set the Init Symbol rate*/
-	SFR = (p->symbol_rate << 16) / state->base->mclk;
+	SFR = ((u64)p->symbol_rate << 16) / state->base->mclk;
 	STV091X_WRITE_REG(state, SFRINIT1, (SFR >> 8) & 0x7F);
 	STV091X_WRITE_REG(state, SFRINIT0, SFR & 0xFF);
 
