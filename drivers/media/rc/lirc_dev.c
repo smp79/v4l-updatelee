@@ -295,14 +295,14 @@ static ssize_t ir_lirc_transmit_ir(struct file *file, const char __user *buf,
 		ret = ir_raw_encode_scancode(scan.rc_proto, scan.scancode,
 					     raw, LIRCBUF_SIZE);
 		if (ret < 0)
-			goto out_kfree;
+			goto out_kfree_raw;
 
 		count = ret;
 
 		txbuf = kmalloc_array(count, sizeof(unsigned int), GFP_KERNEL);
 		if (!txbuf) {
 			ret = -ENOMEM;
-			goto out_kfree;
+			goto out_kfree_raw;
 		}
 
 		for (i = 0; i < count; i++)
@@ -366,6 +366,7 @@ static ssize_t ir_lirc_transmit_ir(struct file *file, const char __user *buf,
 	return n;
 out_kfree:
 	kfree(txbuf);
+out_kfree_raw:
 	kfree(raw);
 out_unlock:
 	mutex_unlock(&dev->lock);
@@ -402,13 +403,13 @@ static long ir_lirc_ioctl(struct file *file, unsigned int cmd,
 			val |= LIRC_CAN_REC_SCANCODE;
 
 		if (dev->driver_type == RC_DRIVER_IR_RAW) {
-			val |= LIRC_CAN_REC_MODE2 | LIRC_CAN_REC_SCANCODE;
+			val |= LIRC_CAN_REC_MODE2;
 			if (dev->rx_resolution)
 				val |= LIRC_CAN_GET_REC_RESOLUTION;
 		}
 
 		if (dev->tx_ir) {
-			val |= LIRC_CAN_SEND_PULSE | LIRC_CAN_SEND_SCANCODE;
+			val |= LIRC_CAN_SEND_PULSE;
 			if (dev->s_tx_mask)
 				val |= LIRC_CAN_SET_TRANSMITTER_MASK;
 			if (dev->s_tx_carrier)
@@ -815,3 +816,5 @@ void __exit lirc_dev_exit(void)
 	class_destroy(lirc_class);
 	unregister_chrdev_region(lirc_base_dev, RC_DEV_MAX);
 }
+
+MODULE_ALIAS("lirc_dev");
