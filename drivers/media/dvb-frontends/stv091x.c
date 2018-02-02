@@ -750,15 +750,15 @@ static int stv091x_get_dmdlock(struct stv091x_state *state)
 //	pr_info("%s: demod: %d\n", __func__, state->nr);
 
 	if (p->symbol_rate <= 1000000) {         /*          SR <=  1Msps */
-		timeout = 3000;
+		timeout = 5000;
 	} else if (p->symbol_rate <= 2000000) {  /*  1Msps < SR <=  2Msps */
-		timeout = 2500;
+		timeout = 4500;
 	} else if (p->symbol_rate <= 5000000) {  /*  2Msps < SR <=  5Msps */
-		timeout = 1000;
+		timeout = 3500;
 	} else if (p->symbol_rate <= 10000000) { /*  5Msps < SR <= 10Msps */
-		timeout = 1000;
+		timeout = 2500;
 	} else if (p->symbol_rate < 20000000) {  /* 10Msps < SR <= 20Msps */
-		timeout = 1000;
+		timeout = 1500;
 	} else {                                 /*          SR >= 20Msps */
 		timeout = 1000;
 	}
@@ -801,8 +801,6 @@ static int stv091x_start(struct stv091x_state *state, struct dtv_frontend_proper
 	const struct stv091x_cfg *config = state->config;
 
 	u64 SFR;
-	int lock;
-	u8  i;
 	s64 CFR;
 	s32 offset;
 	u8  rolloff;
@@ -835,7 +833,7 @@ start:
 
 	/* FE_STV091X_SetSearchStandard */
 	STV091X_WRITE_REG(state, DMDCFGMD, 0xD9);
-	STV091X_WRITE_REG(state, DMDCFG2, 0x7B);
+	STV091X_WRITE_REG(state, DMDCFG2, 0x3B);
 
 	/* Enable DSS search as well */
 	STV091X_WRITE_REG(state, FECM, 0x10);
@@ -885,32 +883,13 @@ start:
 	STV091X_WRITE_REG(state, DMDISTATE, 0x1F);
 	STV091X_WRITE_REG(state, DMDISTATE, 0x01); /* Blindsearch - best guess */
 
-	msleep(50);
-
-	lock = 0;
-	for (i = 0; i < 10; i++) {
-		if (STV091X_READ_FIELD(state, TMGLOCK_QUALITY) >= 2) {
-			lock++;
-		}
-	}
-	pr_info("%s: course lock: %d\n", __func__, lock);
-
-	CFR    = MAKEWORD16(STV091X_READ_REG(state, CFR2), STV091X_READ_REG(state, CFR1));
-	CFR    = comp2(CFR, 16);
-	CFR   *= (state->base->mclk / 1000);
-	offset = CFR >> 16;
-	pr_info("%s: freq: %d offset %d\n", __func__, p->frequency, offset);
-	p->frequency   += offset;
-	p->symbol_rate  = stv091x_get_SR(state);
-
-	if (offset > 1000 || offset < -1000) {
-		pr_info("%s: corrected frequency: %d RESTARTING\n", __func__, p->frequency);
-		goto start;
-	}
-
-	pr_info("%s: SR: %d, BW: %d\n", __func__, p->symbol_rate, p->bandwidth_hz);
-
 	if (stv091x_get_dmdlock(state)) {
+		CFR    = MAKEWORD16(STV091X_READ_REG(state, CFR2), STV091X_READ_REG(state, CFR1));
+		CFR    = comp2(CFR, 16);
+		CFR   *= (state->base->mclk / 1000);
+		offset = CFR >> 16;
+		pr_info("%s: freq: %d offset %d\n", __func__, p->frequency, offset);
+		p->frequency   += offset;
 		p->symbol_rate  = stv091x_get_SR(state);
 
 		switch(STV091X_READ_FIELD(state, ROLLOFF_STATUS)) {
@@ -931,10 +910,12 @@ start:
 
 		p->bandwidth_hz = (p->symbol_rate * rolloff) / 100;
 
+		if (offset > 1000 || offset < -1000) {
+			pr_info("%s: corrected frequency: %d RESTARTING\n", __func__, p->frequency);
+			goto start;
+		}
+
 		pr_info("%s: SR: %d, BW: %d\n", __func__, p->symbol_rate, p->bandwidth_hz);
-		stv091x_i2c_gate_ctrl(fe, 1);
-		config->tuner_set_bandwidth(fe, p->bandwidth_hz);
-		stv091x_i2c_gate_ctrl(fe, 0);
 
 		return 1;
 	} else {
