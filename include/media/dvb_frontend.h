@@ -46,6 +46,8 @@
 
 #include <media/dvbdev.h>
 
+#define fprintk(fmt, arg...)	printk(KERN_INFO "%s: " fmt "\n",  __func__, ##arg)
+
 /*
  * Maximum number of Delivery systems per frontend. It
  * should be smaller or equal to 32
