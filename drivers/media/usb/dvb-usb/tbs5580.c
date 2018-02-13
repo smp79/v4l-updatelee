@@ -47,12 +47,15 @@ static int tbs5580_op_rw(struct usb_device *dev, u8 request, u16 value,
 				u16 index, u8 * data, u16 len, int flags)
 {
 	int ret;
-	u8 u8buf[len];
+	void *u8buf;
 
 	unsigned int pipe = (flags == TBS5580_READ_MSG) ?
 			usb_rcvctrlpipe(dev, 0) : usb_sndctrlpipe(dev, 0);
 	u8 request_type = (flags == TBS5580_READ_MSG) ? USB_DIR_IN : 
 								USB_DIR_OUT;
+	u8buf = kmalloc(len, GFP_KERNEL);
+	if (!u8buf)
+		return -ENOMEM;
 
 	if (flags == TBS5580_WRITE_MSG)
 		memcpy(u8buf, data, len);
@@ -61,6 +64,7 @@ static int tbs5580_op_rw(struct usb_device *dev, u8 request, u16 value,
 
 	if (flags == TBS5580_READ_MSG)
 		memcpy(data, u8buf, len);
+	kfree(u8buf);
 	return ret;
 }
 
