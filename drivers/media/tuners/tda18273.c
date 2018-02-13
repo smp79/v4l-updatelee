@@ -23,7 +23,7 @@
 #include <linux/slab.h>
 #include <linux/string.h>
 
-#include "dvb_frontend.h"
+#include "media/dvb_frontend.h"
 
 #include "tda18273_priv.h"
 
