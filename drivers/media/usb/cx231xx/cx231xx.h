@@ -83,9 +83,6 @@
 #define CX231XX_BOARD_THE_IMAGING_SOURCE_DFG_USB2_PRO 25
 #define CX231XX_BOARD_HAUPPAUGE_935C 26
 #define CX231XX_BOARD_HAUPPAUGE_975 27
-#define CX231XX_BOARD_TBS_5280 28
-#define CX231XX_BOARD_TBS_5281 29
-#define CX231XX_BOARD_TBS_5990 30
 
 /* Limits minimum and default number of buffers */
 #define CX231XX_MIN_BUF                 4
@@ -348,9 +345,8 @@ struct cx231xx_board {
 
 	/* demod related */
 	int demod_addr;
+	int demod_addr2;
 	u8 demod_xfer_mode;	/* 0 - Serial; 1 - parallel */
-
-	int adap_cnt;
 
 	/* GPIO Pins */
 	struct cx231xx_reg_seq *dvb_gpio;
@@ -368,7 +364,7 @@ struct cx231xx_board {
 
 	/* i2c masters */
 	u8 tuner_i2c_master;
-	u8 demod_i2c_master[2];
+	u8 demod_i2c_master;
 	u8 ir_i2c_master;
 
 	/* for devices with I2C chips for IR */
@@ -380,7 +376,6 @@ struct cx231xx_board {
 	unsigned int valid:1;
 	unsigned int no_alt_vanc:1;
 	unsigned int external_av:1;
-	unsigned int no_audio:1;
 
 	unsigned char xclk, i2c_speed;
 
@@ -595,27 +590,6 @@ struct cx231xx_tsport {
 	void                       *port_priv;
 };
 
-struct cx231xx_dvb {
-	struct dvb_frontend *frontend;
-
-	/* feed count management */
-	struct mutex lock;
-	int nfeeds;
-	u8 count;
-
-	/* general boilerplate stuff */
-	struct dvb_adapter adapter;
-	struct dvb_demux demux;
-	struct dmxdev dmxdev;
-	struct dmx_frontend fe_hw;
-	struct dmx_frontend fe_mem;
-	struct dvb_net net;
-	struct i2c_client *i2c_client_demod;
-	struct i2c_client *i2c_client_tuner;
-
-	void *adap_priv;
-};
-
 /* main device struct */
 struct cx231xx {
 	/* generic device properties */
@@ -705,7 +679,6 @@ struct cx231xx {
 	struct cx231xx_video_mode vbi_mode;
 	struct cx231xx_video_mode sliced_cc_mode;
 	struct cx231xx_video_mode ts1_mode;
-	struct cx231xx_video_mode ts2_mode;
 
 	atomic_t devlist_count;
 
@@ -729,7 +702,7 @@ struct cx231xx {
 
 	enum cx231xx_mode mode;
 
-	struct cx231xx_dvb *dvb[2];
+	struct cx231xx_dvb *dvb;
 
 	/* Cx231xx supported PCB config's */
 	struct pcb_config current_pcb_config;
@@ -892,8 +865,6 @@ int cx231xx_send_usb_command(struct cx231xx_i2c *i2c_bus,
 /* Gpio related functions */
 int cx231xx_send_gpio_cmd(struct cx231xx *dev, u32 gpio_bit, u8 *gpio_val,
 			  u8 len, u8 request, u8 direction);
-int cx231xx_set_gpio_bit(struct cx231xx *dev, u32 gpio_bit, u32 gpio_val);
-int cx231xx_get_gpio_bit(struct cx231xx *dev, u32 gpio_bit, u32 *gpio_val);
 int cx231xx_set_gpio_value(struct cx231xx *dev, int pin_number, int pin_value);
 int cx231xx_set_gpio_direction(struct cx231xx *dev, int pin_number,
 			       int pin_value);
@@ -922,24 +893,14 @@ int cx231xx_init_isoc(struct cx231xx *dev, int max_packets,
 		      int num_bufs, int max_pkt_size,
 		      int (*isoc_copy) (struct cx231xx *dev,
 					struct urb *urb));
-int cx231xx_init_isoc_ts2(struct cx231xx *dev, int max_packets,
-			int num_bufs, int max_pkt_size,
-			int (*isoc_copy) (struct cx231xx *dev,
-					struct urb *urb));
 int cx231xx_init_bulk(struct cx231xx *dev, int max_packets,
-		      int num_bufs, int max_pkt_size,
-		      int (*bulk_copy) (struct cx231xx *dev,
-					struct urb *urb));
-int cx231xx_init_bulk_ts2(struct cx231xx *dev, int max_packets,
 		      int num_bufs, int max_pkt_size,
 		      int (*bulk_copy) (struct cx231xx *dev,
 					struct urb *urb));
 void cx231xx_stop_TS1(struct cx231xx *dev);
 void cx231xx_start_TS1(struct cx231xx *dev);
 void cx231xx_uninit_isoc(struct cx231xx *dev);
-void cx231xx_uninit_isoc_ts2(struct cx231xx *dev);
 void cx231xx_uninit_bulk(struct cx231xx *dev);
-void cx231xx_uninit_bulk_ts2(struct cx231xx *dev);
 int cx231xx_set_mode(struct cx231xx *dev, enum cx231xx_mode set_mode);
 int cx231xx_unmute_audio(struct cx231xx *dev);
 int cx231xx_ep5_bulkout(struct cx231xx *dev, u8 *firmware, u16 size);

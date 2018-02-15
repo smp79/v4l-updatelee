@@ -27,13 +27,47 @@
 
 #define dprintk(fmt, arg...)	printk(KERN_INFO pr_fmt("%s: " fmt "\n"),  __func__, ##arg)
 
-#define lg_chkerr(ret)                                                 \
-({                                                                     \
-       int __ret;                                                      \
-       __ret = (ret < 0);                                              \
-       if (__ret)                                                      \
-	       dprintk("%d on line %d", ret, __LINE__);              \
-       __ret;                                                          \
+static int debug;
+module_param(debug, int, 0644);
+MODULE_PARM_DESC(debug, "set debug level (info=1, reg=2 (or-able))");
+
+/*
+ * Older drivers treated QAM64 and QAM256 the same; that is the HW always
+ * used "Auto" mode during detection.  Setting "forced_manual"=1 allows
+ * the user to treat these modes as separate.  For backwards compatibility,
+ * it's off by default.  QAM_AUTO can now be specified to achive that
+ * effect even if "forced_manual"=1
+ */
+static int forced_manual;
+module_param(forced_manual, int, 0644);
+MODULE_PARM_DESC(forced_manual, "if set, QAM64 and QAM256 will only lock to modulation specified");
+
+#define DBG_INFO 1
+#define DBG_REG  2
+#define DBG_DUMP 4 /* FGR - comment out to remove dump code */
+
+#define lg_debug(fmt, arg...) \
+	printk(KERN_DEBUG pr_fmt(fmt), ## arg)
+
+#define dbg_info(fmt, arg...)					\
+	do {							\
+		if (debug & DBG_INFO)				\
+			lg_debug(fmt, ## arg);			\
+	} while (0)
+
+#define dbg_reg(fmt, arg...)					\
+	do {							\
+		if (debug & DBG_REG)				\
+			lg_debug(fmt, ## arg);			\
+	} while (0)
+
+#define lg_chkerr(ret)							\
+({									\
+	int __ret;							\
+	__ret = (ret < 0);						\
+	if (__ret)							\
+		pr_err("error %d on line %d\n",	ret, __LINE__);		\
+	__ret;								\
 })
 
 struct lgdt3306a_state {
@@ -254,7 +288,8 @@ fail:
 	return ret;
 }
 
-static int lgdt3306a_mpeg_tristate(struct lgdt3306a_state *state, int mode)
+static int lgdt3306a_mpeg_tristate(struct lgdt3306a_state *state,
+				     int mode)
 {
 	u8 val;
 	int ret;
@@ -524,11 +559,11 @@ static int lgdt3306a_set_qam(struct lgdt3306a_state *state, int modulation)
 	/* 3. : 64QAM/256QAM detection(manual, auto) */
 	ret = lgdt3306a_read_reg(state, 0x0009, &val);
 	val &= 0xfc;
-	if (modulation != QAM_AUTO){
+	/* Check for forced Manual modulation modes; otherwise always "auto" */
+	if (forced_manual && (modulation != QAM_AUTO))
 		val |= 0x01; /* STDOPDETCMODE[1:0]= 1=Manual */
-	} else {
+	else
 		val |= 0x02; /* STDOPDETCMODE[1:0]= 2=Auto */
-	}
 	ret = lgdt3306a_write_reg(state, 0x0009, val);
 	if (lg_chkerr(ret))
 		goto fail;
@@ -561,24 +596,24 @@ static int lgdt3306a_set_qam(struct lgdt3306a_state *state, int modulation)
 		goto fail;
 
 	/* 5.1 V0.36 SRDCHKALWAYS : For better QAM detection */
-	ret = lgdt3306a_read_reg(state, 0x000A, &val);
-	val &= 0xFD;
+	ret = lgdt3306a_read_reg(state, 0x000a, &val);
+	val &= 0xfd;
 	val |= 0x02;
-	ret = lgdt3306a_write_reg(state, 0x000A, val);
+	ret = lgdt3306a_write_reg(state, 0x000a, val);
 	if (lg_chkerr(ret))
 		goto fail;
 
 	/* 5.2 V0.36 Control of "no signal" detector function */
 	ret = lgdt3306a_read_reg(state, 0x2849, &val);
-	val &= 0xDF;
+	val &= 0xdf;
 	ret = lgdt3306a_write_reg(state, 0x2849, val);
 	if (lg_chkerr(ret))
 		goto fail;
 
 	/* 5.3 Fix for Blonder Tongue HDE-2H-QAM and AQM modulators */
-	ret = lgdt3306a_read_reg(state, 0x302B, &val);
-	val &= 0x7F;  /* SELFSYNCFINDEN_CQS=0; disable auto reset */
-	ret = lgdt3306a_write_reg(state, 0x302B, val);
+	ret = lgdt3306a_read_reg(state, 0x302b, &val);
+	val &= 0x7f;  /* SELFSYNCFINDEN_CQS=0; disable auto reset */
+	ret = lgdt3306a_write_reg(state, 0x302b, val);
 	if (lg_chkerr(ret))
 		goto fail;
 
@@ -1277,8 +1312,11 @@ static int lgdt3306a_pre_monitoring(struct lgdt3306a_state *state)
 	dprintk("snrRef=%d mainStrong=%d aiccrejStatus=%d currChDiffACQ=0x%x",
 		snrRef, mainStrong, aiccrejStatus, currChDiffACQ);
 
+#if 0
 	/* Dynamic ghost exists */
-	if ((mainStrong == 0) && (currChDiffACQ > 0x70)) {
+	if ((mainStrong == 0) && (currChDiffACQ > 0x70))
+#endif
+	if (mainStrong == 0) {
 		ret = lgdt3306a_read_reg(state, 0x2135, &val);
 		if (ret)
 			return ret;
@@ -1333,6 +1371,8 @@ lgdt3306a_sync_lock_poll(struct lgdt3306a_state *state)
 	int	i;
 
 	for (i = 0; i < 2; i++)	{
+		msleep(30);
+
 		syncLockStatus = lgdt3306a_check_lock_status(state,
 							     LG3306_SYNC_LOCK);
 
@@ -1340,8 +1380,6 @@ lgdt3306a_sync_lock_poll(struct lgdt3306a_state *state)
 			dprintk("locked(%d)", i);
 			return LG3306_LOCK;
 		}
-
-		msleep(30);
 	}
 	dprintk("not locked");
 	return LG3306_UNLOCK;
@@ -1354,6 +1392,8 @@ lgdt3306a_fec_lock_poll(struct lgdt3306a_state *state)
 	int	i;
 
 	for (i = 0; i < 2; i++)	{
+		msleep(30);
+
 		FECLockStatus = lgdt3306a_check_lock_status(state,
 							    LG3306_FEC_LOCK);
 
@@ -1361,8 +1401,6 @@ lgdt3306a_fec_lock_poll(struct lgdt3306a_state *state)
 			dprintk("locked(%d)", i);
 			return FECLockStatus;
 		}
-
-		msleep(30);
 	}
 	dprintk("not locked");
 	return FECLockStatus;
@@ -1374,15 +1412,15 @@ lgdt3306a_neverlock_poll(struct lgdt3306a_state *state)
 	enum lgdt3306a_neverlock_status NLLockStatus = LG3306_NL_FAIL;
 	int i;
 
-	for (i = 0; i < 3; i++) {
+	for (i = 0; i < 5; i++) {
+		msleep(30);
+
 		NLLockStatus = lgdt3306a_check_neverlock_status(state);
 
 		if (NLLockStatus == LG3306_NL_LOCK) {
 			dprintk("NL_LOCK(%d)", i);
 			return NLLockStatus;
 		}
-
-		msleep(30);
 	}
 
 	return NLLockStatus;
@@ -1448,7 +1486,8 @@ static u32 log10_x1000(u32 x)
 	step_log10 = log10x_x1000[i] - log10x_x1000[i - 1];
 
 	/* do a linear interpolation to get in-between values */
-	return log_val + log10x_x1000[i - 1] + ((diff_val*step_log10) / step_val);
+	return log_val + log10x_x1000[i - 1] +
+		((diff_val*step_log10) / step_val);
 }
 
 static u32 lgdt3306a_calculate_snr_x100(struct lgdt3306a_state *state)
@@ -1485,6 +1524,7 @@ lgdt3306a_vsb_lock_poll(struct lgdt3306a_state *state)
 			return LG3306_UNLOCK;
 		}
 
+		msleep(20);
 		ret = lgdt3306a_pre_monitoring(state);
 		if (ret)
 			break;
@@ -1495,8 +1535,6 @@ lgdt3306a_vsb_lock_poll(struct lgdt3306a_state *state)
 
 		if ((snr >= 1500) && (packet_error < 0xff))
 			return LG3306_LOCK;
-
-		msleep(20);
 	}
 
 	dprintk("not locked!");
@@ -1516,14 +1554,14 @@ lgdt3306a_qam_lock_poll(struct lgdt3306a_state *state)
 			return LG3306_UNLOCK;
 		}
 
+		msleep(20);
+
 		packet_error = lgdt3306a_get_packet_error(state);
 		snr = lgdt3306a_calculate_snr_x100(state);
 		dprintk("cnt=%d errors=%d snr=%d", cnt, packet_error, snr);
 
 		if ((snr >= 1500) && (packet_error < 0xff))
 			return LG3306_LOCK;
-
-		msleep(20);
 	}
 
 	dprintk("not locked!");
@@ -1534,7 +1572,6 @@ static int lgdt3306a_read_status(struct dvb_frontend *fe,
 				 enum fe_status *status)
 {
 	struct lgdt3306a_state *state = fe->demodulator_priv;
-
 	u16 strength = 0;
 	int ret = 0;
 
@@ -1612,7 +1649,7 @@ static int lgdt3306a_read_signal_strength(struct dvb_frontend *fe,
 	case QAM_AUTO:
 		/* need to know actual modulation to set proper SNR baseline */
 		lgdt3306a_read_reg(state, 0x00a6, &val);
-		if(val & 0x04)
+		if (val & 0x04)
 			ref_snr = 2800; /* QAM-256 28dB */
 		else
 			ref_snr = 2200; /* QAM-64  22dB */
@@ -2128,7 +2165,6 @@ static void lgdt3306a_DumpRegs(struct lgdt3306a_state *state)
 
 	if ((debug & DBG_DUMP) == 0)
 		return;
-	debug &= ~dprintk; /* suppress dprintk during reg dump */
 
 	lg_debug("");
 

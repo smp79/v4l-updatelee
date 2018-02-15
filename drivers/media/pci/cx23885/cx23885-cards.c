@@ -812,7 +812,7 @@ struct cx23885_board cx23885_boards[] = {
 		.name		= "Hauppauge WinTV-HVR-1265(161111)",
 		.porta		= CX23885_ANALOG_VIDEO,
 		.portc		= CX23885_MPEG_DVB,
-		.tuner_type	= TUNER_SILABS_SI2157,
+		.tuner_type	= TUNER_ABSENT,
 		.force_bff	= 1,
 		.input          = {{
 			.type   = CX23885_VMUX_TELEVISION,
@@ -1364,7 +1364,7 @@ static void hauppauge_eeprom(struct cx23885_dev *dev, u8 *eeprom_data)
 		/* WinTV-HVR5525 (PCIe, DVB-S/S2, DVB-T/T2/C) */
 		break;
 	case 161111:
-		/* WinTV-HVR-1265 (PCIe, Analog/ATSC/QAM-B) */
+		/* WinTV-HVR-1265 K4 (PCIe, Analog/ATSC/QAM-B) */
 		break;
 	case 166100: /* 888 version, hybrid */
 	case 166200: /* 885 version, DVB only */
@@ -2154,7 +2154,6 @@ void cx23885_card_setup(struct cx23885_dev *dev)
 	case CX23885_BOARD_HAUPPAUGE_QUADHD_DVB_885:
 	case CX23885_BOARD_HAUPPAUGE_QUADHD_ATSC:
 	case CX23885_BOARD_HAUPPAUGE_QUADHD_ATSC_885:
-
 		if (dev->i2c_bus[0].i2c_rc == 0)
 			hauppauge_eeprom(dev, eeprom+0xc0);
 		break;
@@ -2392,6 +2391,10 @@ void cx23885_card_setup(struct cx23885_dev *dev)
 				&dev->i2c_bus[2].i2c_adap,
 				"cx25840", 0x88 >> 1, NULL);
 		if (dev->sd_cx25840) {
+			/* set host data for clk_freq configuration */
+			v4l2_set_subdev_hostdata(dev->sd_cx25840,
+						&dev->clk_freq);
+
 			dev->sd_cx25840->grp_id = CX23885_HW_AV_CORE;
 			v4l2_subdev_call(dev->sd_cx25840, core, load_fw);
 		}

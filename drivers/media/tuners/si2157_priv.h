@@ -19,22 +19,17 @@
 
 #include <linux/firmware.h>
 #include <media/v4l2-mc.h>
-#include "tuner-i2c.h"
 #include "si2157.h"
 
 #define dprintk(fmt, arg...)	printk(KERN_INFO pr_fmt("%s: " fmt "\n"),  __func__, ##arg)
 
 /* state struct */
 struct si2157_dev {
-	struct list_head hybrid_tuner_instance_list;
-	struct tuner_i2c_props  i2c_props;
-
 	struct mutex i2c_mutex;
 	struct dvb_frontend *fe;
 	bool active;
 	bool inversion;
 	u8 chiptype;
-	u8 addr;
 	u8 if_port;
 	u32 if_frequency;
 	u32 bandwidth;

@@ -360,9 +360,6 @@ int cx231xx_afe_update_power_control(struct cx231xx *dev,
 	case CX231XX_BOARD_HAUPPAUGE_USB2_FM_PAL:
 	case CX231XX_BOARD_HAUPPAUGE_USB2_FM_NTSC:
 	case CX231XX_BOARD_OTG102:
-	case CX231XX_BOARD_TBS_5280:
-	case CX231XX_BOARD_TBS_5281:
-	case CX231XX_BOARD_TBS_5990:
 		if (avmode == POLARIS_AVMODE_ANALOGT_TV) {
 			while (afe_power_status != (FLD_PWRDN_TUNING_BIAS |
 						FLD_PWRDN_ENABLE_PLL)) {
@@ -602,14 +599,27 @@ int cx231xx_set_video_input_mux(struct cx231xx *dev, u8 input)
 				return status;
 			}
 		}
-		if (dev->tuner_type == TUNER_NXP_TDA18271)
+		switch (dev->model) { /* i2c device tuners */
+		case CX231XX_BOARD_HAUPPAUGE_930C_HD_1114xx:
+		case CX231XX_BOARD_HAUPPAUGE_935C:
+		case CX231XX_BOARD_HAUPPAUGE_955Q:
+		case CX231XX_BOARD_HAUPPAUGE_975:
+		case CX231XX_BOARD_EVROMEDIA_FULL_HYBRID_FULLHD:
 			status = cx231xx_set_decoder_video_input(dev,
 							CX231XX_VMUX_TELEVISION,
 							INPUT(input)->vmux);
-		else
-			status = cx231xx_set_decoder_video_input(dev,
+			break;
+		default:
+			if (dev->tuner_type == TUNER_NXP_TDA18271)
+				status = cx231xx_set_decoder_video_input(dev,
+							CX231XX_VMUX_TELEVISION,
+							INPUT(input)->vmux);
+			else
+				status = cx231xx_set_decoder_video_input(dev,
 							CX231XX_VMUX_COMPOSITE1,
 							INPUT(input)->vmux);
+			break;
+		};
 
 		break;
 	default:
@@ -1208,12 +1218,22 @@ int cx231xx_set_audio_decoder_input(struct cx231xx *dev,
 					cx231xx_set_field(FLD_SIF_EN, 0));
 			break;
 		default:
+			switch (dev->model) { /* i2c device tuners */
+			case CX231XX_BOARD_HAUPPAUGE_930C_HD_1114xx:
+			case CX231XX_BOARD_HAUPPAUGE_935C:
+			case CX231XX_BOARD_HAUPPAUGE_955Q:
+			case CX231XX_BOARD_HAUPPAUGE_975:
+			case CX231XX_BOARD_EVROMEDIA_FULL_HYBRID_FULLHD:
+			/* TODO: Normal mode: SIF passthrough at 14.32 MHz ??? */
+				break;
+			default:
 			/* This is just a casual suggestion to people adding
 			   new boards in case they use a tuner type we don't
 			   currently know about */
-//			dev_info(dev->dev,
-//				 "Unknown tuner type configuring SIF");
-			break;
+				dev_info(dev->dev,
+					 "Unknown tuner type configuring SIF");
+				break;
+			}
 		}
 		break;
 
@@ -2670,7 +2690,7 @@ EXPORT_SYMBOL_GPL(cx231xx_capture_start);
 /*****************************************************************************
 *                   G P I O   B I T control functions                        *
 ******************************************************************************/
-int cx231xx_set_gpio_bit(struct cx231xx *dev, u32 gpio_bit, u32 gpio_val)
+static int cx231xx_set_gpio_bit(struct cx231xx *dev, u32 gpio_bit, u32 gpio_val)
 {
 	int status = 0;
 
@@ -2679,9 +2699,8 @@ int cx231xx_set_gpio_bit(struct cx231xx *dev, u32 gpio_bit, u32 gpio_val)
 
 	return status;
 }
-EXPORT_SYMBOL_GPL(cx231xx_set_gpio_bit);
 
-int cx231xx_get_gpio_bit(struct cx231xx *dev, u32 gpio_bit, u32 *gpio_val)
+static int cx231xx_get_gpio_bit(struct cx231xx *dev, u32 gpio_bit, u32 *gpio_val)
 {
 	__le32 tmp;
 	int status = 0;
@@ -2691,7 +2710,6 @@ int cx231xx_get_gpio_bit(struct cx231xx *dev, u32 gpio_bit, u32 *gpio_val)
 
 	return status;
 }
-EXPORT_SYMBOL_GPL(cx231xx_get_gpio_bit);
 
 /*
 * cx231xx_set_gpio_direction
@@ -2727,7 +2745,6 @@ int cx231xx_set_gpio_direction(struct cx231xx *dev,
 
 	return status;
 }
-EXPORT_SYMBOL_GPL(cx231xx_set_gpio_direction);
 
 /*
 * cx231xx_set_gpio_value
@@ -2772,7 +2789,6 @@ int cx231xx_set_gpio_value(struct cx231xx *dev, int pin_number, int pin_value)
 
 	return status;
 }
-EXPORT_SYMBOL_GPL(cx231xx_set_gpio_value);
 
 /*****************************************************************************
 *                      G P I O I2C related functions                         *

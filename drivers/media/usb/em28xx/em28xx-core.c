@@ -645,10 +645,11 @@ int em28xx_capture_start(struct em28xx *dev, int start)
 					EM2874_R5E_TS2_PKT_SIZE,
 					0xFF);
 		} else {
-			/* TS2 Maximum Transfer Size = 188 * 5 */
+			/* ISOC Maximum Transfer Size = 188 * 5 */
 			em28xx_write_reg(dev, (dev->ts == PRIMARY_TS) ?
 					EM2874_R5D_TS1_PKT_SIZE :
-					EM2874_R5E_TS2_PKT_SIZE, 0x05);
+					EM2874_R5E_TS2_PKT_SIZE,
+					dev->dvb_max_pkt_size_isoc / 188);
 		}
 		if (dev->ts == PRIMARY_TS)
 			rc = em28xx_write_reg_bits(dev,

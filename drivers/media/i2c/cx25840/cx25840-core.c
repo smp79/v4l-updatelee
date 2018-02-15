@@ -463,7 +463,12 @@ static void cx23885_initialize(struct i2c_client *client)
 {
 	DEFINE_WAIT(wait);
 	struct cx25840_state *state = to_state(i2c_get_clientdata(client));
+	u32 clk_freq = 0;
 	struct workqueue_struct *q;
+
+	/* cx23885 sets hostdata to clk_freq pointer */
+	if (v4l2_get_subdev_hostdata(&state->sd))
+		clk_freq = *((u32 *)v4l2_get_subdev_hostdata(&state->sd));
 
 	/*
 	 * Come out of digital power down
@@ -500,8 +505,13 @@ static void cx23885_initialize(struct i2c_client *client)
 		 * 50.0 MHz * (0xb + 0xe8ba26/0x2000000)/4 = 5 * 28.636363 MHz
 		 * 572.73 MHz before post divide
 		 */
-		/* HVR1850 or 50MHz xtal */
-		cx25840_write(client, 0x2, 0x71);
+		if (clk_freq == 25000000) {
+			/* 888/ImpactVCBe or 25Mhz xtal */
+			; /* nothing to do */
+		} else {
+			/* HVR1850 or 50MHz xtal */
+			cx25840_write(client, 0x2, 0x71);
+		}
 		cx25840_write4(client, 0x11c, 0x01d1744c);
 		cx25840_write4(client, 0x118, 0x00000416);
 		cx25840_write4(client, 0x404, 0x0010253e);
@@ -544,9 +554,15 @@ static void cx23885_initialize(struct i2c_client *client)
 	/* HVR1850 */
 	switch (state->id) {
 	case CX23888_AV:
-		/* 888/HVR1250 specific */
-		cx25840_write4(client, 0x10c, 0x13333333);
-		cx25840_write4(client, 0x108, 0x00000515);
+		if (clk_freq == 25000000) {
+			/* 888/ImpactVCBe or 25MHz xtal */
+			cx25840_write4(client, 0x10c, 0x01b6db7b);
+			cx25840_write4(client, 0x108, 0x00000512);
+		} else {
+			/* 888/HVR1250 or 50MHz xtal */
+			cx25840_write4(client, 0x10c, 0x13333333);
+			cx25840_write4(client, 0x108, 0x00000515);
+		}
 		break;
 	default:
 		cx25840_write4(client, 0x10c, 0x002be2c9);
@@ -576,7 +592,7 @@ static void cx23885_initialize(struct i2c_client *client)
 		 * 368.64 MHz before post divide
 		 * 122.88 MHz / 0xa = 12.288 MHz
 		 */
-		/* HVR1850  or 50MHz xtal */
+		/* HVR1850 or 50MHz xtal or 25MHz xtal */
 		cx25840_write4(client, 0x114, 0x017dbf48);
 		cx25840_write4(client, 0x110, 0x000a030e);
 		break;
@@ -668,14 +684,14 @@ static void cx23885_initialize(struct i2c_client *client)
 	 */
 	cx25840_write4(client, 0x404, 0x0010253e);
 
-	/* CC on  - Undocumented Register */
+	/* CC on  -  VBI_LINE_CTRL3, FLD_VBI_MD_LINE12 */
 	cx25840_write(client, state->vbi_regs_offset + 0x42f, 0x66);
 
 	/* HVR-1250 / HVR1850 DIF related */
 	/* Power everything up */
 	cx25840_write4(client, 0x130, 0x0);
 
-	/* Undocumented */
+	/* SRC_COMB_CFG */
 	if (is_cx23888(state))
 		cx25840_write4(client, 0x454, 0x6628021F);
 	else
@@ -1111,16 +1127,25 @@ static int set_input(struct i2c_client *client, enum cx25840_video_input vid_inp
 			cx25840_write4(client, 0x410, 0xffff0dbf);
 			cx25840_write4(client, 0x414, 0x00137d03);
 
-			cx25840_write4(client, state->vbi_regs_offset + 0x42c, 0x42600000);
-			cx25840_write4(client, state->vbi_regs_offset + 0x430, 0x0000039b);
-			cx25840_write4(client, state->vbi_regs_offset + 0x438, 0x00000000);
-
-			cx25840_write4(client, state->vbi_regs_offset + 0x440, 0xF8E3E824);
-			cx25840_write4(client, state->vbi_regs_offset + 0x444, 0x401040dc);
-			cx25840_write4(client, state->vbi_regs_offset + 0x448, 0xcd3f02a0);
-			cx25840_write4(client, state->vbi_regs_offset + 0x44c, 0x161f1000);
-			cx25840_write4(client, state->vbi_regs_offset + 0x450, 0x00000802);
-
+			/* These are not VBI controls */
+			if (is_cx23888(state)) {
+				/* 888 MISC_TIM_CTRL */
+				cx25840_write4(client, 0x42c, 0x42600000);
+				/* 888 FIELD_COUNT */
+				cx25840_write4(client, 0x430, 0x0000039b);
+				/* 888 VSCALE_CTRL */
+				cx25840_write4(client, 0x438, 0x00000000);
+				/* 888 DFE_CTRL1 */
+				cx25840_write4(client, 0x440, 0xF8E3E824);
+				/* 888 DFE_CTRL2 */
+				cx25840_write4(client, 0x444, 0x401040dc);
+				/* 888 DFE_CTRL3 */
+				cx25840_write4(client, 0x448, 0xcd3f02a0);
+				/* 888 PLL_CTRL */
+				cx25840_write4(client, 0x44c, 0x161f1000);
+				/* 888 HTL_CTRL */
+				cx25840_write4(client, 0x450, 0x00000802);
+			}
 			cx25840_write4(client, 0x91c, 0x01000000);
 			cx25840_write4(client, 0x8e0, 0x03063870);
 			cx25840_write4(client, 0x8d4, 0x7FFF0024);
@@ -1727,6 +1752,7 @@ static int cx25840_s_stream(struct v4l2_subdev *sd, int enable)
 	if (is_cx2388x(state) || is_cx231xx(state))
 		return 0;
 
+	/* PIN_CTRL1 */
 	if (enable) {
 		v = cx25840_read(client, 0x115) | 0x0c;
 		cx25840_write(client, 0x115, v);

@@ -1,5 +1,5 @@
 /*
- * Silicon Labs Si2146/2147/2148/2157/2158 silicon tuner driver
+ * Silicon Labs Si2141/2146/2147/2148/2157/2158 silicon tuner driver
  *
  * Copyright (C) 2014 Antti Palosaari <crope@iki.fi>
  *
@@ -66,6 +66,11 @@ static int si2157_cmd_execute(struct i2c_client *client, struct si2157_cmd *cmd)
 			ret = -ETIMEDOUT;
 			goto r_err_mutex_unlock;
 		}
+		/* check error status bit */
+		if (cmd->args[0] & 0x40) {
+			ret = -EAGAIN;
+			goto r_err_mutex_unlock;
+		}
 	}
 
 	mutex_unlock(&dev->i2c_mutex);
@@ -96,20 +101,20 @@ static int si2157_init(struct dvb_frontend *fe)
 	struct si2157_cmd cmd;
 	const struct firmware *fw;
 	const char *fw_name;
-	unsigned int uitmp, chip_id;
+	unsigned int chip_id, xtal_trim;
 
-	/* Returned IF frequency is garbage when firmware is not running */
-	memcpy(cmd.args, "\x15\x00\x06\x07", 4);
+	/* Try to get Xtal trim property, to verify tuner still running */
+	memcpy(cmd.args, "\x15\x00\x04\x02", 4);
 	cmd.wlen = 4;
 	cmd.rlen = 4;
 	ret = si2157_cmd_execute(client, &cmd);
-	if (ret)
-		goto err;
 
-	uitmp = cmd.args[2] << 0 | cmd.args[3] << 8;
+	xtal_trim = cmd.args[2] | (cmd.args[3] << 8);
 
-	if (uitmp == dev->if_frequency / 1000)
+	if ((ret == 0) && (xtal_trim < 16))
 		goto warm;
+
+	dev->if_frequency = 0; /* we no longer know current tuner state */
 
 	/* power up */
 	if (dev->chiptype == SI2157_CHIPTYPE_SI2146) {
@@ -256,7 +261,7 @@ skip_fw_download:
 			goto err;
 	}
 
-	/* enable tuner status flags, for si2157_tune_wait() */
+	/* enable tuner status flags */
 	memcpy(cmd.args, "\x14\x00\x01\x05\x01\x00", 6);
 	cmd.wlen = 6;
 	cmd.rlen = 1;
@@ -314,6 +319,84 @@ static int si2157_sleep(struct dvb_frontend *fe)
 //err:
 //	dprintk("failed=%d", ret);
 //	return ret;
+}
+
+static int si2157_tune_wait(struct i2c_client *client, u8 is_digital)
+{
+#define TUN_TIMEOUT 40
+#define DIG_TIMEOUT 30
+#define ANALOG_TIMEOUT 150
+	struct si2157_dev *dev = i2c_get_clientdata(client);
+	int ret;
+	unsigned long timeout;
+	unsigned long start_time;
+	u8 wait_status;
+	u8  tune_lock_mask;
+
+	if (is_digital)
+		tune_lock_mask = 0x04;
+	else
+		tune_lock_mask = 0x02;
+
+	mutex_lock(&dev->i2c_mutex);
+
+	/* wait tuner command complete */
+	start_time = jiffies;
+	timeout = start_time + msecs_to_jiffies(TUN_TIMEOUT);
+	while (!time_after(jiffies, timeout)) {
+		ret = i2c_master_recv(client, &wait_status,
+					sizeof(wait_status));
+		if (ret < 0) {
+			goto err_mutex_unlock;
+		} else if (ret != sizeof(wait_status)) {
+			ret = -EREMOTEIO;
+			goto err_mutex_unlock;
+		}
+
+		/* tuner done? */
+		if ((wait_status & 0x81) == 0x81)
+			break;
+		usleep_range(5000, 10000);
+	}
+	/* if we tuned ok, wait a bit for tuner lock */
+	if ((wait_status & 0x81) == 0x81) {
+		if (is_digital)
+			timeout = jiffies + msecs_to_jiffies(DIG_TIMEOUT);
+		else
+			timeout = jiffies + msecs_to_jiffies(ANALOG_TIMEOUT);
+		while (!time_after(jiffies, timeout)) {
+			ret = i2c_master_recv(client, &wait_status,
+						sizeof(wait_status));
+			if (ret < 0) {
+				goto err_mutex_unlock;
+			} else if (ret != sizeof(wait_status)) {
+				ret = -EREMOTEIO;
+				goto err_mutex_unlock;
+			}
+
+			/* tuner locked? */
+			if (wait_status & tune_lock_mask)
+				break;
+			usleep_range(5000, 10000);
+		}
+	}
+
+	dev_dbg(&client->dev, "tuning took %d ms, status=0x%x\n",
+		jiffies_to_msecs(jiffies) - jiffies_to_msecs(start_time),
+		wait_status);
+
+	if ((wait_status & 0xc0) != 0x80) {
+		ret = -ETIMEDOUT;
+		goto err_mutex_unlock;
+	}
+
+	mutex_unlock(&dev->i2c_mutex);
+	return 0;
+
+err_mutex_unlock:
+	mutex_unlock(&dev->i2c_mutex);
+	dev_dbg(&client->dev, "failed=%d\n", ret);
+	return ret;
 }
 
 static int si2157_set_params(struct dvb_frontend *fe)
@@ -417,12 +500,14 @@ static int si2157_set_params(struct dvb_frontend *fe)
 	dev->bandwidth = bandwidth;
 	dev->frequency = c->frequency;
 
+	si2157_tune_wait(client, 1); /* wait to complete, ignore any errors */
+
 	return 0;
 err:
 	dev->bandwidth = 0;
 	dev->frequency = 0;
 	dev->if_frequency = 0;
-	dprintk("failed=%d", ret);
+	dev_dbg(&client->dev, "failed=%d\n", ret);
 	return ret;
 }
 
@@ -476,11 +561,12 @@ static int si2157_set_analog_params(struct dvb_frontend *fe,
 		freq = freq * 1000;
 	dev->frequency = freq;
 
+	/* if_frequency values based on tda187271C2 */
 	if (params->std & (V4L2_STD_B|V4L2_STD_GH)) {
 		if (freq >= 470000000) {
 			std = "palGH";
 			bandwidth = 8000000;
-			if_frequency = 6000000; /* matches tda18271C2, works w/cx23885 */
+			if_frequency = 6000000;
 			system = 1;
 			if (params->std & (V4L2_STD_SECAM_G|V4L2_STD_SECAM_H)) {
 				std = "secamGH";
@@ -489,7 +575,7 @@ static int si2157_set_analog_params(struct dvb_frontend *fe,
 		} else {
 			std = "palB";
 			bandwidth = 7000000;
-			if_frequency = 6000000; /* matches tda18271C2, works w/cx23885 */;
+			if_frequency = 6000000;
 			system = 0;
 			if (params->std & V4L2_STD_SECAM_B) {
 				std = "secamB";
@@ -499,17 +585,17 @@ static int si2157_set_analog_params(struct dvb_frontend *fe,
 	} else if (params->std & V4L2_STD_MN) {
 		std = "MN";
 		bandwidth = 6000000;
-		if_frequency = 5400000; /* matches tda18271C2, works w/cx23885 */
+		if_frequency = 5400000;
 		system = 2;
 	} else if (params->std & V4L2_STD_PAL_I) {
 		std = "palI";
 		bandwidth = 8000000;
-		if_frequency = 7250000; /* matches tda18271C2, does not work yet w/cx23885 */
+		if_frequency = 7250000; /* TODO: does not work yet */
 		system = 4;
 	} else if (params->std & V4L2_STD_DK) {
 		std = "palDK";
 		bandwidth = 8000000;
-		if_frequency = 6900000; /* matches tda18271C2, does not work yet w/cx23885 */
+		if_frequency = 6900000; /* TODO: does not work yet */
 		system = 5;
 		if (params->std & V4L2_STD_SECAM_DK) {
 			std = "secamDK";
@@ -518,13 +604,15 @@ static int si2157_set_analog_params(struct dvb_frontend *fe,
 	} else if (params->std & V4L2_STD_SECAM_L) {
 		std = "secamL";
 		bandwidth = 8000000;
-		if_frequency = 6750000; /* not tested yet w/cx23885 */
-		system = 6;  color = 0x10;
+		if_frequency = 6750000; /* TODO: untested */
+		system = 6;
+		color = 0x10;
 	} else if (params->std & V4L2_STD_SECAM_LC) {
 		std = "secamL'";
 		bandwidth = 7000000;
-		if_frequency = 1250000; /* not tested yet w/cx23885 */
-		system = 7;  color = 0x10;
+		if_frequency = 1250000; /* TODO: untested */
+		system = 7;
+		color = 0x10;
 	} else {
 		std = "unknown";
 	}
@@ -621,8 +709,9 @@ static int si2157_set_analog_params(struct dvb_frontend *fe,
 		(cmd.args[7]<<24 | cmd.args[6]<<16 |
 		cmd.args[5]<<8 | cmd.args[4]));
 #endif
-
 	dev->bandwidth = bandwidth;
+
+	si2157_tune_wait(client, 0); /* wait to complete, ignore any errors */
 
 	return 0;
 err:
@@ -659,87 +748,10 @@ static int si2157_get_if_frequency(struct dvb_frontend *fe, u32 *frequency)
 	struct si2157_dev *dev = i2c_get_clientdata(client);
 
 	*frequency = dev->if_frequency & ~1; /* strip analog IF indicator bit */
+	dev_info(&client->dev, "%s: if_frequency=%u\n", __func__, *frequency);
 	return 0;
 }
 
-static int si2157_get_rf_strength(struct dvb_frontend *fe,
-				       u16 *signal_strength)
-{
-	struct i2c_client *client = fe->tuner_priv;
-	struct dtv_frontend_properties *c = &fe->dtv_property_cache;
-	struct si2157_cmd cmd;
-	int ret;
-
-	memcpy(cmd.args, "\x42\x00", 2);
-	cmd.wlen = 2;
-	cmd.rlen = 12;
-	ret = si2157_cmd_execute(client, &cmd);
-	if (ret) {
-		dprintk("failed=%d", ret);
-		return -1;
-	}
-
-	c->strength.stat[0].scale = FE_SCALE_DECIBEL;
-	c->strength.stat[0].svalue = (s8)cmd.args[3] * 1000;
-	*signal_strength = cmd.args[3];
-
-	return 0;
-}
-
-static void si2157_release(struct dvb_frontend *fe)
-{
-	struct i2c_client *client = fe->tuner_priv;
-	struct si2157_dev *dev = NULL;
-
-	pr_info("%s: client=%p\n", __func__, client);
-	if (client == NULL)
-		return;
-
-	dev = i2c_get_clientdata(client);
-	pr_info("%s: dev=%p\n", __func__, dev);
-	if (dev == NULL)
-		return;
-
-	/* only remove dev reference from final instance */
-	if (hybrid_tuner_report_instance_count(dev) == 1)
-		i2c_set_clientdata(client, NULL);
-
-	mutex_lock(&si2157_list_mutex);
-	hybrid_tuner_release_state(dev);
-	mutex_unlock(&si2157_list_mutex);
-
-	fe->tuner_priv = NULL;
-}
-
-static int si2157_setup_configuration(struct dvb_frontend *fe,
-					struct si2157_config *cfg)
-{
-	struct i2c_client *client = fe->tuner_priv;
-	struct si2157_dev *dev = NULL;
-
-	pr_info("%s: client=%p\n", __func__, client);
-	if (client == NULL)
-		return -1;
-
-	dev = i2c_get_clientdata(client);
-	pr_info("%s: dev=%p\n", __func__, dev);
-	if (dev == NULL)
-		return -1;
-
-	if (cfg) {
-		pr_info("%s(0x%02X): dvb driver submitted configuration; port=%d invert=%d\n",
-				__func__, dev->addr,
-				cfg->if_port, cfg->inversion);
-		dev->inversion = cfg->inversion;
-		dev->if_port   = cfg->if_port;
-	} else {
-		pr_info("%s(0x%02X): default configuration\n",
-				__func__, dev->addr);
-		dev->inversion = true;
-		dev->if_port   = 1;
-	}
-	return 0;
-}
 static const struct dvb_tuner_ops si2157_ops = {
 	.info = {
 		.name           = "Silicon Labs Si2141/2146/2147/2148/2157/2158",
@@ -747,63 +759,123 @@ static const struct dvb_tuner_ops si2157_ops = {
 		.frequency_max  = 870000000,
 	},
 
-	.init			= si2157_init,
-	.sleep			= si2157_sleep,
-	.set_params		= si2157_set_params,
-	.set_analog_params      = si2157_set_analog_params,
-	.release                = si2157_release,
-	.get_frequency          = si2157_get_frequency,
-	.get_bandwidth          = si2157_get_bandwidth,
-	.get_if_frequency	= si2157_get_if_frequency,
-	.get_rf_strength	= si2157_get_rf_strength,
+	.init = si2157_init,
+	.sleep = si2157_sleep,
+	.set_params = si2157_set_params,
+	.set_analog_params = si2157_set_analog_params,
+	.get_frequency     = si2157_get_frequency,
+	.get_bandwidth     = si2157_get_bandwidth,
+	.get_if_frequency = si2157_get_if_frequency,
 };
+
+static void si2157_stat_work(struct work_struct *work)
+{
+	struct si2157_dev *dev = container_of(work, struct si2157_dev, stat_work.work);
+	struct dvb_frontend *fe = dev->fe;
+	struct i2c_client *client = fe->tuner_priv;
+	struct dtv_frontend_properties *c = &fe->dtv_property_cache;
+	struct si2157_cmd cmd;
+	int ret;
+
+	dev_dbg(&client->dev, "\n");
+
+	memcpy(cmd.args, "\x42\x00", 2);
+	cmd.wlen = 2;
+	cmd.rlen = 12;
+	ret = si2157_cmd_execute(client, &cmd);
+	if (ret)
+		goto err;
+
+	c->strength.stat[0].scale = FE_SCALE_DECIBEL;
+	c->strength.stat[0].svalue = (s8) cmd.args[3] * 1000;
+
+	schedule_delayed_work(&dev->stat_work, msecs_to_jiffies(2000));
+	return;
+err:
+	c->strength.stat[0].scale = FE_SCALE_NOT_AVAILABLE;
+	dev_dbg(&client->dev, "failed=%d\n", ret);
+}
 
 static int si2157_probe(struct i2c_client *client,
 			const struct i2c_device_id *id)
 {
 	struct si2157_config *cfg = client->dev.platform_data;
 	struct dvb_frontend *fe = cfg->fe;
-	struct si2157_dev *dev = NULL;
-	unsigned short addr = client->addr;
-	int ret = 0;
+	struct si2157_dev *dev;
+	struct si2157_cmd cmd;
+	int ret;
 
-	pr_info("%s: probing si2157 tuner fe=%p cfg=%p addr=0X%2x\n",
-			__func__, fe, cfg, addr);
-	fe->tuner_priv = client;
-
-	if (si2157_attach(fe, (u8)addr, client->adapter, cfg) == NULL) {
-		dev_err(&client->dev, "%s: attaching si2157 tuner failed\n",
-				__func__);
+	dev = kzalloc(sizeof(*dev), GFP_KERNEL);
+	if (!dev) {
+		ret = -ENOMEM;
+		dev_err(&client->dev, "kzalloc() failed\n");
 		goto err;
 	}
-	fe->ops.tuner_ops.release = NULL;
 
-	dev = i2c_get_clientdata(client);
+	i2c_set_clientdata(client, dev);
+	dev->fe = cfg->fe;
+	dev->inversion = cfg->inversion;
+	dev->if_port = cfg->if_port;
 	dev->chiptype = (u8)id->driver_data;
+	dev->if_frequency = 5000000; /* default value of property 0x0706 */
+	mutex_init(&dev->i2c_mutex);
+	INIT_DELAYED_WORK(&dev->stat_work, si2157_stat_work);
 
-	dprintk("Silicon Labs %s successfully attached",
+	/* check if the tuner is there */
+	cmd.wlen = 0;
+	cmd.rlen = 1;
+	ret = si2157_cmd_execute(client, &cmd);
+	if (ret && (ret != -EAGAIN))
+		goto err_kfree;
+
+	memcpy(&fe->ops.tuner_ops, &si2157_ops, sizeof(struct dvb_tuner_ops));
+	fe->tuner_priv = client;
+
+#ifdef CONFIG_MEDIA_CONTROLLER
+	if (cfg->mdev) {
+		dev->mdev = cfg->mdev;
+
+		dev->ent.name = KBUILD_MODNAME;
+		dev->ent.function = MEDIA_ENT_F_TUNER;
+
+		dev->pad[TUNER_PAD_RF_INPUT].flags = MEDIA_PAD_FL_SINK;
+		dev->pad[TUNER_PAD_OUTPUT].flags = MEDIA_PAD_FL_SOURCE;
+		dev->pad[TUNER_PAD_AUD_OUT].flags = MEDIA_PAD_FL_SOURCE;
+
+		ret = media_entity_pads_init(&dev->ent, TUNER_NUM_PADS,
+					     &dev->pad[0]);
+
+		if (ret)
+			goto err_kfree;
+
+		ret = media_device_register_entity(cfg->mdev, &dev->ent);
+		if (ret) {
+			media_entity_cleanup(&dev->ent);
+			goto err_kfree;
+		}
+	}
+#endif
+
+	dev_info(&client->dev, "Silicon Labs %s successfully attached\n",
 			dev->chiptype == SI2157_CHIPTYPE_SI2141 ?  "Si2141" :
 			dev->chiptype == SI2157_CHIPTYPE_SI2146 ?
 			"Si2146" : "Si2147/2148/2157/2158");
 
 	return 0;
 
+err_kfree:
+	kfree(dev);
 err:
-	dprintk("failed=%d", ret);
+	dev_dbg(&client->dev, "failed=%d\n", ret);
 	return ret;
 }
 
 static int si2157_remove(struct i2c_client *client)
 {
 	struct si2157_dev *dev = i2c_get_clientdata(client);
-	struct dvb_frontend *fe = NULL;
+	struct dvb_frontend *fe = dev->fe;
 
-	if (dev == NULL) {
-		return 0;
-	}
-	fe = dev->fe;
-
-	dprintk("");
+	dev_dbg(&client->dev, "\n");
 
 	/* stop statistics polling */
 	cancel_delayed_work_sync(&dev->stat_work);
@@ -814,7 +886,8 @@ static int si2157_remove(struct i2c_client *client)
 #endif
 
 	memset(&fe->ops.tuner_ops, 0, sizeof(struct dvb_tuner_ops));
-	si2157_release(fe);
+	fe->tuner_priv = NULL;
+	kfree(dev);
 
 	return 0;
 }
@@ -839,127 +912,7 @@ static struct i2c_driver si2157_driver = {
 
 module_i2c_driver(si2157_driver);
 
-struct dvb_frontend *si2157_attach(struct dvb_frontend *fe, u8 addr,
-		struct i2c_adapter *i2c,
-		struct si2157_config *cfg)
-{
-	struct i2c_client *client = NULL;
-	struct si2157_dev *dev = NULL;
-	struct si2157_cmd cmd;
-	int instance = 0, ret;
-
-	pr_info("%s (%d-%04x)\n", __func__,
-	       i2c ? i2c_adapter_id(i2c) : 0,
-	       addr);
-
-	mutex_lock(&si2157_list_mutex);
-
-	if (!cfg) {
-		pr_info("no configuration submitted\n");
-		goto fail;
-	}
-
-	if (!fe) {
-		pr_info("fe is NULL\n");
-		goto fail;
-	}
-
-	client = fe->tuner_priv;
-	if (!client) {
-		pr_info("client is NULL\n");
-		goto fail;
-	}
-
-	instance = hybrid_tuner_request_state(struct si2157_dev, dev,
-			hybrid_tuner_instance_list,
-			i2c, addr, "si2157");
-
-	pr_info("%s: instance=%d\n", __func__, instance);
-	switch (instance) {
-	case 0:
-		goto fail;
-	case 1:
-		/* new tuner instance */
-		pr_info("%s(): new instance for tuner @0x%02x\n",
-				__func__, addr);
-		dev->addr = addr;
-		i2c_set_clientdata(client, dev);
-
-		si2157_setup_configuration(fe, cfg);
-
-		dev->fe = fe;
-		/* BUGBUG - should chiptype come from config? */
-		dev->chiptype = (u8)SI2157_CHIPTYPE_SI2157;
-		dev->if_frequency = 0;
-
-		mutex_init(&dev->i2c_mutex);
-		break;
-	default:
-		/* existing tuner instance */
-		pr_info("%s(): using existing instance for tuner @0x%02x\n",
-				 __func__, addr);
-
-		/* allow dvb driver to override configuration settings */
-		if (cfg)
-			si2157_setup_configuration(fe, cfg);
-
-		break;
-	}
-
-	/* check if the tuner is there */
-	cmd.wlen = 0;
-	cmd.rlen = 1;
-	ret = si2157_cmd_execute(client, &cmd);
-	/* verify no i2c error and CTS is set */
-	if (ret && (ret != -EAGAIN)) {
-		pr_info("no HW found ret=%d\n", ret);
-		goto fail;
-	}
-
-	memcpy(&fe->ops.tuner_ops, &si2157_ops, sizeof(struct dvb_tuner_ops));
-
-#ifdef CONFIG_MEDIA_CONTROLLER
-	if (instance == 1 && cfg->mdev) {
-		pr_info("cfg->mdev=%p\n", cfg->mdev);
-		dev->mdev = cfg->mdev;
-
-		dev->ent.name = KBUILD_MODNAME;
-		dev->ent.function = MEDIA_ENT_F_TUNER;
-
-		dev->pad[TUNER_PAD_RF_INPUT].flags = MEDIA_PAD_FL_SINK;
-		dev->pad[TUNER_PAD_OUTPUT].flags = MEDIA_PAD_FL_SOURCE;
-		dev->pad[TUNER_PAD_AUD_OUT].flags = MEDIA_PAD_FL_SOURCE;
-
-		ret = media_entity_pads_init(&dev->ent, TUNER_NUM_PADS,
-					     &dev->pad[0]);
-
-		if (ret)
-			goto fail;
-
-		ret = media_device_register_entity(cfg->mdev, &dev->ent);
-		if (ret) {
-			pr_info("media_device_regiser_entity returns %d\n", ret);
-			media_entity_cleanup(&dev->ent);
-			goto fail;
-		}
-	}
-#endif
-
-	mutex_unlock(&si2157_list_mutex);
-
-	return fe;
-
-fail:
-	pr_info("%s: Failed\n", __func__);
-	mutex_unlock(&si2157_list_mutex);
-
-	if (fe && (instance == 1))
-		si2157_release(fe);
-	return NULL;
-}
-EXPORT_SYMBOL(si2157_attach);
-
-MODULE_DESCRIPTION("Silicon Labs Si2141/2146/2147/2148/2157/2158 silicon tuner driver");
+MODULE_DESCRIPTION("Silicon Labs Si2141/Si2146/2147/2148/2157/2158 silicon tuner driver");
 MODULE_AUTHOR("Antti Palosaari <crope@iki.fi>");
 MODULE_LICENSE("GPL");
 MODULE_FIRMWARE(SI2158_A20_FIRMWARE);

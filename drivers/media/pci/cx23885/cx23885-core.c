@@ -839,10 +839,10 @@ static int cx23885_dev_setup(struct cx23885_dev *dev)
 
 	/* Configure the internal memory */
 	if (dev->pci->device == 0x8880) {
-		/* Could be 887 or 888, assume a default */
-		dev->bridge = CX23885_BRIDGE_887;
+		/* Could be 887 or 888, assume an 888 default */
+		dev->bridge = CX23885_BRIDGE_888;
 		/* Apply a sensible clock frequency for the PCIe bridge */
-		dev->clk_freq = 25000000;
+		dev->clk_freq = 50000000;
 		dev->sram_channels = cx23887_sram_channels;
 	} else
 	if (dev->pci->device == 0x8852) {
@@ -880,6 +880,16 @@ static int cx23885_dev_setup(struct cx23885_dev *dev)
 	/* If the user specific a clk freq override, apply it */
 	if (cx23885_boards[dev->board].clk_freq > 0)
 		dev->clk_freq = cx23885_boards[dev->board].clk_freq;
+
+	if (dev->board == CX23885_BOARD_HAUPPAUGE_IMPACTVCBE &&
+		dev->pci->subsystem_device == 0x7137) {
+		/* Hauppauge ImpactVCBe device ID 0x7137 is populated
+		 * with an 888, and a 25Mhz crystal, instead of the
+		 * usual third overtone 50Mhz. The default clock rate must
+		 * be overridden so the cx25840 is properly configured
+		 */
+		dev->clk_freq = 25000000;
+	}
 
 	dev->pci_bus  = dev->pci->bus->number;
 	dev->pci_slot = PCI_SLOT(dev->pci->devfn);
