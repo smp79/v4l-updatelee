@@ -237,6 +237,7 @@ static int stv6120_set_cutoff(struct dvb_frontend *fe, u32 frequency)
 
 static int stv6120_set_frequency(struct dvb_frontend *fe, u32 frequency)
 {
+	struct dtv_frontend_properties *p = &fe->dtv_property_cache;
 	struct stv6120_state *state = fe->tuner_priv;
 	const struct stv6120_config *config = state->config;
 
@@ -315,6 +316,8 @@ static int stv6120_set_frequency(struct dvb_frontend *fe, u32 frequency)
 		msleep(10);
 	}
 
+	p->frequency = frequency;
+
 	return 0;
 }
 
@@ -329,6 +332,7 @@ static int stv6120_get_frequency(struct dvb_frontend *fe, u32 *frequency)
 
 static int stv6120_set_bandwidth(struct dvb_frontend *fe, u32 bandwidth)
 {
+	struct dtv_frontend_properties *p = &fe->dtv_property_cache;
 	struct stv6120_state *state = fe->tuner_priv;
 	u8 lpf;
 	s32 i;
@@ -352,6 +356,9 @@ static int stv6120_set_bandwidth(struct dvb_frontend *fe, u32 bandwidth)
 	}
 
 	pr_info("%s: LPF:%d\n", __func__, lpf);
+
+	p->bandwidth_hz = bandwidth;
+
 	return 0;
 }
 

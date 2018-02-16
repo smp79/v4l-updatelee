@@ -804,20 +804,19 @@ static int stv091x_start(struct stv091x_state *state, struct dtv_frontend_proper
 	s64 CFR;
 	s32 offset;
 	u8  rolloff;
+	u32 bandwidth_hz = 36000000 * 2;
 
 	fprintk("demod: %d", state->nr);
 
 	if (p->symbol_rate < fe->ops.info.symbol_rate_min || p->symbol_rate > fe->ops.info.symbol_rate_max)
 		return -EINVAL;
 
-	p->bandwidth_hz = 36000000 * 2;
-
 start:
 	STV091X_WRITE_REG(state, AGC2O, 0x5B);
 	STV091X_WRITE_REG(state, DMDISTATE, 0x5C); /* Demod Stop */
 
 	stv091x_i2c_gate_ctrl(fe, 1);
-	config->tuner_set_bandwidth(fe, p->bandwidth_hz);
+	config->tuner_set_bandwidth(fe, bandwidth_hz);
 	config->tuner_set_frequency(fe, p->frequency);
 	stv091x_i2c_gate_ctrl(fe, 0);
 
@@ -908,11 +907,17 @@ start:
 			break;
 		}
 
-		p->bandwidth_hz = (p->symbol_rate * rolloff) / 100;
+		bandwidth_hz = (p->symbol_rate * rolloff) / 100;
 
 		if (offset > 1000 || offset < -1000) {
 			fprintk("corrected frequency: %d RESTARTING", p->frequency);
 			goto start;
+		}
+
+		if (p->bandwidth_hz != bandwidth_hz) {
+			stv091x_i2c_gate_ctrl(fe, 1);
+			config->tuner_set_bandwidth(fe, bandwidth_hz);
+			stv091x_i2c_gate_ctrl(fe, 0);
 		}
 
 		fprintk("SR: %d, BW: %d", p->symbol_rate, p->bandwidth_hz);
