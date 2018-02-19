@@ -1901,7 +1901,7 @@ static int lgdt3306a_get_spectrum_scan(struct dvb_frontend *fe, struct dvb_fe_sp
 	if (lg_chkerr(ret))
 		goto fail;
 
-	if (fe->ops.tuner_ops.set_params) {
+	if (fe->ops.tuner_ops.set_params && fe->ops.tuner_ops.get_rf_strength) {
 		for (x = 0; x < s->num_freq; x++)
 		{
 			p->frequency = *(s->freq + x);
@@ -2181,33 +2181,33 @@ static void lgdt3306a_DumpRegs(struct lgdt3306a_state *state)
 
 static int lgdt3306a_read_reg2(struct lgdt3306a_state *state, unsigned int reg, u8* out, u8 len)
 {
-        int ret;
+	int ret;
 
-        u8 b0[] = { reg >> 8, reg & 0xff };
-        struct i2c_msg msg[] = {
-                { .addr = state->cfg->i2c_addr, .flags       = 0,            .buf = b0,      .len = 2 },
-                { .addr = state->cfg->i2c_addr, .flags       = I2C_M_RD,     .buf = out,     .len = len }
-        };
+	u8 b0[] = { reg >> 8, reg & 0xff };
+	struct i2c_msg msg[] = {
+		{ .addr = state->cfg->i2c_addr, .flags       = 0,            .buf = b0,      .len = 2 },
+		{ .addr = state->cfg->i2c_addr, .flags       = I2C_M_RD,     .buf = out,     .len = len }
+	};
 
-        ret = i2c_transfer(state->i2c_adap, msg, 2);
-        if (ret != 2)
+	ret = i2c_transfer(state->i2c_adap, msg, 2);
+	if (ret != 2)
 		printk("%s: i2c error %d, reg[0x%02x]", __func__, ret, reg);
-        return 0;
+	return 0;
 }
 
 static int lgdt3306a_get_constellation_samples(struct dvb_frontend *fe, struct dvb_fe_constellation_samples *s)
 {
-        struct lgdt3306a_state *state = fe->demodulator_priv;
-        u32 x;
-        u8 buf[2];
+	struct lgdt3306a_state *state = fe->demodulator_priv;
+	u32 x;
+	u8 buf[2];
 
-        for (x = 0 ; x < s->num ; x++)
-        {
-                lgdt3306a_read_reg2(state, 0x00ee, buf, 2);
-                s->samples[x].imaginary= buf[0]; //real and imaginary are swapped
-                s->samples[x].real = buf[1];
-        }
-        return 0;
+	for (x = 0 ; x < s->num ; x++)
+	{
+		lgdt3306a_read_reg2(state, 0x00ee, buf, 2);
+		s->samples[x].imaginary= buf[0]; //real and imaginary are swapped
+		s->samples[x].real = buf[1];
+	}
+	return 0;
 }
 
 static const struct dvb_frontend_ops lgdt3306a_ops = {
@@ -2242,7 +2242,7 @@ static const struct dvb_frontend_ops lgdt3306a_ops = {
 	.search               = lgdt3306a_search,
 	.dtv_tune	      = lgdt3306a_dtv_tune,
 	.get_spectrum_scan    = lgdt3306a_get_spectrum_scan,
-        .get_constellation_samples      = lgdt3306a_get_constellation_samples,
+	.get_constellation_samples      = lgdt3306a_get_constellation_samples,
 };
 
 static int lgdt3306a_select(struct i2c_mux_core *muxc, u32 chan)

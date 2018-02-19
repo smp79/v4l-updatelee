@@ -78,16 +78,17 @@ static int si2168_cmd_execute(struct i2c_client *client, struct si2168_cmd *cmd)
 //	dprintk("R: %*ph", cmd->rlen, cmd->args);
 
 	return 0;
+
 w_err_mutex_unlock:
 	mutex_unlock(&dev->i2c_mutex);
 	dprintk("Write: failed=%d", ret);
-	dprintk("W: %*ph", cmd->wlen, cmd->args);
+	dprintk("W: %d:%*ph", cmd->wlen, cmd->wlen, cmd->args);
 	return ret;
 r_err_mutex_unlock:
 	mutex_unlock(&dev->i2c_mutex);
 	dprintk("Read: failed=%d", ret);
-	dprintk("W: %*ph", cmd->wlen, cmd->w_args);
-	dprintk("R: %*ph", cmd->rlen, cmd->args);
+	dprintk("W: %d:%*ph", cmd->wlen, cmd->wlen, cmd->w_args);
+	dprintk("R: %d:%*ph", cmd->rlen, cmd->rlen, cmd->args);
 	return ret;
 }
 
@@ -145,6 +146,7 @@ static int si2168_read_status(struct dvb_frontend *fe, enum fe_status *status)
 			sys = SYS_DVBT2;
 		}
 	}
+
 	switch (sys) {
 	case SYS_DVBT:
 		memcpy(cmd.args, "\xa0\x01", 2);
@@ -284,7 +286,7 @@ static int si2168_read_ber(struct dvb_frontend *fe, u32 *ber)
 	struct si2168_dev *dev = i2c_get_clientdata(client);
 	struct si2168_cmd cmd;
 	int ret;
-	
+
 	if (dev->fe_status & FE_HAS_LOCK) {
 		memcpy(cmd.args, "\x82\x00", 2);
 		cmd.wlen = 2;
@@ -309,7 +311,7 @@ static int si2168_read_ucblocks(struct dvb_frontend *fe, u32 *ucblocks)
 	struct si2168_dev *dev = i2c_get_clientdata(client);
 	struct si2168_cmd cmd;
 	int ret;
-	
+
 	if (dev->stat_resp & 0x10) {
 		memcpy(cmd.args, "\x84\x00", 2);
 		cmd.wlen = 2;
@@ -813,7 +815,7 @@ static int si2168_init(struct dvb_frontend *fe)
 	cmd.wlen = 2;
 	cmd.rlen = 12;
 	cmd.args[1] = (dev->fef_inv & 1) << 3 | (dev->fef_pin & 7);
-	
+
 	ret = si2168_cmd_execute(client, &cmd);
 	if (ret) {
 		dprintk("err set fef pip");
@@ -838,7 +840,7 @@ static int si2168_init(struct dvb_frontend *fe)
 		cmd.args[4] = dev->fef_inv ? 3 : 2;
 		break;
 	}
-	
+
 	ret = si2168_cmd_execute(client, &cmd);
 	if (ret) {
 		dprintk("err set mp defaults");

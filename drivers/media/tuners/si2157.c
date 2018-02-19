@@ -82,13 +82,13 @@ static int si2157_cmd_execute(struct i2c_client *client, struct si2157_cmd *cmd)
 w_err_mutex_unlock:
 	mutex_unlock(&dev->i2c_mutex);
 	dprintk("Write: failed=%d", ret);
-	dprintk("W: %*ph", cmd->wlen, cmd->args);
+	dprintk("W: %d:%*ph", cmd->wlen, cmd->wlen, cmd->args);
 	return ret;
 r_err_mutex_unlock:
 	mutex_unlock(&dev->i2c_mutex);
 	dprintk("Read: failed=%d", ret);
-	dprintk("W: %*ph", cmd->wlen, cmd->w_args);
-	dprintk("R: %*ph", cmd->rlen, cmd->args);
+	dprintk("W: %d:%*ph", cmd->wlen, cmd->wlen, cmd->w_args);
+	dprintk("R: %d:%*ph", cmd->rlen, cmd->rlen, cmd->args);
 	return ret;
 }
 
@@ -102,17 +102,6 @@ static int si2157_init(struct dvb_frontend *fe)
 	const struct firmware *fw;
 	const char *fw_name;
 	unsigned int chip_id, xtal_trim;
-
-	/* Try to get Xtal trim property, to verify tuner still running */
-	memcpy(cmd.args, "\x15\x00\x04\x02", 4);
-	cmd.wlen = 4;
-	cmd.rlen = 4;
-	ret = si2157_cmd_execute(client, &cmd);
-
-	xtal_trim = cmd.args[2] | (cmd.args[3] << 8);
-
-	if ((ret == 0) && (xtal_trim < 16))
-		goto warm;
 
 	dev->if_frequency = 0; /* we no longer know current tuner state */
 
@@ -752,6 +741,30 @@ static int si2157_get_if_frequency(struct dvb_frontend *fe, u32 *frequency)
 	return 0;
 }
 
+static int si2157_get_rf_strength(struct dvb_frontend *fe,
+				       u16 *signal_strength)
+{
+	struct i2c_client *client = fe->tuner_priv;
+	struct dtv_frontend_properties *c = &fe->dtv_property_cache;
+	struct si2157_cmd cmd;
+	int ret;
+
+	memcpy(cmd.args, "\x42\x00", 2);
+	cmd.wlen = 2;
+	cmd.rlen = 12;
+	ret = si2157_cmd_execute(client, &cmd);
+	if (ret) {
+		dprintk("failed=%d", ret);
+		return -1;
+	}
+
+	c->strength.stat[0].scale = FE_SCALE_DECIBEL;
+	c->strength.stat[0].svalue = (s8)cmd.args[3] * 1000;
+	*signal_strength = cmd.args[3];
+
+	return 0;
+}
+
 static const struct dvb_tuner_ops si2157_ops = {
 	.info = {
 		.name           = "Silicon Labs Si2141/2146/2147/2148/2157/2158",
@@ -765,7 +778,8 @@ static const struct dvb_tuner_ops si2157_ops = {
 	.set_analog_params = si2157_set_analog_params,
 	.get_frequency     = si2157_get_frequency,
 	.get_bandwidth     = si2157_get_bandwidth,
-	.get_if_frequency = si2157_get_if_frequency,
+	.get_if_frequency  = si2157_get_if_frequency,
+	.get_rf_strength   = si2157_get_rf_strength,
 };
 
 static void si2157_stat_work(struct work_struct *work)
@@ -820,13 +834,6 @@ static int si2157_probe(struct i2c_client *client,
 	dev->if_frequency = 5000000; /* default value of property 0x0706 */
 	mutex_init(&dev->i2c_mutex);
 	INIT_DELAYED_WORK(&dev->stat_work, si2157_stat_work);
-
-	/* check if the tuner is there */
-	cmd.wlen = 0;
-	cmd.rlen = 1;
-	ret = si2157_cmd_execute(client, &cmd);
-	if (ret && (ret != -EAGAIN))
-		goto err_kfree;
 
 	memcpy(&fe->ops.tuner_ops, &si2157_ops, sizeof(struct dvb_tuner_ops));
 	fe->tuner_priv = client;
