@@ -101,7 +101,7 @@ static int si2157_init(struct dvb_frontend *fe)
 	struct si2157_cmd cmd;
 	const struct firmware *fw;
 	const char *fw_name;
-	unsigned int chip_id, xtal_trim;
+	unsigned int chip_id;
 
 	dev->if_frequency = 0; /* we no longer know current tuner state */
 
@@ -163,7 +163,7 @@ static int si2157_init(struct dvb_frontend *fe)
 		fw_name = NULL;
 		break;
 	default:
-		dprintk("unknown chip version Si21%d-%c%c%c \n\n",
+		dprintk("unknown chip version Si21%d-%c%c%c",
 				cmd.args[2], cmd.args[1],
 				cmd.args[3], cmd.args[4]);
 		ret = -EINVAL;
@@ -178,14 +178,14 @@ static int si2157_init(struct dvb_frontend *fe)
 	/* request the firmware, this will block and timeout */
 	ret = request_firmware(&fw, fw_name, &client->dev);
 	if (ret) {
-		dprintk("firmware file '%s' not found\n",
+		dprintk("firmware file '%s' not found",
 				fw_name);
 		goto err;
 	}
 
 	/* firmware should be n chunks of 17 bytes */
 	if (fw->size % 17 != 0) {
-		dprintk("firmware file '%s' is invalid\n",
+		dprintk("firmware file '%s' is invalid",
 				fw_name);
 		ret = -EINVAL;
 		goto err_release_firmware;
@@ -196,7 +196,7 @@ static int si2157_init(struct dvb_frontend *fe)
 	for (remaining = fw->size; remaining > 0; remaining -= 17) {
 		len = fw->data[fw->size - remaining];
 		if (len > SI2157_ARGLEN) {
-			dprintk("Bad firmware length\n");
+			dprintk("Bad firmware length");
 			ret = -EINVAL;
 			goto err_release_firmware;
 		}
@@ -205,7 +205,7 @@ static int si2157_init(struct dvb_frontend *fe)
 		cmd.rlen = 1;
 		ret = si2157_cmd_execute(client, &cmd);
 		if (ret) {
-			dprintk("firmware download failed %d\n",
+			dprintk("firmware download failed %d",
 					ret);
 			goto err_release_firmware;
 		}
@@ -230,7 +230,7 @@ skip_fw_download:
 	if (ret)
 		goto err;
 
-	dprintk("firmware version: %c.%c.%d\n",
+	dprintk("firmware version: %c.%c.%d",
 			cmd.args[6], cmd.args[7], cmd.args[8]);
 
 	if (dev->chiptype == SI2157_CHIPTYPE_SI2141) {
@@ -271,7 +271,7 @@ skip_fw_download:
 	ret = si2157_cmd_execute(client, &cmd);
 	if (ret)
 		goto err;
-warm:
+
 	/* init statistics in order signal app which are supported */
 	c->strength.len = 1;
 	c->strength.stat[0].scale = FE_SCALE_NOT_AVAILABLE;
@@ -370,10 +370,6 @@ static int si2157_tune_wait(struct i2c_client *client, u8 is_digital)
 		}
 	}
 
-	dev_dbg(&client->dev, "tuning took %d ms, status=0x%x\n",
-		jiffies_to_msecs(jiffies) - jiffies_to_msecs(start_time),
-		wait_status);
-
 	if ((wait_status & 0xc0) != 0x80) {
 		ret = -ETIMEDOUT;
 		goto err_mutex_unlock;
@@ -384,7 +380,6 @@ static int si2157_tune_wait(struct i2c_client *client, u8 is_digital)
 
 err_mutex_unlock:
 	mutex_unlock(&dev->i2c_mutex);
-	dev_dbg(&client->dev, "failed=%d\n", ret);
 	return ret;
 }
 
@@ -496,7 +491,6 @@ err:
 	dev->bandwidth = 0;
 	dev->frequency = 0;
 	dev->if_frequency = 0;
-	dev_dbg(&client->dev, "failed=%d\n", ret);
 	return ret;
 }
 
@@ -517,8 +511,6 @@ static int si2157_set_analog_params(struct dvb_frontend *fe,
 	u8 invert_analog = 1; /* analog tuner spectrum; 0=normal, 1=inverted */
 
 	if (dev->chiptype != SI2157_CHIPTYPE_SI2157) {
-		dev_info(&client->dev, "%s: Analog tuning not supported for chiptype=%u\n",
-				__func__, dev->chiptype);
 		ret = -EINVAL;
 		goto err;
 	}
@@ -538,7 +530,6 @@ static int si2157_set_analog_params(struct dvb_frontend *fe,
 	 * if_frequency = 6600000;  //HVR-9xx(cx231xx)
 	 * if_frequency = 5500000;  //HVR-19xx(pvrusb2)
 	 */
-		dev_dbg(&client->dev, "si2157 does not currently support FM radio\n");
 		ret = -EINVAL;
 		goto err;
 	}
@@ -608,11 +599,6 @@ static int si2157_set_analog_params(struct dvb_frontend *fe,
 	/* calc channel center freq */
 	freq = freq - 1250000 + (bandwidth/2);
 
-	dev_dbg(&client->dev,
-			"mode=%d system=%u std='%s' params->frequency=%u center freq=%u if=%u bandwidth=%u\n",
-			params->mode, system, std, params->frequency,
-			freq, if_frequency, bandwidth);
-
 	/* set analog IF port */
 	memcpy(cmd.args, "\x14\x00\x03\x06\x08\x02", 6);
 	/* in using dev->if_port, we assume analog and digital IF's */
@@ -639,7 +625,6 @@ static int si2157_set_analog_params(struct dvb_frontend *fe,
 
 	/* calc and set tuner analog if center frequency */
 	if_frequency = if_frequency + 1250000 - (bandwidth/2);
-	dev_dbg(&client->dev, "IF Ctr freq=%d\n", if_frequency);
 
 	memcpy(cmd.args, "\x14\x00\x0C\x06", 4);
 	cmd.args[4] = (if_frequency / 1000) & 0xff;
@@ -692,11 +677,6 @@ static int si2157_set_analog_params(struct dvb_frontend *fe,
 	cmd.wlen = 2;
 	cmd.rlen = 12;
 	ret = si2157_cmd_execute(client, &cmd);
-
-	dev_info(&client->dev, "%s: tuner status: ret=%d rssi=%d mode=%x freq=%d\n",
-		__func__, ret, cmd.args[3], cmd.args[8],
-		(cmd.args[7]<<24 | cmd.args[6]<<16 |
-		cmd.args[5]<<8 | cmd.args[4]));
 #endif
 	dev->bandwidth = bandwidth;
 
@@ -707,7 +687,6 @@ err:
 	dev->bandwidth = 0;
 	dev->frequency = 0;
 	dev->if_frequency = 0;
-	dev_dbg(&client->dev, "failed=%d\n", ret);
 	return ret;
 }
 
@@ -717,7 +696,6 @@ static int si2157_get_frequency(struct dvb_frontend *fe, u32 *frequency)
 	struct si2157_dev *dev = i2c_get_clientdata(client);
 
 	*frequency = dev->frequency;
-	dev_info(&client->dev, "%s: freq=%u\n", __func__, dev->frequency);
 	return 0;
 }
 
@@ -727,7 +705,6 @@ static int si2157_get_bandwidth(struct dvb_frontend *fe, u32 *bandwidth)
 	struct si2157_dev *dev = i2c_get_clientdata(client);
 
 	*bandwidth = dev->bandwidth;
-	dev_info(&client->dev, "%s: bandwidth=%u\n", __func__, dev->bandwidth);
 	return 0;
 }
 
@@ -737,7 +714,6 @@ static int si2157_get_if_frequency(struct dvb_frontend *fe, u32 *frequency)
 	struct si2157_dev *dev = i2c_get_clientdata(client);
 
 	*frequency = dev->if_frequency & ~1; /* strip analog IF indicator bit */
-	dev_info(&client->dev, "%s: if_frequency=%u\n", __func__, *frequency);
 	return 0;
 }
 
@@ -782,47 +758,17 @@ static const struct dvb_tuner_ops si2157_ops = {
 	.get_rf_strength   = si2157_get_rf_strength,
 };
 
-static void si2157_stat_work(struct work_struct *work)
-{
-	struct si2157_dev *dev = container_of(work, struct si2157_dev, stat_work.work);
-	struct dvb_frontend *fe = dev->fe;
-	struct i2c_client *client = fe->tuner_priv;
-	struct dtv_frontend_properties *c = &fe->dtv_property_cache;
-	struct si2157_cmd cmd;
-	int ret;
-
-	dev_dbg(&client->dev, "\n");
-
-	memcpy(cmd.args, "\x42\x00", 2);
-	cmd.wlen = 2;
-	cmd.rlen = 12;
-	ret = si2157_cmd_execute(client, &cmd);
-	if (ret)
-		goto err;
-
-	c->strength.stat[0].scale = FE_SCALE_DECIBEL;
-	c->strength.stat[0].svalue = (s8) cmd.args[3] * 1000;
-
-	schedule_delayed_work(&dev->stat_work, msecs_to_jiffies(2000));
-	return;
-err:
-	c->strength.stat[0].scale = FE_SCALE_NOT_AVAILABLE;
-	dev_dbg(&client->dev, "failed=%d\n", ret);
-}
-
 static int si2157_probe(struct i2c_client *client,
 			const struct i2c_device_id *id)
 {
 	struct si2157_config *cfg = client->dev.platform_data;
 	struct dvb_frontend *fe = cfg->fe;
 	struct si2157_dev *dev;
-	struct si2157_cmd cmd;
 	int ret;
 
 	dev = kzalloc(sizeof(*dev), GFP_KERNEL);
 	if (!dev) {
 		ret = -ENOMEM;
-		dev_err(&client->dev, "kzalloc() failed\n");
 		goto err;
 	}
 
@@ -833,7 +779,6 @@ static int si2157_probe(struct i2c_client *client,
 	dev->chiptype = (u8)id->driver_data;
 	dev->if_frequency = 5000000; /* default value of property 0x0706 */
 	mutex_init(&dev->i2c_mutex);
-	INIT_DELAYED_WORK(&dev->stat_work, si2157_stat_work);
 
 	memcpy(&fe->ops.tuner_ops, &si2157_ops, sizeof(struct dvb_tuner_ops));
 	fe->tuner_priv = client;
@@ -863,17 +808,14 @@ static int si2157_probe(struct i2c_client *client,
 	}
 #endif
 
-	dev_info(&client->dev, "Silicon Labs %s successfully attached\n",
+	dprintk("Silicon Labs %s successfully attached",
 			dev->chiptype == SI2157_CHIPTYPE_SI2141 ?  "Si2141" :
 			dev->chiptype == SI2157_CHIPTYPE_SI2146 ?
 			"Si2146" : "Si2147/2148/2157/2158");
 
 	return 0;
 
-err_kfree:
-	kfree(dev);
 err:
-	dev_dbg(&client->dev, "failed=%d\n", ret);
 	return ret;
 }
 
@@ -881,11 +823,6 @@ static int si2157_remove(struct i2c_client *client)
 {
 	struct si2157_dev *dev = i2c_get_clientdata(client);
 	struct dvb_frontend *fe = dev->fe;
-
-	dev_dbg(&client->dev, "\n");
-
-	/* stop statistics polling */
-	cancel_delayed_work_sync(&dev->stat_work);
 
 #ifdef CONFIG_MEDIA_CONTROLLER_DVB
 	if (dev->mdev)

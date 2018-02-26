@@ -99,7 +99,7 @@ static int si2168_ts_bus_ctrl(struct dvb_frontend *fe, int acquire)
 	struct si2168_cmd cmd;
 	int ret = 0;
 
-	dev_dbg(&client->dev, "%s acquire: %d\n", __func__, acquire);
+	dprintk("%s acquire: %d", __func__, acquire);
 
 	/* set TS_MODE property */
 	memcpy(cmd.args, "\x14\x00\x01\x10\x10\x00", 6);
@@ -737,12 +737,10 @@ static int si2168_init(struct dvb_frontend *fe)
 		}
 
 		if (ret == 0) {
-			dev_notice(&client->dev,
-					"please install firmware file '%s'\n",
+			dprintk("please install firmware file '%s'",
 					SI2168_B40_FIRMWARE);
 		} else {
-			dev_err(&client->dev,
-					"firmware file '%s' not found\n",
+			dprintk("firmware file '%s' not found",
 					dev->firmware_name);
 			goto err_release_firmware;
 		}
