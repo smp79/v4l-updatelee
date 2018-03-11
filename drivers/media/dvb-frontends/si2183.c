@@ -1274,7 +1274,7 @@ static int si2183_get_spectrum_scan(struct dvb_frontend *fe, struct dvb_fe_spect
 
 			strength = cmd.args[1];
 			fe->ops.tuner_ops.get_rf_strength(fe, &strength);
-			*(s->rf_level + x) = div_s64(p->strength.stat[0].svalue, 10);
+			*(s->rf_level + x) = div_s64(p->strength.stat[0].svalue, 1);
 		}
 	}
 
