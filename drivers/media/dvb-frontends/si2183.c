@@ -297,8 +297,12 @@ static int si2183_read_status(struct dvb_frontend *fe, enum fe_status *status)
 		dev->snr = 2;
 		break;
 	default:
-		ret = -EINVAL;
-		goto err;
+		// FIXME: is there a default?
+		memcpy(cmd.args, "\x70\x01", 2);
+		cmd.wlen = 2;
+		cmd.rlen = 13;
+		dev->snr = 5;
+		break;
 	}
 
 	ret = si2183_cmd_execute(client, &cmd);
