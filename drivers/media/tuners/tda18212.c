@@ -60,8 +60,7 @@ static int tda18212_set_params(struct dvb_frontend *fe)
 		[ATSC_QAM] = { 0x7d, 0x20, 0x63 },
 	};
 
-	dev_dbg(&dev->client->dev,
-			"delivery_system=%d frequency=%d bandwidth_hz=%d\n",
+	fprintk("delivery_system=%d frequency=%d bandwidth_hz=%d",
 			c->delivery_system, c->frequency,
 			c->bandwidth_hz);
 
@@ -70,14 +69,17 @@ static int tda18212_set_params(struct dvb_frontend *fe)
 
 	switch (c->delivery_system) {
 	case SYS_ATSC:
+		fprintk("ATSC");
 		if_khz = dev->cfg.if_atsc_vsb;
 		i = ATSC_VSB;
 		break;
 	case SYS_DVBC_ANNEX_B:
+		fprintk("SYS_DVBC_ANNEX_B");
 		if_khz = dev->cfg.if_atsc_qam;
 		i = ATSC_QAM;
 		break;
 	case SYS_DVBT:
+		fprintk("SYS_DVBT");
 		switch (c->bandwidth_hz) {
 		case 6000000:
 			if_khz = dev->cfg.if_dvbt_6;
@@ -98,6 +100,7 @@ static int tda18212_set_params(struct dvb_frontend *fe)
 		buf[0] = 0x30;
 		break;
 	case SYS_DVBT2:
+		fprintk("SYS_DVBT2");
 		switch (c->bandwidth_hz) {
 		case 6000000:
 			if_khz = dev->cfg.if_dvbt2_6;
@@ -119,6 +122,7 @@ static int tda18212_set_params(struct dvb_frontend *fe)
 		break;
 	case SYS_DVBC_ANNEX_A:
 	case SYS_DVBC_ANNEX_C:
+		fprintk("SYS_DVBC_ANNEX_A & C");
 		if_khz = dev->cfg.if_dvbc;
 		i = DVBC_8;
 		buf[0] = 0x00;
@@ -214,6 +218,8 @@ static int tda18212_probe(struct i2c_client *client,
 		.val_bits = 8,
 	};
 
+	fprintk("");
+
 	dev = kzalloc(sizeof(*dev), GFP_KERNEL);
 	if (dev == NULL) {
 		ret = -ENOMEM;
@@ -274,7 +280,7 @@ static int tda18212_remove(struct i2c_client *client)
 	struct tda18212_dev *dev = i2c_get_clientdata(client);
 	struct dvb_frontend *fe = dev->cfg.fe;
 
-	dev_dbg(&client->dev, "\n");
+	fprintk("");
 
 	memset(&fe->ops.tuner_ops, 0, sizeof(struct dvb_tuner_ops));
 	fe->tuner_priv = NULL;

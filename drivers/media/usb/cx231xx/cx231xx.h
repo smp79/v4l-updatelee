@@ -83,6 +83,7 @@
 #define CX231XX_BOARD_THE_IMAGING_SOURCE_DFG_USB2_PRO 25
 #define CX231XX_BOARD_HAUPPAUGE_935C 26
 #define CX231XX_BOARD_HAUPPAUGE_975 27
+#define CX231XX_BOARD_KWORLD_UB445_V3 28
 
 /* Limits minimum and default number of buffers */
 #define CX231XX_MIN_BUF                 4

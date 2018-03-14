@@ -30,6 +30,7 @@
 #include "xc5000.h"
 #include "s5h1432.h"
 #include "tda18271.h"
+#include "tda18212.h"
 #include "s5h1411.h"
 #include "lgdt3305.h"
 #include "si2165.h"
@@ -111,6 +112,24 @@ static struct s5h1411_config tda18271_s5h1411_config = {
 	.status_mode   = S5H1411_DEMODLOCKING,
 	.mpeg_timing   = S5H1411_MPEGTIMING_CONTINUOUS_NONINVERTING_CLOCK,
 };
+
+static struct lgdt3305_config kworld_ub445_v3_lgdt3305_nogate_dev = {
+	.i2c_addr           = 0x0e,
+	.mpeg_mode          = LGDT3305_MPEG_SERIAL,
+	.tpclk_edge         = LGDT3305_TPCLK_FALLING_EDGE,
+	.tpvalid_polarity   = LGDT3305_TP_VALID_HIGH,
+	.spectral_inversion = 1,
+	.deny_i2c_rptr      = 1,
+	.qam_if_khz         = 4000,
+	.vsb_if_khz         = 3250,
+	.name		    = "Kworld 445v3",
+};
+
+static struct tda18212_config kworld_ub445_v3_tda18212_config = {
+	.if_atsc_vsb    = 3600,
+	.if_atsc_qam    = 3600,
+};
+
 static struct s5h1411_config xc5000_s5h1411_config = {
 	.output_mode   = S5H1411_SERIAL_OUTPUT,
 	.gpio          = S5H1411_GPIO_OFF,
@@ -757,6 +776,26 @@ static int dvb_init(struct cx231xx *dev)
 			result = -EINVAL;
 			goto out_free;
 		}
+		break;
+	case CX231XX_BOARD_KWORLD_UB445_V3:
+		dev->dvb->frontend[0] = dvb_attach(lgdt3305_attach,
+							   &kworld_ub445_v3_lgdt3305_nogate_dev,
+							   demod_i2c);
+		if (dev->dvb->frontend[0] == NULL) {
+			fprintk("Failed to attach LG3305 front end");
+			result = -EINVAL;
+			goto out_free;
+		}
+
+		/* define general-purpose callback pointer */
+		dvb->frontend[0]->callback = cx231xx_tuner_callback;
+
+		/* attach tuner */
+		kworld_ub445_v3_tda18212_config.fe = dvb->frontend[0];
+
+		dvb_module_probe("tda18212", NULL,
+							 tuner_i2c, 0x60,
+							 &kworld_ub445_v3_tda18212_config);
 		break;
 	case CX231XX_BOARD_HAUPPAUGE_EXETER:
 

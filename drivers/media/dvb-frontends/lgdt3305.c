@@ -682,7 +682,7 @@ static int lgdt3304_set_parameters(struct dvb_frontend *fe)
 	struct lgdt3305_state *state = fe->demodulator_priv;
 	int ret;
 
-	lg_dbg("(%d, %d)\n", p->frequency, p->modulation);
+	fprintk("freq: %d, modulation: %d)", p->frequency, p->modulation);
 
 	if (fe->ops.tuner_ops.set_params) {
 		ret = fe->ops.tuner_ops.set_params(fe);
@@ -750,7 +750,7 @@ static int lgdt3305_set_parameters(struct dvb_frontend *fe)
 	struct lgdt3305_state *state = fe->demodulator_priv;
 	int ret;
 
-	lg_dbg("(%d, %d)\n", p->frequency, p->modulation);
+	fprintk("freq: %d, modulation: %d)", p->frequency, p->modulation);
 
 	if (fe->ops.tuner_ops.set_params) {
 		ret = fe->ops.tuner_ops.set_params(fe);
@@ -868,7 +868,7 @@ static int lgdt3305_read_cr_lock_status(struct lgdt3305_state *state,
 	default:
 		ret = -EINVAL;
 	}
-	lg_dbg("(%d) %s\n", *locked, cr_lock_state);
+	fprintk("(%s) %s\n", *locked ? "locked" : "unlocked", cr_lock_state);
 fail:
 	return ret;
 }
@@ -895,7 +895,7 @@ static int lgdt3305_read_fec_lock_status(struct lgdt3305_state *state,
 
 		*locked = mpeg_lock && fec_lock && viterbi_lock;
 
-		lg_dbg("(%d) %s%s%s\n", *locked,
+		fprintk("(%s) %s%s%s\n", *locked ? "locked" : "unlocked",
 		       mpeg_lock    ? "mpeg lock  "  : "",
 		       fec_lock     ? "fec lock  "   : "",
 		       viterbi_lock ? "viterbi lock" : "");
@@ -927,7 +927,7 @@ static int lgdt3305_read_status(struct dvb_frontend *fe, enum fe_status *status)
 	nofecerr  = (val & (1 << 1)) ? 1 : 0;
 	snrgood   = (val & (1 << 0)) ? 1 : 0;
 
-	lg_dbg("%s%s%s%s%s\n",
+	fprintk("%s%s%s%s%s\n",
 	       signal    ? "SIGNALEXIST " : "",
 	       inlock    ? "INLOCK "      : "",
 	       sync_lock ? "SYNCLOCK "    : "",
@@ -1109,7 +1109,7 @@ struct dvb_frontend *lgdt3305_attach(const struct lgdt3305_config *config,
 	int ret;
 	u8 val;
 
-	lg_dbg("(%d-%04x)\n",
+	fprintk("(%d-%04x)",
 	       i2c_adap ? i2c_adapter_id(i2c_adap) : 0,
 	       config ? config->i2c_addr : 0);
 
@@ -1175,14 +1175,13 @@ static int lgdt3305_get_spectrum_scan(struct dvb_frontend *fe, struct dvb_fe_spe
 	p->delivery_system	= SYS_ATSC;
 	p->modulation		= VSB_8;
 
-	lg_info("%s\n", __func__);
+	fprintk("");
 
-        *s->type = SC_DB;
+	*s->type = SC_DB;
 	if (fe->ops.tuner_ops.set_params) {
 		for (x = 0; x < s->num_freq; x++)
 		{
 			p->frequency = *(s->freq + x);
-			lg_info("freq: %d\n", p->frequency);
 
 			if (fe->ops.tuner_ops.set_params) {
 				ret = fe->ops.tuner_ops.set_params(fe);
