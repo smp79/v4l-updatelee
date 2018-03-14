@@ -25,15 +25,48 @@
 #include "lgdt3306a.h"
 #include <linux/i2c-mux.h>
 
-#define dprintk(fmt, arg...)	printk(KERN_INFO pr_fmt("%s: " fmt "\n"),  __func__, ##arg)
 
-#define lg_chkerr(ret)                                                 \
-({                                                                     \
-       int __ret;                                                      \
-       __ret = (ret < 0);                                              \
-       if (__ret)                                                      \
-	       dprintk("%d on line %d", ret, __LINE__);              \
-       __ret;                                                          \
+static int debug;
+module_param(debug, int, 0644);
+MODULE_PARM_DESC(debug, "set debug level (info=1, reg=2 (or-able))");
+
+/*
+ * Older drivers treated QAM64 and QAM256 the same; that is the HW always
+ * used "Auto" mode during detection.  Setting "forced_manual"=1 allows
+ * the user to treat these modes as separate.  For backwards compatibility,
+ * it's off by default.  QAM_AUTO can now be specified to achive that
+ * effect even if "forced_manual"=1
+ */
+static int forced_manual;
+module_param(forced_manual, int, 0644);
+MODULE_PARM_DESC(forced_manual, "if set, QAM64 and QAM256 will only lock to modulation specified");
+
+#define DBG_INFO 1
+#define DBG_REG  2
+#define DBG_DUMP 4 /* FGR - comment out to remove dump code */
+
+#define lg_debug(fmt, arg...) \
+	printk(KERN_DEBUG pr_fmt(fmt), ## arg)
+
+#define dbg_info(fmt, arg...)					\
+	do {							\
+		if (debug & DBG_INFO)				\
+			lg_debug(fmt, ## arg);			\
+	} while (0)
+
+#define dbg_reg(fmt, arg...)					\
+	do {							\
+		if (debug & DBG_REG)				\
+			lg_debug(fmt, ## arg);			\
+	} while (0)
+
+#define lg_chkerr(ret)							\
+({									\
+	int __ret;							\
+	__ret = (ret < 0);						\
+	if (__ret)							\
+		pr_err("error %d on line %d\n",	ret, __LINE__);		\
+	__ret;								\
 })
 
 struct lgdt3306a_state {
@@ -106,12 +139,12 @@ static int lgdt3306a_write_reg(struct lgdt3306a_state *state, u16 reg, u8 val)
 		.buf = buf, .len = 3,
 	};
 
-//	dprintk("reg: 0x%04x, val: 0x%02x", reg, val);
+//	fprintk("reg: 0x%04x, val: 0x%02x", reg, val);
 
 	ret = i2c_transfer(state->i2c_adap, &msg, 1);
 
 	if (ret != 1) {
-		dprintk("(addr %02x %02x <- %02x, err = %i)", msg.buf[0], msg.buf[1], msg.buf[2], ret);
+		fprintk("(addr %02x %02x <- %02x, err = %i)", msg.buf[0], msg.buf[1], msg.buf[2], ret);
 		if (ret < 0)
 			return ret;
 		else
@@ -134,13 +167,13 @@ static int lgdt3306a_read_reg(struct lgdt3306a_state *state, u16 reg, u8 *val)
 	ret = i2c_transfer(state->i2c_adap, msg, 2);
 
 	if (ret != 2) {
-		dprintk("(addr %02x reg %04x error (ret == %i)", state->cfg->i2c_addr, reg, ret);
+		fprintk("(addr %02x reg %04x error (ret == %i)", state->cfg->i2c_addr, reg, ret);
 		if (ret < 0)
 			return ret;
 		else
 			return -EREMOTEIO;
 	}
-//	dprintk("reg: 0x%04x, val: 0x%02x", reg, *val);
+//	fprintk("reg: 0x%04x, val: 0x%02x", reg, *val);
 
 	return 0;
 }
@@ -160,7 +193,7 @@ static int lgdt3306a_set_reg_bit(struct lgdt3306a_state *state,
 	u8 val;
 	int ret;
 
-//	dprintk("reg: 0x%04x, bit: %d, level: %d", reg, bit, onoff);
+//	fprintk("reg: 0x%04x, bit: %d, level: %d", reg, bit, onoff);
 
 	ret = lgdt3306a_read_reg(state, reg, &val);
 	if (lg_chkerr(ret))
@@ -254,7 +287,8 @@ fail:
 	return ret;
 }
 
-static int lgdt3306a_mpeg_tristate(struct lgdt3306a_state *state, int mode)
+static int lgdt3306a_mpeg_tristate(struct lgdt3306a_state *state,
+				     int mode)
 {
 	u8 val;
 	int ret;
@@ -524,7 +558,8 @@ static int lgdt3306a_set_qam(struct lgdt3306a_state *state, int modulation)
 	/* 3. : 64QAM/256QAM detection(manual, auto) */
 	ret = lgdt3306a_read_reg(state, 0x0009, &val);
 	val &= 0xfc;
-	if (modulation != QAM_AUTO){
+	/* Check for forced Manual modulation modes; otherwise always "auto" */
+	if(forced_manual && (modulation != QAM_AUTO)){
 		val |= 0x01; /* STDOPDETCMODE[1:0]= 1=Manual */
 	} else {
 		val |= 0x02; /* STDOPDETCMODE[1:0]= 2=Auto */
@@ -561,24 +596,24 @@ static int lgdt3306a_set_qam(struct lgdt3306a_state *state, int modulation)
 		goto fail;
 
 	/* 5.1 V0.36 SRDCHKALWAYS : For better QAM detection */
-	ret = lgdt3306a_read_reg(state, 0x000A, &val);
-	val &= 0xFD;
+	ret = lgdt3306a_read_reg(state, 0x000a, &val);
+	val &= 0xfd;
 	val |= 0x02;
-	ret = lgdt3306a_write_reg(state, 0x000A, val);
+	ret = lgdt3306a_write_reg(state, 0x000a, val);
 	if (lg_chkerr(ret))
 		goto fail;
 
 	/* 5.2 V0.36 Control of "no signal" detector function */
 	ret = lgdt3306a_read_reg(state, 0x2849, &val);
-	val &= 0xDF;
+	val &= 0xdf;
 	ret = lgdt3306a_write_reg(state, 0x2849, val);
 	if (lg_chkerr(ret))
 		goto fail;
 
 	/* 5.3 Fix for Blonder Tongue HDE-2H-QAM and AQM modulators */
-	ret = lgdt3306a_read_reg(state, 0x302B, &val);
-	val &= 0x7F;  /* SELFSYNCFINDEN_CQS=0; disable auto reset */
-	ret = lgdt3306a_write_reg(state, 0x302B, val);
+	ret = lgdt3306a_read_reg(state, 0x302b, &val);
+	val &= 0x7f;  /* SELFSYNCFINDEN_CQS=0; disable auto reset */
+	ret = lgdt3306a_write_reg(state, 0x302b, val);
 	if (lg_chkerr(ret))
 		goto fail;
 
@@ -710,7 +745,7 @@ static int lgdt3306a_set_if(struct lgdt3306a_state *state,
 
 	switch (if_freq_khz) {
 	default:
-		dprintk("IF=%d KHz is not supported, 3250 assumed", if_freq_khz);
+		fprintk("IF=%d KHz is not supported, 3250 assumed", if_freq_khz);
 		/* fallthrough */
 	case 3250: /* 3.25Mhz */
 		nco1 = 0x34;
@@ -750,7 +785,7 @@ static int lgdt3306a_i2c_gate_ctrl(struct dvb_frontend *fe, int enable)
 	struct lgdt3306a_state *state = fe->demodulator_priv;
 
 	if (state->cfg->deny_i2c_rptr) {
-		dprintk("deny_i2c_rptr=%d", state->cfg->deny_i2c_rptr);
+		fprintk("deny_i2c_rptr=%d", state->cfg->deny_i2c_rptr);
 		return 0;
 	}
 
@@ -789,6 +824,8 @@ static int lgdt3306a_init(struct dvb_frontend *fe)
 	struct lgdt3306a_state *state = fe->demodulator_priv;
 	u8 val;
 	int ret;
+
+	fprintk("");
 
 	state->algo = LG3306_NOTUNE;
 
@@ -883,7 +920,7 @@ static int lgdt3306a_init(struct dvb_frontend *fe)
 		if (lg_chkerr(ret))
 			goto fail;
 	} else {
-		dprintk("Bad xtalMHz=%d", state->cfg->xtalMHz);
+		fprintk("Bad xtalMHz=%d", state->cfg->xtalMHz);
 	}
 #if 0
 	ret = lgdt3306a_write_reg(state, 0x000e, 0x00);
@@ -948,11 +985,11 @@ static int lgdt3306a_set_parameters(struct dvb_frontend *fe)
 	struct lgdt3306a_state *state = fe->demodulator_priv;
 	int ret;
 
-	dprintk("(%d, %d)", p->frequency, p->modulation);
+	fprintk("(%d, %d)", p->frequency, p->modulation);
 
 	if (state->current_frequency == p->frequency &&
 	   state->current_modulation == p->modulation) {
-		dprintk(" (already set, skipping ...)");
+		fprintk(" (already set, skipping ...)");
 		return 0;
 	}
 	state->algo = LG3306_TUNE;
@@ -1071,8 +1108,8 @@ static int lgdt3306a_monitor_vsb(struct lgdt3306a_state *state)
 		return ret;
 	fbDlyCir |= val;
 
-	dprintk("snrRef=%d maxPowerMan=0x%x nCombDet=%d fbDlyCir=0x%x",
-		snrRef, maxPowerMan, nCombDet, fbDlyCir);
+//	fprintk("snrRef=%d maxPowerMan=0x%x nCombDet=%d fbDlyCir=0x%x",
+//		snrRef, maxPowerMan, nCombDet, fbDlyCir);
 
 	/* Carrier offset sub loop bandwidth */
 	ret = lgdt3306a_read_reg(state, 0x1061, &val);
@@ -1125,7 +1162,7 @@ lgdt3306a_check_oper_mode(struct lgdt3306a_state *state)
 		goto err;
 
 	if (val & 0x80)	{
-		dprintk("VSB");
+		fprintk("VSB");
 		return LG3306_VSB;
 	}
 	if (val & 0x08) {
@@ -1134,14 +1171,14 @@ lgdt3306a_check_oper_mode(struct lgdt3306a_state *state)
 			goto err;
 		val = val >> 2;
 		if (val & 0x01) {
-			dprintk("QAM256");
+			fprintk("QAM256");
 			return LG3306_QAM256;
 		}
-		dprintk("QAM64");
+		fprintk("QAM64");
 		return LG3306_QAM64;
 	}
 err:
-	dprintk("UNKNOWN");
+	fprintk("UNKNOWN");
 	return LG3306_UNKNOWN_MODE;
 }
 
@@ -1168,7 +1205,7 @@ lgdt3306a_check_lock_status(struct lgdt3306a_state *state,
 		else
 			lockStatus = LG3306_UNLOCK;
 
-		dprintk("SYNC_LOCK=%x", lockStatus);
+//		fprintk("SYNC_LOCK=%x", lockStatus);
 		break;
 	}
 	case LG3306_AGC_LOCK:
@@ -1182,7 +1219,7 @@ lgdt3306a_check_lock_status(struct lgdt3306a_state *state,
 		else
 			lockStatus = LG3306_UNLOCK;
 
-		dprintk("AGC_LOCK=%x", lockStatus);
+//		fprintk("AGC_LOCK=%x", lockStatus);
 		break;
 	}
 	case LG3306_TR_LOCK:
@@ -1200,7 +1237,7 @@ lgdt3306a_check_lock_status(struct lgdt3306a_state *state,
 		} else
 			lockStatus = LG3306_UNKNOWN_LOCK;
 
-		dprintk("TR_LOCK=%x", lockStatus);
+//		fprintk("TR_LOCK=%x", lockStatus);
 		break;
 	}
 	case LG3306_FEC_LOCK:
@@ -1218,13 +1255,13 @@ lgdt3306a_check_lock_status(struct lgdt3306a_state *state,
 		} else
 			lockStatus = LG3306_UNKNOWN_LOCK;
 
-		dprintk("FEC_LOCK=%x", lockStatus);
+//		fprintk("FEC_LOCK=%x", lockStatus);
 		break;
 	}
 
 	default:
 		lockStatus = LG3306_UNKNOWN_LOCK;
-		dprintk("UNKNOWN whatLock=%d", whatLock);
+//		fprintk("UNKNOWN whatLock=%d", whatLock);
 		break;
 	}
 
@@ -1274,11 +1311,14 @@ static int lgdt3306a_pre_monitoring(struct lgdt3306a_state *state)
 		return ret;
 	aiccrejStatus = (val & 0xf0) >> 4;
 
-	dprintk("snrRef=%d mainStrong=%d aiccrejStatus=%d currChDiffACQ=0x%x",
-		snrRef, mainStrong, aiccrejStatus, currChDiffACQ);
+//	fprintk("snrRef=%d mainStrong=%d aiccrejStatus=%d currChDiffACQ=0x%x",
+//		snrRef, mainStrong, aiccrejStatus, currChDiffACQ);
 
+#if 0
 	/* Dynamic ghost exists */
-	if ((mainStrong == 0) && (currChDiffACQ > 0x70)) {
+	if ((mainStrong == 0) && (currChDiffACQ > 0x70))
+#endif
+	if (mainStrong == 0) {
 		ret = lgdt3306a_read_reg(state, 0x2135, &val);
 		if (ret)
 			return ret;
@@ -1333,17 +1373,17 @@ lgdt3306a_sync_lock_poll(struct lgdt3306a_state *state)
 	int	i;
 
 	for (i = 0; i < 2; i++)	{
+		msleep(30);
+
 		syncLockStatus = lgdt3306a_check_lock_status(state,
 							     LG3306_SYNC_LOCK);
 
 		if (syncLockStatus == LG3306_LOCK) {
-			dprintk("locked(%d)", i);
+//			fprintk("locked(%d)", i);
 			return LG3306_LOCK;
 		}
-
-		msleep(30);
 	}
-	dprintk("not locked");
+//	fprintk("not locked");
 	return LG3306_UNLOCK;
 }
 
@@ -1354,17 +1394,17 @@ lgdt3306a_fec_lock_poll(struct lgdt3306a_state *state)
 	int	i;
 
 	for (i = 0; i < 2; i++)	{
+		msleep(30);
+
 		FECLockStatus = lgdt3306a_check_lock_status(state,
 							    LG3306_FEC_LOCK);
 
 		if (FECLockStatus == LG3306_LOCK) {
-			dprintk("locked(%d)", i);
+			fprintk("locked(%d)", i);
 			return FECLockStatus;
 		}
-
-		msleep(30);
 	}
-	dprintk("not locked");
+	fprintk("not locked");
 	return FECLockStatus;
 }
 
@@ -1374,17 +1414,17 @@ lgdt3306a_neverlock_poll(struct lgdt3306a_state *state)
 	enum lgdt3306a_neverlock_status NLLockStatus = LG3306_NL_FAIL;
 	int i;
 
-	for (i = 0; i < 3; i++) {
+	for (i = 0; i < 5; i++) {
+		msleep(30);
+
 		NLLockStatus = lgdt3306a_check_neverlock_status(state);
 
 		if (NLLockStatus == LG3306_NL_LOCK) {
-			dprintk("NL_LOCK(%d)", i);
+//			fprintk("NL_LOCK(%d)", i);
 			return NLLockStatus;
 		}
-
-		msleep(30);
 	}
-
+//	fprintk("NLLockStatus=%d", NLLockStatus);
 	return NLLockStatus;
 }
 
@@ -1448,7 +1488,8 @@ static u32 log10_x1000(u32 x)
 	step_log10 = log10x_x1000[i] - log10x_x1000[i - 1];
 
 	/* do a linear interpolation to get in-between values */
-	return log_val + log10x_x1000[i - 1] + ((diff_val*step_log10) / step_val);
+	return log_val + log10x_x1000[i - 1] +
+		((diff_val*step_log10) / step_val);
 }
 
 static u32 lgdt3306a_calculate_snr_x100(struct lgdt3306a_state *state)
@@ -1466,7 +1507,7 @@ static u32 lgdt3306a_calculate_snr_x100(struct lgdt3306a_state *state)
 		return 0;
 
 	snr_x100 = log10_x1000((pwr * 10000) / mse) - 3000;
-	dprintk("mse=%u, pwr=%u, snr_x100=%d", mse, pwr, snr_x100);
+//	fprintk("mse=%u, pwr=%u, snr_x100=%d", mse, pwr, snr_x100);
 
 	return snr_x100;
 }
@@ -1481,25 +1522,24 @@ lgdt3306a_vsb_lock_poll(struct lgdt3306a_state *state)
 
 	for (cnt = 0; cnt < 10; cnt++) {
 		if (lgdt3306a_sync_lock_poll(state) == LG3306_UNLOCK) {
-			dprintk("no sync lock!");
+//			fprintk("no sync lock!");
 			return LG3306_UNLOCK;
 		}
 
+		msleep(20);
 		ret = lgdt3306a_pre_monitoring(state);
 		if (ret)
 			break;
 
 		packet_error = lgdt3306a_get_packet_error(state);
 		snr = lgdt3306a_calculate_snr_x100(state);
-		dprintk("cnt=%d errors=%d snr=%d", cnt, packet_error, snr);
+//		fprintk("cnt=%d errors=%d snr=%d", cnt, packet_error, snr);
 
 		if ((snr >= 1500) && (packet_error < 0xff))
 			return LG3306_LOCK;
-
-		msleep(20);
 	}
 
-	dprintk("not locked!");
+//	fprintk("not locked!");
 	return LG3306_UNLOCK;
 }
 
@@ -1512,21 +1552,21 @@ lgdt3306a_qam_lock_poll(struct lgdt3306a_state *state)
 
 	for (cnt = 0; cnt < 10; cnt++) {
 		if (lgdt3306a_fec_lock_poll(state) == LG3306_UNLOCK) {
-			dprintk("no fec lock!");
+			fprintk("no fec lock!");
 			return LG3306_UNLOCK;
 		}
 
+		msleep(20);
+
 		packet_error = lgdt3306a_get_packet_error(state);
 		snr = lgdt3306a_calculate_snr_x100(state);
-		dprintk("cnt=%d errors=%d snr=%d", cnt, packet_error, snr);
+		fprintk("cnt=%d errors=%d snr=%d", cnt, packet_error, snr);
 
 		if ((snr >= 1500) && (packet_error < 0xff))
 			return LG3306_LOCK;
-
-		msleep(20);
 	}
 
-	dprintk("not locked!");
+	fprintk("not locked!");
 	return LG3306_UNLOCK;
 }
 
@@ -1534,7 +1574,6 @@ static int lgdt3306a_read_status(struct dvb_frontend *fe,
 				 enum fe_status *status)
 {
 	struct lgdt3306a_state *state = fe->demodulator_priv;
-
 	u16 strength = 0;
 	int ret = 0;
 
@@ -1638,6 +1677,7 @@ static int lgdt3306a_read_signal_strength(struct dvb_frontend *fe,
 		str = (0xffff * str) / 100;
 	}
 	*strength = (u16)str;
+//	fprintk("strength=%u", *strength);
 
 fail:
 	return ret;
@@ -1651,8 +1691,6 @@ static int lgdt3306a_read_ber(struct dvb_frontend *fe, u32 *ber)
 	u32 tmp;
 
 	*ber = 0;
-	/* FGR - FIXME - I don't know what value is expected by dvb_core
-	 * what is the scale of the value?? */
 	tmp =              read_reg(state, 0x00f8); /* VABER[15:8] */
 	tmp = (tmp << 8) | read_reg(state, 0x00f9); /* VABER[7:0]  */
 	return 0;
@@ -1667,6 +1705,7 @@ static int lgdt3306a_read_ucblocks(struct dvb_frontend *fe, u32 *ucblocks)
 	/* FGR - FIXME - I don't know what value is expected by dvb_core
 	 * what happens when value wraps? */
 	*ucblocks = read_reg(state, 0x00f4); /* TPIFTPERRCNT[0-7] */
+//	fprintk("ucblocks=%u", *ucblocks);
 #endif
 
 	return 0;
@@ -1678,6 +1717,9 @@ static int lgdt3306a_tune(struct dvb_frontend *fe, bool re_tune,
 {
 	int ret = 0;
 	struct lgdt3306a_state *state = fe->demodulator_priv;
+
+	fprintk("");
+
 	state->algo = LG3306_TUNE;
 
 	if (re_tune) {
@@ -1715,7 +1757,7 @@ static int lgdt3306a_search(struct dvb_frontend *fe)
 	enum fe_status status = 0;
 	int ret, i;
 
-	dprintk("lgdt3306a_search ");
+	fprintk("");
 
 	state->algo = LG3306_TUNE;
 
@@ -1726,7 +1768,7 @@ static int lgdt3306a_search(struct dvb_frontend *fe)
 
 	/* wait frontend lock */
 	for (i = 0; i < 5; i++) {
-		dprintk("loop=%d", i);
+		fprintk("loop=%d", i);
 
 		// no msleep() required as this function is so bloated already
 		lgdt3306a_read_status(fe, &status);
@@ -1748,7 +1790,7 @@ static int lgdt3306a_search(struct dvb_frontend *fe)
 	}
 
 error:
-	dprintk("failed (%d)", ret);
+	fprintk("failed (%d)", ret);
 	state->algo = LG3306_NOTUNE;
 	return DVBFE_ALGO_SEARCH_ERROR;
 }
@@ -1757,7 +1799,7 @@ static void lgdt3306a_release(struct dvb_frontend *fe)
 {
 	struct lgdt3306a_state *state = fe->demodulator_priv;
 
-	dprintk("");
+	fprintk("");
 	kfree(state);
 }
 
@@ -1770,7 +1812,7 @@ struct dvb_frontend *lgdt3306a_attach(const struct lgdt3306a_config *config,
 	int ret;
 	u8 val;
 
-	dprintk("(%d-%04x)",
+	fprintk("(%d-%04x)",
 	       i2c_adap ? i2c_adapter_id(i2c_adap) : 0,
 	       config ? config->i2c_addr : 0);
 
@@ -1792,7 +1834,7 @@ struct dvb_frontend *lgdt3306a_attach(const struct lgdt3306a_config *config,
 	if (lg_chkerr(ret))
 		goto fail;
 	if ((val & 0x74) != 0x74) {
-		dprintk("expected 0x74, got 0x%x", (val & 0x74));
+		fprintk("expected 0x74, got 0x%x", (val & 0x74));
 #if 0
 		/* FIXME - re-enable when we know this is right */
 		goto fail;
@@ -1802,7 +1844,7 @@ struct dvb_frontend *lgdt3306a_attach(const struct lgdt3306a_config *config,
 	if (lg_chkerr(ret))
 		goto fail;
 	if ((val & 0xf6) != 0xc6) {
-		dprintk("expected 0xc6, got 0x%x", (val & 0xf6));
+		fprintk("expected 0xc6, got 0x%x", (val & 0xf6));
 #if 0
 		/* FIXME - re-enable when we know this is right */
 		goto fail;
@@ -1812,7 +1854,7 @@ struct dvb_frontend *lgdt3306a_attach(const struct lgdt3306a_config *config,
 	if (lg_chkerr(ret))
 		goto fail;
 	if ((val & 0x73) != 0x03) {
-		dprintk("expected 0x03, got 0x%x", (val & 0x73));
+		fprintk("expected 0x03, got 0x%x", (val & 0x73));
 #if 0
 		/* FIXME - re-enable when we know this is right */
 		goto fail;
@@ -1827,7 +1869,7 @@ struct dvb_frontend *lgdt3306a_attach(const struct lgdt3306a_config *config,
 	return &state->frontend;
 
 fail:
-	dprintk("unable to detect LGDT3306A hardware");
+	fprintk("unable to detect LGDT3306A hardware");
 	kfree(state);
 	return NULL;
 }
@@ -1840,6 +1882,8 @@ static int lgdt3306a_get_spectrum_scan(struct dvb_frontend *fe, struct dvb_fe_sp
 	int x, ret;
 	u8 val;
 	u16 lvl;
+
+	fprintk("");
 
 	p->frequency		= 0;
 	p->bandwidth_hz		= 0;
@@ -1979,7 +2023,7 @@ static const short regtab[] = {
 	0x00a2, /* SAMFREQOFFSET[15:8] */
 	0x00a3, /* SAMFREQOFFSET[7:0] */
 	0x00a6, /* SYNCLOCK SYNCLOCKH */
-#if 1 /* covered elsewhere */
+#if 0 /* covered elsewhere */
 	0x00e8, /* CONSTPWR[15:8] */
 	0x00e9, /* CONSTPWR[7:0] */
 	0x00ea, /* BMSE[15:8] */
@@ -2128,14 +2172,14 @@ static void lgdt3306a_DumpRegs(struct lgdt3306a_state *state)
 
 	if ((debug & DBG_DUMP) == 0)
 		return;
-	debug &= ~dprintk; /* suppress dprintk during reg dump */
+	debug &= ~DBG_REG; /* suppress DBG_REG during reg dump */
 
-	lg_debug("");
+	lg_debug("\n");
 
 	for (i = 0; i < numDumpRegs; i++) {
 		lgdt3306a_read_reg(state, regtab[i], &regval1[i]);
 		if (regval1[i] != regval2[i]) {
-			lg_debug(" %04X = %02X", regtab[i], regval1[i]);
+			lg_debug(" %04X = %02X\n", regtab[i], regval1[i]);
 			regval2[i] = regval1[i];
 		}
 	}
@@ -2145,33 +2189,35 @@ static void lgdt3306a_DumpRegs(struct lgdt3306a_state *state)
 
 static int lgdt3306a_read_reg2(struct lgdt3306a_state *state, unsigned int reg, u8* out, u8 len)
 {
-        int ret;
+	int ret;
 
-        u8 b0[] = { reg >> 8, reg & 0xff };
-        struct i2c_msg msg[] = {
-                { .addr = state->cfg->i2c_addr, .flags       = 0,            .buf = b0,      .len = 2 },
-                { .addr = state->cfg->i2c_addr, .flags       = I2C_M_RD,     .buf = out,     .len = len }
-        };
+	u8 b0[] = { reg >> 8, reg & 0xff };
+	struct i2c_msg msg[] = {
+		{ .addr = state->cfg->i2c_addr, .flags       = 0,            .buf = b0,      .len = 2 },
+		{ .addr = state->cfg->i2c_addr, .flags       = I2C_M_RD,     .buf = out,     .len = len }
+	};
 
-        ret = i2c_transfer(state->i2c_adap, msg, 2);
-        if (ret != 2)
-		printk("%s: i2c error %d, reg[0x%02x]", __func__, ret, reg);
-        return 0;
+	ret = i2c_transfer(state->i2c_adap, msg, 2);
+	if (ret != 2)
+		fprintk("%s: i2c error %d, reg[0x%02x]", __func__, ret, reg);
+	return 0;
 }
 
 static int lgdt3306a_get_constellation_samples(struct dvb_frontend *fe, struct dvb_fe_constellation_samples *s)
 {
-        struct lgdt3306a_state *state = fe->demodulator_priv;
-        u32 x;
-        u8 buf[2];
+	struct lgdt3306a_state *state = fe->demodulator_priv;
+	u32 x;
+	u8 buf[2];
 
-        for (x = 0 ; x < s->num ; x++)
-        {
-                lgdt3306a_read_reg2(state, 0x00ee, buf, 2);
-                s->samples[x].imaginary= buf[0]; //real and imaginary are swapped
-                s->samples[x].real = buf[1];
-        }
-        return 0;
+	fprintk("");
+
+	for (x = 0 ; x < s->num ; x++)
+	{
+		lgdt3306a_read_reg2(state, 0x00ee, buf, 2);
+		s->samples[x].imaginary= buf[0]; //real and imaginary are swapped
+		s->samples[x].real = buf[1];
+	}
+	return 0;
 }
 
 static const struct dvb_frontend_ops lgdt3306a_ops = {
@@ -2206,7 +2252,7 @@ static const struct dvb_frontend_ops lgdt3306a_ops = {
 	.search               = lgdt3306a_search,
 	.dtv_tune	      = lgdt3306a_dtv_tune,
 	.get_spectrum_scan    = lgdt3306a_get_spectrum_scan,
-        .get_constellation_samples      = lgdt3306a_get_constellation_samples,
+	.get_constellation_samples      = lgdt3306a_get_constellation_samples,
 };
 
 static int lgdt3306a_select(struct i2c_mux_core *muxc, u32 chan)
@@ -2271,6 +2317,8 @@ static int lgdt3306a_probe(struct i2c_client *client,
 	*config->i2c_adapter = state->muxc->adapter[0];
 	*config->fe = fe;
 
+	fprintk("LG Electronics LGDT3306A successfully identified");
+
 	return 0;
 
 err_kfree:
@@ -2278,7 +2326,7 @@ err_kfree:
 err_fe:
 	kfree(config);
 fail:
-	dev_dbg(&client->dev, "failed=%d", ret);
+	fprintk("probe failed = %d", ret);
 	return ret;
 }
 

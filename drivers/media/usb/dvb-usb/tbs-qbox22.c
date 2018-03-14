@@ -43,8 +43,6 @@ struct tbsqbox22_rc_keys {
 	u32 event;
 };
 
-#define dprintk(fmt, arg...)	printk(KERN_INFO "%s: " fmt "\n",  __func__, ##arg)
-
 DVB_DEFINE_MOD_OPT_ADAPTER_NR(adapter_nr);
 
 static int tbsqbox22_op_rw(struct usb_device *dev, u8 request, u16 value, u16 index, u8 * data, u16 len, int flags)
@@ -110,7 +108,7 @@ static int tbsqbox22_i2c_transfer(struct i2c_adapter *adap, struct i2c_msg msg[]
 			msg[0].buf[0] = buf[2];
 			msg[0].buf[1] = buf[3];
 			msleep(3);
-			//dprintk("TBSQBOX_RC_QUERY %x %x %x %x\n",buf6[0],buf6[1],buf6[2],buf6[3]);
+			//fprintk("TBSQBOX_RC_QUERY %x %x %x %x\n",buf6[0],buf6[1],buf6[2],buf6[3]);
 			break;
 		case (TBSQBOX_VOLTAGE_CTRL):
 			break;
@@ -152,7 +150,7 @@ static int tbsqbox22_read_mac_address(struct dvb_usb_device *d, u8 mac[6])
 		ret = tbsqbox22_op_rw(d->udev, 0x90, 0, 0, buf, 3, TBSQBOX_WRITE_MSG);
 		ret = tbsqbox22_op_rw(d->udev, 0x91, 0, 0, buf, 1, TBSQBOX_READ_MSG);
 			if (ret < 0) {
-				dprintk("read eeprom failed");
+				fprintk("read eeprom failed");
 				return -1;
 			} else {
 				eepromline[i % 16] = buf[0];
@@ -279,7 +277,7 @@ static int tbsqbox22_rc_query(struct dvb_usb_device *d, u32 *event, int *state)
 
 	*state = REMOTE_NO_KEY_PRESSED;
 	if (tbsqbox22_i2c_transfer(&d->i2c_adap, msg, 1) == 1) {
-		//dprintk("key: %x %x\n",msg[0].buf[0],msg[0].buf[1]);
+		//fprintk("key: %x %x\n",msg[0].buf[0],msg[0].buf[1]);
 		for (i = 0; i < keymap_size; i++) {
 			if (rc5_data(&keymap[i]) == msg[0].buf[1]) {
 				*state = REMOTE_KEY_PRESSED;
@@ -313,7 +311,7 @@ static int tbsqbox22_load_firmware(struct usb_device *dev, const struct firmware
 	case 0x5922:
 		ret = request_firmware(&fw, filename, &dev->dev);
 		if (ret != 0) {
-			dprintk("Firmware not found: %s", filename);
+			fprintk("Firmware not found: %s", filename);
 			return ret;
 		}
 		break;
@@ -321,7 +319,7 @@ static int tbsqbox22_load_firmware(struct usb_device *dev, const struct firmware
 		fw = frmwr;
 		break;
 	}
-	dprintk("start downloading TBSQBOX firmware");
+	fprintk("start downloading TBSQBOX firmware");
 	p = kmalloc(fw->size, GFP_KERNEL);
 	reset = 1;
 	/*stop the CPU*/
@@ -333,7 +331,7 @@ static int tbsqbox22_load_firmware(struct usb_device *dev, const struct firmware
 		for (i = 0; i < fw->size; i += 0x40) {
 			b = (u8 *) p + i;
 			if (tbsqbox22_op_rw(dev, 0xa0, i, 0, b , 0x40, TBSQBOX_WRITE_MSG) != 0x40) {
-				dprintk("error while transferring firmware");
+				fprintk("error while transferring firmware");
 				ret = -EINVAL;
 				break;
 			}
@@ -341,11 +339,11 @@ static int tbsqbox22_load_firmware(struct usb_device *dev, const struct firmware
 		/* restart the CPU */
 		reset = 0;
 		if (ret || tbsqbox22_op_rw(dev, 0xa0, 0x7f92, 0, &reset, 1, TBSQBOX_WRITE_MSG) != 1) {
-			dprintk("could not restart the USB controller CPU.");
+			fprintk("could not restart the USB controller CPU.");
 			ret = -EINVAL;
 		}
 		if (ret || tbsqbox22_op_rw(dev, 0xa0, 0xe600, 0, &reset, 1, TBSQBOX_WRITE_MSG) != 1) {
-			dprintk("could not restart the USB controller CPU.");
+			fprintk("could not restart the USB controller CPU.");
 			ret = -EINVAL;
 		}
 
@@ -420,7 +418,7 @@ static int __init tbsqbox22_module_init(void)
 {
 	int ret =  usb_register(&tbsqbox22_driver);
 	if (ret)
-		dprintk("usb_register failed. Error number %d", ret);
+		fprintk("usb_register failed. Error number %d", ret);
 
 	return ret;
 }

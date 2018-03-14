@@ -560,7 +560,7 @@ static const struct s5h1409_config pinnacle_pctv_hd_800i_config = {
 	.qam_if	       = 44000,
 	.inversion     = S5H1409_INVERSION_OFF,
 	.status_mode   = S5H1409_DEMODLOCKING,
-	.mpeg_timing   = S5H1409_MPEGTIMING_NONCONTINOUS_NONINVERTING_CLOCK,
+	.mpeg_timing   = S5H1409_MPEGTIMING_NONCONTINUOUS_NONINVERTING_CLOCK,
 };
 
 static const struct s5h1409_config dvico_hdtv5_pci_nano_config = {
@@ -569,7 +569,7 @@ static const struct s5h1409_config dvico_hdtv5_pci_nano_config = {
 	.gpio          = S5H1409_GPIO_OFF,
 	.inversion     = S5H1409_INVERSION_OFF,
 	.status_mode   = S5H1409_DEMODLOCKING,
-	.mpeg_timing   = S5H1409_MPEGTIMING_CONTINOUS_NONINVERTING_CLOCK,
+	.mpeg_timing   = S5H1409_MPEGTIMING_CONTINUOUS_NONINVERTING_CLOCK,
 };
 
 static const struct s5h1409_config kworld_atsc_120_config = {
@@ -578,7 +578,7 @@ static const struct s5h1409_config kworld_atsc_120_config = {
 	.gpio	       = S5H1409_GPIO_OFF,
 	.inversion     = S5H1409_INVERSION_OFF,
 	.status_mode   = S5H1409_DEMODLOCKING,
-	.mpeg_timing   = S5H1409_MPEGTIMING_CONTINOUS_NONINVERTING_CLOCK,
+	.mpeg_timing   = S5H1409_MPEGTIMING_CONTINUOUS_NONINVERTING_CLOCK,
 };
 
 static const struct xc5000_config pinnacle_pctv_hd_800i_tuner_config = {
@@ -601,7 +601,7 @@ static const struct zl10353_config cx88_geniatech_x8000_mt = {
 static const struct s5h1411_config dvico_fusionhdtv7_config = {
 	.output_mode   = S5H1411_SERIAL_OUTPUT,
 	.gpio          = S5H1411_GPIO_ON,
-	.mpeg_timing   = S5H1411_MPEGTIMING_CONTINOUS_NONINVERTING_CLOCK,
+	.mpeg_timing   = S5H1411_MPEGTIMING_CONTINUOUS_NONINVERTING_CLOCK,
 	.qam_if        = S5H1411_IF_44000,
 	.vsb_if        = S5H1411_IF_44000,
 	.inversion     = S5H1411_INVERSION_OFF,

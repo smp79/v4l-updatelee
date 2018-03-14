@@ -1,3 +1,5 @@
+- Aero-M (dvb_usb_mxl111sf) has usb write issues
+
 - saa716x: remove worker_demux
 - stv090x should have two types of locking, normal (default right now) and slow (SR = 1000 and loops 3x before failing)
 - TBS5925 impliment voltage off

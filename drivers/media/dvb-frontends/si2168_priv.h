@@ -23,8 +23,6 @@
 #include <linux/i2c-mux.h>
 #include <linux/kernel.h>
 
-#define dprintk(fmt, arg...)	printk(KERN_INFO pr_fmt("%s: " fmt "\n"),  __func__, ##arg)
-
 #define SI2168_A20_FIRMWARE "dvb-demod-si2168-a20-01.fw"
 #define SI2168_A30_FIRMWARE "dvb-demod-si2168-a30-01.fw"
 #define SI2168_B40_FIRMWARE "dvb-demod-si2168-b40-01.fw"
@@ -56,6 +54,7 @@ struct si2168_dev {
 	u8 ts_mode;
 	bool ts_clock_inv;
 	bool ts_clock_gapped;
+	bool spectral_inversion;
 	int fef_pin;
 	bool fef_inv;
 	int agc_pin;

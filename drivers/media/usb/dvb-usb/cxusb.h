@@ -5,8 +5,6 @@
 #define DVB_USB_LOG_PREFIX "cxusb"
 #include "dvb-usb.h"
 
-#define dprintk(fmt, arg...)	printk(KERN_INFO pr_fmt("%s: " fmt "\n"),  __func__, ##arg)
-
 /* usb commands - some of it are guesses, don't have a reference yet */
 #define CMD_BLUEBIRD_GPIO_RW 0x05
 

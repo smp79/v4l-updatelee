@@ -193,7 +193,7 @@ static struct s5h1409_config hauppauge_generic_config = {
 	.qam_if        = 44000,
 	.inversion     = S5H1409_INVERSION_OFF,
 	.status_mode   = S5H1409_DEMODLOCKING,
-	.mpeg_timing   = S5H1409_MPEGTIMING_CONTINOUS_NONINVERTING_CLOCK,
+	.mpeg_timing   = S5H1409_MPEGTIMING_CONTINUOUS_NONINVERTING_CLOCK,
 };
 
 static struct tda10048_config hauppauge_hvr1200_config = {
@@ -225,7 +225,7 @@ static struct s5h1409_config hauppauge_ezqam_config = {
 	.qam_if        = 4000,
 	.inversion     = S5H1409_INVERSION_ON,
 	.status_mode   = S5H1409_DEMODLOCKING,
-	.mpeg_timing   = S5H1409_MPEGTIMING_CONTINOUS_NONINVERTING_CLOCK,
+	.mpeg_timing   = S5H1409_MPEGTIMING_CONTINUOUS_NONINVERTING_CLOCK,
 };
 
 static struct s5h1409_config hauppauge_hvr1800lp_config = {
@@ -235,7 +235,7 @@ static struct s5h1409_config hauppauge_hvr1800lp_config = {
 	.qam_if        = 44000,
 	.inversion     = S5H1409_INVERSION_OFF,
 	.status_mode   = S5H1409_DEMODLOCKING,
-	.mpeg_timing   = S5H1409_MPEGTIMING_CONTINOUS_NONINVERTING_CLOCK,
+	.mpeg_timing   = S5H1409_MPEGTIMING_CONTINUOUS_NONINVERTING_CLOCK,
 };
 
 static struct s5h1409_config hauppauge_hvr1500_config = {
@@ -244,7 +244,7 @@ static struct s5h1409_config hauppauge_hvr1500_config = {
 	.gpio          = S5H1409_GPIO_OFF,
 	.inversion     = S5H1409_INVERSION_OFF,
 	.status_mode   = S5H1409_DEMODLOCKING,
-	.mpeg_timing   = S5H1409_MPEGTIMING_CONTINOUS_NONINVERTING_CLOCK,
+	.mpeg_timing   = S5H1409_MPEGTIMING_CONTINUOUS_NONINVERTING_CLOCK,
 };
 
 static struct mt2131_config hauppauge_generic_tunerconfig = {
@@ -264,7 +264,7 @@ static struct s5h1409_config hauppauge_hvr1500q_config = {
 	.qam_if        = 44000,
 	.inversion     = S5H1409_INVERSION_OFF,
 	.status_mode   = S5H1409_DEMODLOCKING,
-	.mpeg_timing   = S5H1409_MPEGTIMING_CONTINOUS_NONINVERTING_CLOCK,
+	.mpeg_timing   = S5H1409_MPEGTIMING_CONTINUOUS_NONINVERTING_CLOCK,
 };
 
 static struct s5h1409_config dvico_s5h1409_config = {
@@ -274,7 +274,7 @@ static struct s5h1409_config dvico_s5h1409_config = {
 	.qam_if        = 44000,
 	.inversion     = S5H1409_INVERSION_OFF,
 	.status_mode   = S5H1409_DEMODLOCKING,
-	.mpeg_timing   = S5H1409_MPEGTIMING_CONTINOUS_NONINVERTING_CLOCK,
+	.mpeg_timing   = S5H1409_MPEGTIMING_CONTINUOUS_NONINVERTING_CLOCK,
 };
 
 static struct s5h1411_config dvico_s5h1411_config = {
@@ -284,7 +284,7 @@ static struct s5h1411_config dvico_s5h1411_config = {
 	.vsb_if        = S5H1411_IF_44000,
 	.inversion     = S5H1411_INVERSION_OFF,
 	.status_mode   = S5H1411_DEMODLOCKING,
-	.mpeg_timing   = S5H1411_MPEGTIMING_CONTINOUS_NONINVERTING_CLOCK,
+	.mpeg_timing   = S5H1411_MPEGTIMING_CONTINUOUS_NONINVERTING_CLOCK,
 };
 
 static struct s5h1411_config hcw_s5h1411_config = {
@@ -294,7 +294,7 @@ static struct s5h1411_config hcw_s5h1411_config = {
 	.qam_if        = S5H1411_IF_4000,
 	.inversion     = S5H1411_INVERSION_ON,
 	.status_mode   = S5H1411_DEMODLOCKING,
-	.mpeg_timing   = S5H1411_MPEGTIMING_CONTINOUS_NONINVERTING_CLOCK,
+	.mpeg_timing   = S5H1411_MPEGTIMING_CONTINUOUS_NONINVERTING_CLOCK,
 };
 
 static struct xc5000_config hauppauge_hvr1500q_tunerconfig = {
@@ -511,7 +511,6 @@ static struct cx24116_config tbs_cx24116_config = {
 
 static struct cx24117_config tbs_cx24117_config = {
 	.demod_address = 0x55,
-	.lnb_power = NULL,
 };
 
 static struct ds3000_config tevii_ds3000_config = {
@@ -2388,16 +2387,6 @@ static int dvb_register(struct cx23885_tsport *port)
 				goto frontend_detach;
 			}
 			port->i2c_client_tuner = client_tuner;
-
-			/* we only attach tuner for analog on the 888 version */
-			if (dev->board == CX23885_BOARD_HAUPPAUGE_QUADHD_DVB) {
-				pr_info("%s(): QUADHD_DVB analog setup\n",
-					__func__);
-				dev->ts1.analog_fe.tuner_priv = client_tuner;
-				dvb_attach(si2157_attach, &dev->ts1.analog_fe,
-					info.addr, &dev->i2c_bus[1].i2c_adap,
-					&si2157_config);
-			}
 			break;
 
 		/* port c - terrestrial/cable */
@@ -2487,16 +2476,6 @@ static int dvb_register(struct cx23885_tsport *port)
 				goto frontend_detach;
 			}
 			port->i2c_client_tuner = client_tuner;
-
-			/* we only attach tuner for analog on the 888 version */
-			if (dev->board == CX23885_BOARD_HAUPPAUGE_QUADHD_ATSC) {
-				pr_info("%s(): QUADHD_ATSC analog setup\n",
-					__func__);
-				dev->ts1.analog_fe.tuner_priv = client_tuner;
-				dvb_attach(si2157_attach, &dev->ts1.analog_fe,
-					info.addr, &dev->i2c_bus[1].i2c_adap,
-					&si2157_config);
-			}
 			break;
 
 		/* port c - terrestrial/cable */
@@ -2537,14 +2516,14 @@ static int dvb_register(struct cx23885_tsport *port)
 		}
 		break;
 	case CX23885_BOARD_HAUPPAUGE_HVR1265_K4:
-		pr_info("%s(): port=%d\n", __func__, port->nr);
 		switch (port->nr) {
 		/* port c - Terrestrial/cable */
 		case 2:
 			/* attach frontend */
 			i2c_bus = &dev->i2c_bus[0];
 			fe0->dvb.frontend = dvb_attach(lgdt3306a_attach,
-			&hauppauge_hvr1265k4_config, &i2c_bus->i2c_adap);
+					&hauppauge_hvr1265k4_config,
+					&i2c_bus->i2c_adap);
 			if (fe0->dvb.frontend == NULL)
 				break;
 
@@ -2559,26 +2538,18 @@ static int dvb_register(struct cx23885_tsport *port)
 			info.platform_data = &si2157_config;
 			request_module("%s", info.type);
 			client_tuner = i2c_new_device(&dev->i2c_bus[1].i2c_adap, &info);
-			if (!client_tuner || !client_tuner->dev.driver) {
+			if (!client_tuner || !client_tuner->dev.driver)
 				goto frontend_detach;
-			}
+
 			if (!try_module_get(client_tuner->dev.driver->owner)) {
 				i2c_unregister_device(client_tuner);
 				client_tuner = NULL;
 				goto frontend_detach;
 			}
 			port->i2c_client_tuner = client_tuner;
-
-			dev->ts1.analog_fe.tuner_priv = client_tuner;
-			dvb_attach(si2157_attach, &dev->ts1.analog_fe,
-				0x60, &dev->i2c_bus[1].i2c_adap,
-				&si2157_config);
-			pr_info("%s(): HVR1265_K4 setup\n", __func__);
 			break;
 		}
 		break;
-
-
 	default:
 		pr_info("%s: The frontend of your DVB/ATSC card  isn't supported yet\n",
 			dev->name);

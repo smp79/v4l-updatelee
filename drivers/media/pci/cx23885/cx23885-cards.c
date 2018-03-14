@@ -325,7 +325,8 @@ struct cx23885_board cx23885_boards[] = {
 		.name		= "Hauppauge WinTV-HVR1255",
 		.porta		= CX23885_ANALOG_VIDEO,
 		.portc		= CX23885_MPEG_DVB,
-		.tuner_type	= TUNER_NXP_TDA18271,
+		.tuner_type	= TUNER_ABSENT,
+		.tuner_addr	= 0x42, /* 0x84 >> 1 */
 		.force_bff	= 1,
 		.input          = {{
 			.type   = CX23885_VMUX_TELEVISION,
@@ -353,7 +354,8 @@ struct cx23885_board cx23885_boards[] = {
 		.name		= "Hauppauge WinTV-HVR1255",
 		.porta		= CX23885_ANALOG_VIDEO,
 		.portc		= CX23885_MPEG_DVB,
-		.tuner_type	= TUNER_NXP_TDA18271,
+		.tuner_type	= TUNER_ABSENT,
+		.tuner_addr	= 0x42, /* 0x84 >> 1 */
 		.force_bff	= 1,
 		.input          = {{
 			.type   = CX23885_VMUX_TELEVISION,
@@ -765,63 +767,32 @@ struct cx23885_board cx23885_boards[] = {
 		} },
 	},
 	[CX23885_BOARD_HAUPPAUGE_QUADHD_DVB] = {
-		.name         = "Hauppauge WinTV-QuadHD-DVB",
-		.porta        = CX23885_ANALOG_VIDEO,
+		.name        = "Hauppauge WinTV-QuadHD-DVB",
 		.portb        = CX23885_MPEG_DVB,
 		.portc        = CX23885_MPEG_DVB,
-		.tuner_type	= TUNER_ABSENT,
-		.force_bff	= 1,
-		.input          = {{
-			.type   = CX23885_VMUX_TELEVISION,
-			.vmux   =	CX25840_VIN7_CH3 |
-					CX25840_VIN5_CH2 |
-					CX25840_VIN2_CH1 |
-					CX25840_DIF_ON,
-			.amux   = CX25840_AUDIO8,
-		} },
 	},
 	[CX23885_BOARD_HAUPPAUGE_QUADHD_DVB_885] = {
-		.name         = "Hauppauge WinTV-QuadHD-DVB(885)",
+		.name       = "Hauppauge WinTV-QuadHD-DVB(885)",
 		.portb        = CX23885_MPEG_DVB,
 		.portc        = CX23885_MPEG_DVB,
-		.tuner_type   = TUNER_ABSENT,
 	},
 	[CX23885_BOARD_HAUPPAUGE_QUADHD_ATSC] = {
-		.name         = "Hauppauge WinTV-QuadHD-ATSC",
-		.porta        = CX23885_ANALOG_VIDEO,
+		.name        = "Hauppauge WinTV-QuadHD-ATSC",
 		.portb        = CX23885_MPEG_DVB,
 		.portc        = CX23885_MPEG_DVB,
-		.tuner_type	= TUNER_ABSENT,
-		.force_bff	= 1,
-		.input          = {{
-			.type   = CX23885_VMUX_TELEVISION,
-			.vmux   =	CX25840_VIN7_CH3 |
-					CX25840_VIN5_CH2 |
-					CX25840_VIN2_CH1 |
-					CX25840_DIF_ON,
-			.amux   = CX25840_AUDIO8,
-		} },
 	},
 	[CX23885_BOARD_HAUPPAUGE_QUADHD_ATSC_885] = {
-		.name         = "Hauppauge WinTV-QuadHD-ATSC(885)",
+		.name       = "Hauppauge WinTV-QuadHD-ATSC(885)",
 		.portb        = CX23885_MPEG_DVB,
 		.portc        = CX23885_MPEG_DVB,
-		.tuner_type   = TUNER_ABSENT,
 	},
 	[CX23885_BOARD_HAUPPAUGE_HVR1265_K4] = {
 		.name		= "Hauppauge WinTV-HVR-1265(161111)",
-		.porta		= CX23885_ANALOG_VIDEO,
+		.porta          = CX23885_ANALOG_VIDEO,
 		.portc		= CX23885_MPEG_DVB,
-		.tuner_type	= TUNER_SILABS_SI2157,
+		.tuner_type     = TUNER_ABSENT,
 		.force_bff	= 1,
 		.input          = {{
-			.type   = CX23885_VMUX_TELEVISION,
-			.vmux   =	CX25840_VIN7_CH3 |
-					CX25840_VIN5_CH2 |
-					CX25840_VIN2_CH1 |
-					CX25840_DIF_ON,
-			.amux   = CX25840_AUDIO8,
-		}, {
 			.type   = CX23885_VMUX_COMPOSITE1,
 			.vmux   =	CX25840_VIN7_CH3 |
 					CX25840_VIN4_CH2 |
@@ -1364,7 +1335,7 @@ static void hauppauge_eeprom(struct cx23885_dev *dev, u8 *eeprom_data)
 		/* WinTV-HVR5525 (PCIe, DVB-S/S2, DVB-T/T2/C) */
 		break;
 	case 161111:
-		/* WinTV-HVR-1265 (PCIe, Analog/ATSC/QAM-B) */
+		/* WinTV-HVR-1265 K4 (PCIe, Analog/ATSC/QAM-B) */
 		break;
 	case 166100: /* 888 version, hybrid */
 	case 166200: /* 885 version, DVB only */
@@ -2154,7 +2125,6 @@ void cx23885_card_setup(struct cx23885_dev *dev)
 	case CX23885_BOARD_HAUPPAUGE_QUADHD_DVB_885:
 	case CX23885_BOARD_HAUPPAUGE_QUADHD_ATSC:
 	case CX23885_BOARD_HAUPPAUGE_QUADHD_ATSC_885:
-
 		if (dev->i2c_bus[0].i2c_rc == 0)
 			hauppauge_eeprom(dev, eeprom+0xc0);
 		break;
@@ -2392,6 +2362,10 @@ void cx23885_card_setup(struct cx23885_dev *dev)
 				&dev->i2c_bus[2].i2c_adap,
 				"cx25840", 0x88 >> 1, NULL);
 		if (dev->sd_cx25840) {
+			/* set host data for clk_freq configuration */
+			v4l2_set_subdev_hostdata(dev->sd_cx25840,
+						&dev->clk_freq);
+
 			dev->sd_cx25840->grp_id = CX23885_HW_AV_CORE;
 			v4l2_subdev_call(dev->sd_cx25840, core, load_fw);
 		}
