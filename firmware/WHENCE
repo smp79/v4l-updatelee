@@ -8,6 +8,14 @@ kernel.
 
 --------------------------------------------------------------------------
 
+Driver: BCM-0bb4-0306 Cypress Bluetooth firmware for HTC Vive
+
+File: brcm/BCM-0bb4-0306.hcd
+
+Licence: Redistributable. See LICENCE.broadcom_bcm43xx for details.
+
+--------------------------------------------------------------------------
+
 Driver: ambassador -- Madge Ambassador (Collage PCI 155 Server) ATM NIC.
 
 File: atmsar11.fw
@@ -990,10 +998,10 @@ File: iwlwifi-9000-pu-b0-jf-b0-33.ucode
 Version: 33.610294.0
 
 File: iwlwifi-9000-pu-b0-jf-b0-34.ucode
-Version: 34.618819.0
+Version: 34.ba501b11.0
 
 File: iwlwifi-9260-th-b0-jf-b0-34.ucode
-Version: 34.618819.0
+Version: 34.ba501b11.0
 
 Licence: Redistributable. See LICENCE.iwlwifi_firmware for details
 
@@ -2123,10 +2131,14 @@ File: qed/qed_init_values_zipped-8.7.3.0.bin
 File: qed/qed_init_values_zipped-8.10.5.0.bin
 File: qed/qed_init_values-8.10.9.0.bin
 File: qed/qed_init_values_zipped-8.10.10.0.bin
+File: qed/qed_init_values-8.14.6.0.bin
 File: qed/qed_init_values_zipped-8.15.3.0.bin
+File: qed/qed_init_values-8.18.9.0.bin
 File: qed/qed_init_values_zipped-8.20.0.0.bin
+File: qed/qed_init_values-8.20.0.0.bin
 File: qed/qed_init_values-8.30.12.0.bin
 File: qed/qed_init_values_zipped-8.33.1.0.bin
+File: qed/qed_init_values_zipped-8.33.11.0.bin
 
 Licence:
   This file contains firmware data derived from proprietary unpublished
@@ -2751,7 +2763,7 @@ File: ath10k/QCA988X/hw2.0/firmware-4.bin
 Version: 10.2.4.45
 Licence: ath10k/QCA988X/hw2.0/notice_ath10k_firmware-4.txt
 File: ath10k/QCA988X/hw2.0/firmware-5.bin
-Version: 10.2.4.70.54
+Version: 10.2.4-1.0-00037
 Licence: ath10k/QCA988X/hw2.0/notice_ath10k_firmware-5.txt
 File: ath10k/QCA6174/hw2.1/board.bin
 File: ath10k/QCA6174/hw2.1/board-2.bin
@@ -2764,12 +2776,12 @@ File: ath10k/QCA6174/hw3.0/firmware-4.bin
 Version: WLAN.RM.2.0-00180-QCARMSWPZ-1
 Licence: ath10k/QCA6174/hw3.0/notice_ath10k_firmware-4.txt
 File: ath10k/QCA6174/hw3.0/firmware-6.bin
-Version: WLAN.RM.4.4.1-00051-QCARMSWP-1
+Version: WLAN.RM.4.4.1-00079-QCARMSWPZ-1
 Licence: ath10k/QCA6174/hw3.0/notice_ath10k_firmware-6.txt
 File: ath10k/QCA9377/hw1.0/board.bin
 File: ath10k/QCA9377/hw1.0/board-2.bin
 File: ath10k/QCA9377/hw1.0/firmware-5.bin
-Version: WLAN.TF.1.0-00267-1
+Version: WLAN.TF.1.0-00002-QCATFSWPZ-5
 Licence: ath10k/QCA9377/hw1.0/notice_ath10k_firmware-5.txt
 File: ath10k/QCA99X0/hw2.0/board.bin
 File: ath10k/QCA99X0/hw2.0/firmware-5.bin
@@ -2777,19 +2789,19 @@ Version: 10.4.1.00030-1
 Licence: ath10k/QCA99X0/hw2.0/notice_ath10k_firmware-5.txt
 File: ath10k/QCA4019/hw1.0/board-2.bin
 File: ath10k/QCA4019/hw1.0/firmware-5.bin
-Version: 10.4-3.4-00082
+Version: 10.4-3.5.3-00053
 Licence: ath10k/QCA4019/hw1.0/notice_ath10k_firmware-5.txt
 File: ath10k/QCA9887/hw1.0/board.bin
 File: ath10k/QCA9887/hw1.0/firmware-5.bin
-Version: 10.2.4-1.0-00029
+Version: 10.2.4-1.0-00037
 Licence: ath10k/QCA9887/hw1.0/notice_ath10k_firmware-5.txt
 File: ath10k/QCA9888/hw2.0/board-2.bin
 File: ath10k/QCA9888/hw2.0/firmware-5.bin
-Version: 10.4-3.5.1-00014
+Version: 10.4-3.5.3-00053
 Licence: ath10k/QCA9888/hw2.0/notice_ath10k_firmware-5.txt
 File: ath10k/QCA9984/hw1.0/board-2.bin
 File: ath10k/QCA9984/hw1.0/firmware-5.bin
-Version: 10.4-3.4-00082
+Version: 10.4-3.5.3-00053
 Licence: ath10k/QCA9984/hw1.0/notice_ath10k_firmware-5.txt
 
 Licence: Redistributable. See LICENSE.QualcommAtheros_ath10k for details
@@ -2948,7 +2960,7 @@ Version: BT_StonePeak_C0_REL_59_0001
 File: intel/ibt-hw-37.8.10-fw-1.10.3.11.e.bseq
 Version: BT_StonePeak_D0_REL_37_0002
 File: intel/ibt-hw-37.8.10-fw-22.50.19.14.f.bseq
-Version: BT_StonePeak_D1_REL_28_0001
+Version: BT_StonePeak_D1_REL_51_00001
 File: intel/ibt-11-5.ddc
 Version: LnP/SfP_REL0432
 File: intel/ibt-11-5.sfi
@@ -3286,7 +3298,9 @@ File: intel/dsp_fw_kbl_v2630.bin
 Version: 9.21.00.2630_97
 File: intel/dsp_fw_kbl_v3266.bin
 Version: 9.21.00.3266_144
-Link: intel/dsp_fw_kbl.bin -> dsp_fw_kbl_v3266.bin
+File: intel/dsp_fw_kbl_v3420.bin
+Version: 9.21.00.3420_163
+Link: intel/dsp_fw_kbl.bin -> dsp_fw_kbl_v3420.bin
 
 License: Redistributable. See LICENCE.adsp_sst for details
 
@@ -3886,6 +3900,7 @@ Driver: mlxsw_spectrum - Mellanox Spectrum switch
 
 File: mellanox/mlxsw_spectrum-13.1420.122.mfa2
 File: mellanox/mlxsw_spectrum-13.1530.152.mfa2
+File: mellanox/mlxsw_spectrum-13.1620.192.mfa2
 
 Licence:
  Copyright (c) 2017 Mellanox Technologies, Ltd. All rights reserved.
