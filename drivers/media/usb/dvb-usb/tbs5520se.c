@@ -23,7 +23,7 @@
 
 struct tbs5520se_state {
 	struct i2c_client *i2c_client_demod;
-	struct i2c_client *i2c_client_tuner; 
+	struct i2c_client *i2c_client_tuner;
 	u32 last_key_pressed;
 };
 
@@ -36,7 +36,7 @@ static struct av201x_config tbs5520se_av201x_cfg = {
 /* debug */
 static int dvb_usb_tbs5520se_debug;
 module_param_named(debug, dvb_usb_tbs5520se_debug, int, 0644);
-MODULE_PARM_DESC(debug, "set debugging level (1=info 2=xfer (or-able))." 
+MODULE_PARM_DESC(debug, "set debugging level (1=info 2=xfer (or-able))."
 							DVB_USB_DEBUG_STATUS);
 
 DVB_DEFINE_MOD_OPT_ADAPTER_NR(adapter_nr);
@@ -66,7 +66,7 @@ static int tbs5520se_op_rw(struct usb_device *dev, u8 request, u16 value,
 }
 
 /* I2C */
-static int tbs5520se_i2c_transfer(struct i2c_adapter *adap, 
+static int tbs5520se_i2c_transfer(struct i2c_adapter *adap,
 					struct i2c_msg msg[], int num)
 {
 	struct dvb_usb_device *d = i2c_get_adapdata(adap);
@@ -153,7 +153,7 @@ static struct i2c_algorithm tbs5520se_i2c_algo = {
 	.functionality = tbs5520se_i2c_func,
 };
 
-static int tbs5520se_set_voltage(struct dvb_frontend *fe, 
+static int tbs5520se_set_voltage(struct dvb_frontend *fe,
 						enum fe_sec_voltage voltage)
 {
 	static u8 command_13v[1] = {0x00};
@@ -162,7 +162,7 @@ static int tbs5520se_set_voltage(struct dvb_frontend *fe,
 		{.addr = TBS5520se_VOLTAGE_CTRL, .flags = 0,
 			.buf = command_13v, .len = 1},
 	};
-	
+
 	struct dvb_usb_adapter *udev_adap =
 		(struct dvb_usb_adapter *)(fe->dvb->priv);
 	if (voltage == SEC_VOLTAGE_18)
@@ -170,7 +170,7 @@ static int tbs5520se_set_voltage(struct dvb_frontend *fe,
 
 	//info("tbs5520se_set_voltage %d",voltage);
 	i2c_transfer(&udev_adap->dev->i2c_adap, msg, 1);
-	
+
 	return 0;
 }
 
@@ -195,7 +195,7 @@ static int tbs5520se_read_mac_address(struct dvb_usb_device *d, u8 mac[6])
 				eepromline[i%16] = ibuf[0];
 				eeprom[i] = ibuf[0];
 			}
-			
+
 			if ((i % 16) == 15) {
 				deb_xfer("%02x: ", i - 15);
 				debug_dump(eepromline, 16, deb_xfer);
@@ -223,7 +223,7 @@ static int tbs5520se_frontend_attach(struct dvb_usb_adapter *adap)
 	/* attach frontend */
 	memset(&si2183_config,0,sizeof(si2183_config));
 	si2183_config.i2c_adapter = &adapter;
-	si2183_config.fe = &adap->fe_adap[0].fe;	
+	si2183_config.fe = &adap->fe_adap[0].fe;
 	si2183_config.ts_mode = SI2183_TS_PARALLEL;
 	si2183_config.ts_clock_gapped = true;
 	si2183_config.rf_in = 0;
@@ -253,11 +253,11 @@ static int tbs5520se_frontend_attach(struct dvb_usb_adapter *adap)
 
 	/* terrestrial tuner */
 	memset(adap->fe_adap[0].fe->ops.delsys, 0, MAX_DELSYS);
-	adap->fe_adap[0].fe->ops.delsys[0] = SYS_DVBT;
-	adap->fe_adap[0].fe->ops.delsys[1] = SYS_DVBT2;
-	adap->fe_adap[0].fe->ops.delsys[2] = SYS_DVBC_ANNEX_A;
-	adap->fe_adap[0].fe->ops.delsys[3] = SYS_ISDBT;
-	adap->fe_adap[0].fe->ops.delsys[4] = SYS_DVBC_ANNEX_B;
+	adap->fe_adap[0].fe->ops.delsys[0] = SYS_DVBC_ANNEX_A;
+	adap->fe_adap[0].fe->ops.delsys[1] = SYS_DVBC_ANNEX_B;
+	adap->fe_adap[0].fe->ops.delsys[2] = SYS_ISDBT;
+	adap->fe_adap[0].fe->ops.delsys[3] = SYS_DVBT;
+	adap->fe_adap[0].fe->ops.delsys[4] = SYS_DVBT2;
 
 	/* attach ter tuner */
 	memset(&si2157_config, 0, sizeof(si2157_config));
@@ -284,9 +284,9 @@ static int tbs5520se_frontend_attach(struct dvb_usb_adapter *adap)
 	st->i2c_client_tuner = client_tuner;
 
 	memset(adap->fe_adap[0].fe2->ops.delsys, 0, MAX_DELSYS);
-	adap->fe_adap[0].fe2->ops.delsys[0] = SYS_DVBS;
-	adap->fe_adap[0].fe2->ops.delsys[1] = SYS_DVBS2;
-	adap->fe_adap[0].fe2->ops.delsys[2] = SYS_DSS;
+	adap->fe_adap[0].fe2->ops.delsys[0] = SYS_DSS;
+	adap->fe_adap[0].fe2->ops.delsys[1] = SYS_DVBS;
+	adap->fe_adap[0].fe2->ops.delsys[2] = SYS_DVBS2;
 	adap->fe_adap[0].fe2->id = 1;
 
 	if (dvb_attach(av201x_attach, adap->fe_adap[0].fe2, &tbs5520se_av201x_cfg,
@@ -298,9 +298,9 @@ static int tbs5520se_frontend_attach(struct dvb_usb_adapter *adap)
 		buf[1] = 0;
 		tbs5520se_op_rw(d->udev, 0x8a, 0, 0,
 					buf, 2, TBS5520se_WRITE_MSG);
-		
+
 		adap->fe_adap[0].fe2->ops.set_voltage = tbs5520se_set_voltage;
-		
+
 	}
 
 	buf[0] = 0;
@@ -433,7 +433,7 @@ static struct dvb_usb_device_properties tbs5520se_properties = {
 			},*/
 
 		},
-		
+
 	}},
 
 	.num_device_descs = 1,
@@ -475,7 +475,7 @@ static void tbs5520se_disconnect(struct usb_interface *intf)
 		module_put(client->dev.driver->owner);
 		i2c_unregister_device(client);
 	}
-#endif	
+#endif
 	dvb_usb_device_exit(intf);
 }
 

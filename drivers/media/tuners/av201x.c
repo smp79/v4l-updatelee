@@ -21,8 +21,6 @@
 #include "av201x.h"
 #include "av201x_priv.h"
 
-#define dprintk(fmt, arg...)	printk(KERN_INFO "%s: " fmt "\n",  __func__, ##arg)
-
 /* write multiple (continuous) registers */
 static int av201x_wrm(struct av201x_priv *priv, u8 *buf, int len)
 {
@@ -31,11 +29,11 @@ static int av201x_wrm(struct av201x_priv *priv, u8 *buf, int len)
 		.addr = priv->cfg->i2c_address,
 		.flags = 0, .buf = buf, .len = len };
 
-//	dprintk("buf = %*ph", len, buf);
+//	fprintk("buf = %*ph", len, buf);
 
 	ret = i2c_transfer(priv->i2c, &msg, 1);
 	if (ret < 0) {
-		dprintk("ERROR: %d", ret);
+		fprintk("ERROR: %d", ret);
 		return ret;
 	}
 	return 0;
@@ -61,11 +59,11 @@ static int av201x_rdm(struct av201x_priv *priv, u8 addr, u8 *buf, int len)
 
 	ret = i2c_transfer(priv->i2c, msg, 2);
 	if (ret < 0) {
-		dprintk("ERROR: %d", ret);
+		fprintk("ERROR: %d", ret);
 		return ret;
 	}
 
-//	dprintk("addr: %02x, buf = %*ph", addr, len, buf);
+//	fprintk("addr: %02x, buf = %*ph", addr, len, buf);
 	return 0;
 }
 
@@ -106,7 +104,7 @@ static int av201x_wrtable(struct av201x_priv *priv, struct av201x_regtable *regt
 
 static void av201x_release(struct dvb_frontend *fe)
 {
-	dprintk("");
+	fprintk("");
 
 	kfree(fe->tuner_priv);
 	fe->tuner_priv = NULL;
@@ -116,7 +114,7 @@ static int av201x_init(struct dvb_frontend *fe)
 {
 	struct av201x_priv *priv = fe->tuner_priv;
 	int ret;
-	dprintk("");
+	fprintk("");
 
 	ret = av201x_wrtable(priv, av201x_inittuner0, ARRAY_SIZE(av201x_inittuner0));
 
@@ -137,7 +135,7 @@ static int av201x_init(struct dvb_frontend *fe)
 	msleep(120);
 
 	if (ret)
-		dprintk("ERROR");
+		fprintk("ERROR");
 	return ret;
 }
 
@@ -145,11 +143,11 @@ static int av201x_sleep(struct dvb_frontend *fe)
 {
 	struct av201x_priv *priv = fe->tuner_priv;
 	int ret;
-	dprintk("");
+	fprintk("");
 
 	ret = av201x_regmask(priv, REG_TUNER_CTRL, AV201X_SLEEP, 0);
 	if (ret)
-		dprintk("ERROR");
+		fprintk("ERROR");
 	return ret;
 }
 
@@ -160,6 +158,8 @@ static int av201x_set_params(struct dvb_frontend *fe)
 	u32 n, bw, bf;
 	u8 buf[5];
 	int ret;
+
+//	fprintk("");
 
 	/*
 	   ** PLL setup **
@@ -201,7 +201,7 @@ static int av201x_set_params(struct dvb_frontend *fe)
 	msleep(20);
 exit:
 	if (ret)
-		dprintk("ERROR");
+		fprintk("ERROR");
 	return ret;
 }
 
@@ -258,14 +258,14 @@ struct dvb_frontend *av201x_attach(struct dvb_frontend *fe, struct av201x_config
 
 	priv = kzalloc(sizeof(struct av201x_priv), GFP_KERNEL);
 	if (priv == NULL) {
-		dprintk("attach ERROR");
+		fprintk("attach ERROR");
 		return NULL;
 	}
 
 	priv->cfg = cfg;
 	priv->i2c = i2c;
 
-	dprintk("Airoha Technology AV201x successfully attached");
+	fprintk("Airoha Technology AV201x successfully attached");
 
 	memcpy(&fe->ops.tuner_ops, &av201x_tuner_ops,
 			sizeof(struct dvb_tuner_ops));
