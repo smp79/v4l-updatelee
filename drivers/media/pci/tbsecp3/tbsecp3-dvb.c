@@ -45,20 +45,20 @@ struct sec_priv {
 };
 
 static void ecp3_spi_read(struct i2c_adapter *i2c,u8 reg, u32 *buf)
-{	
+{
 	struct tbsecp3_i2c *i2c_adap = i2c_get_adapdata(i2c);
 	struct tbsecp3_dev *dev = i2c_adap->dev;
 
 	*buf = tbs_read(TBSECP3_GPIO_BASE,reg);
 
-//	dprintk("**********%x = %x*******", reg, *buf);
+//	fprintk("**********%x = %x*******", reg, *buf);
 	return ;
 }
 static void ecp3_spi_write(struct i2c_adapter *i2c,u8 reg, u32 buf)
 {
 	struct tbsecp3_i2c *i2c_adap = i2c_get_adapdata(i2c);
 	struct tbsecp3_dev *dev = i2c_adap->dev;
-//	dprintk("**********%x = %x*******", reg, *buf);
+//	fprintk("**********%x = %x*******", reg, *buf);
 
 	tbs_write(TBSECP3_GPIO_BASE, reg, buf);
 
@@ -66,20 +66,20 @@ static void ecp3_spi_write(struct i2c_adapter *i2c,u8 reg, u32 buf)
 }
 
 static void mcu_24cxx_read(struct i2c_adapter *i2c,u32 bassaddr, u8 reg, u32 *buf)
-{	
+{
 	struct tbsecp3_i2c *i2c_adap = i2c_get_adapdata(i2c);
 	struct tbsecp3_dev *dev = i2c_adap->dev;
 
 	*buf = tbs_read(bassaddr,reg);
 
-//	dprintk("**********%x = %x*******", reg, *buf);
+//	fprintk("**********%x = %x*******", reg, *buf);
 	return ;
 }
 static void mcu_24cxx_write(struct i2c_adapter *i2c,u32 bassaddr,u8 reg, u32 buf)
 {
 	struct tbsecp3_i2c *i2c_adap = i2c_get_adapdata(i2c);
 	struct tbsecp3_dev *dev = i2c_adap->dev;
-//	dprintk("**********%x = %x*******", reg, *buf);
+//	fprintk("**********%x = %x*******", reg, *buf);
 
 	tbs_write(bassaddr, reg, buf);
 
@@ -107,16 +107,16 @@ static void tbs6301_read_mac(struct tbsecp3_adapter *adap)
 			break;
 	}
 	if (i == 100) {
-		dprintk("the receiver always busy !");
+		fprintk("the receiver always busy !");
 		// check mcu status
 		*(u32 *)tmpbuf = tbs_read(BASE_ADDRESS_24CXX,  STATUS_MAC16_24CXX);
 		if ((tmpbuf[0]&0x4) == 1) { // bit2==1 mcu busy
-			dprintk("MCU status is busy!!!");
+			fprintk("MCU status is busy!!!");
 			// release cs;
 			tbs_write(BASE_ADDRESS_24CXX,  CS_RELEASE, *(u32 *)&tmpbuf[0]);
 			return;
 		}
-		
+
 	}
 	// release cs;
 	tbs_write(BASE_ADDRESS_24CXX, CS_RELEASE, *(u32 *)&tmpbuf[0]);
@@ -128,13 +128,13 @@ static void tbs6301_read_mac(struct tbsecp3_adapter *adap)
 			break;
 	}
 	if (i == 100) {
-		dprintk("wait wt_24cxx_done timeout!");
+		fprintk("wait wt_24cxx_done timeout!");
 	}
 	// read back to host;
 	*(u32 *)rdbuffer = tbs_read(BASE_ADDRESS_24CXX, DATA0_24CXX);
 	*(u32 *)&rdbuffer[4] = tbs_read(BASE_ADDRESS_24CXX, DATA1_24CXX);
 
-	dprintk("tbs6301 mac address: %*phC", 6, rdbuffer);
+	fprintk("tbs6301 mac address: %*phC", 6, rdbuffer);
 
 	return ;
 };
@@ -146,7 +146,7 @@ static int tbsecp3_set_voltage(struct dvb_frontend* fe, enum fe_sec_voltage volt
 	struct tbsecp3_gpio_config *cfg = &priv->adap->cfg->gpio;
 	struct tbsecp3_dev *dev = priv->adap->dev;
 
-	dprintk("%s", voltage == SEC_VOLTAGE_13 ? "SEC_VOLTAGE_13" : voltage == SEC_VOLTAGE_18 ? "SEC_VOLTAGE_18" : "SEC_VOLTAGE_OFF");
+	fprintk("%s", voltage == SEC_VOLTAGE_13 ? "SEC_VOLTAGE_13" : voltage == SEC_VOLTAGE_18 ? "SEC_VOLTAGE_18" : "SEC_VOLTAGE_OFF");
 
 	switch (voltage) {
 	case SEC_VOLTAGE_13:
@@ -224,9 +224,9 @@ static int set_mac_address(struct tbsecp3_adapter *adap)
 	eep_addr += 0x10 * adap->nr;
 	ret = i2c_transfer(i2c, msg, 2);
 	if (ret != 2) {
-		dprintk("error reading MAC address for adapter %d", adap->nr);
+		fprintk("error reading MAC address for adapter %d", adap->nr);
 	} else {
-		dprintk("MAC address %pM", adap->dvb_adapter.proposed_mac);
+		fprintk("MAC address %pM", adap->dvb_adapter.proposed_mac);
 	}
 	return 0;
 };
@@ -425,8 +425,8 @@ static int max_set_voltage(struct i2c_adapter *i2c, enum fe_sec_voltage voltage,
 
 	u32 val, reg;
 
-//	dprintk("set voltage on %u = %d", rf_in, voltage);
-	
+//	fprintk("set voltage on %u = %d", rf_in, voltage);
+
 	if (rf_in > 3)
 		return -EINVAL;
 
@@ -455,11 +455,11 @@ static void RF_switch(struct i2c_adapter *i2c,u8 rf_in,u8 flag) //flag : 0: dvbs
 	struct tbsecp3_i2c *i2c_adap = i2c_get_adapdata(i2c);
 	struct tbsecp3_dev *dev = i2c_adap->dev;
 	u32 val ,reg;
-	
-	dprintk("%s", flag ? "Terrestrial" : "Satellite");
+
+	fprintk("%s", flag ? "Terrestrial" : "Satellite");
 
 	reg = 0x8 + rf_in * 4;
-	
+
 	val = tbs_read(TBSECP3_GPIO_BASE, reg);
 	if (flag)
 		val |= 2;
@@ -883,11 +883,11 @@ static int tbsecp3_frontend_attach(struct tbsecp3_adapter *adapter)
 
 		/* terrestrial tuner */
 		memset(adapter->fe->ops.delsys, 0, MAX_DELSYS);
-		adapter->fe->ops.delsys[0] = SYS_DVBT;
-		adapter->fe->ops.delsys[1] = SYS_DVBT2;
-		adapter->fe->ops.delsys[2] = SYS_DVBC_ANNEX_A;
-		adapter->fe->ops.delsys[3] = SYS_ISDBT;
-		adapter->fe->ops.delsys[4] = SYS_DVBC_ANNEX_B;
+		adapter->fe->ops.delsys[0] = SYS_DVBC_ANNEX_A;
+		adapter->fe->ops.delsys[1] = SYS_DVBC_ANNEX_B;
+		adapter->fe->ops.delsys[2] = SYS_ISDBT;
+		adapter->fe->ops.delsys[3] = SYS_DVBT;
+		adapter->fe->ops.delsys[4] = SYS_DVBT2;
 
 		/* attach tuner */
 		memset(&si2157_config, 0, sizeof(si2157_config));
@@ -911,16 +911,16 @@ static int tbsecp3_frontend_attach(struct tbsecp3_adapter *adapter)
 
 		/* sattelite tuner */
 		memset(adapter->fe2->ops.delsys, 0, MAX_DELSYS);
-		adapter->fe2->ops.delsys[0] = SYS_DVBS;
-		adapter->fe2->ops.delsys[1] = SYS_DVBS2;
-		adapter->fe2->ops.delsys[2] = SYS_DSS;
+		adapter->fe2->ops.delsys[0] = SYS_DSS;
+		adapter->fe2->ops.delsys[1] = SYS_DVBS;
+		adapter->fe2->ops.delsys[2] = SYS_DVBS2;
 		adapter->fe2->id = 1;
 		if (dvb_attach(av201x_attach, adapter->fe2, &tbs6522_av201x_cfg[adapter->nr], i2c) == NULL) {
-			dprintk("frontend %d tuner attach failed", adapter->nr);
+			fprintk("frontend %d tuner attach failed", adapter->nr);
 			goto frontend_atach_fail;
 		}
 		if (tbsecp3_attach_sec(adapter, adapter->fe2) == NULL) {
-			dprintk("error attaching lnb control on adapter %d", adapter->nr);
+			fprintk("error attaching lnb control on adapter %d", adapter->nr);
 		}
 
 		break;
@@ -962,11 +962,11 @@ static int tbsecp3_frontend_attach(struct tbsecp3_adapter *adapter)
 
 		/* terrestrial tuner */
 		memset(adapter->fe->ops.delsys, 0, MAX_DELSYS);
-		adapter->fe->ops.delsys[0] = SYS_DVBT;
-		adapter->fe->ops.delsys[1] = SYS_DVBT2;
-		adapter->fe->ops.delsys[2] = SYS_DVBC_ANNEX_A;
-		adapter->fe->ops.delsys[3] = SYS_ISDBT;
-		adapter->fe->ops.delsys[4] = SYS_DVBC_ANNEX_B;
+		adapter->fe->ops.delsys[0] = SYS_DVBC_ANNEX_A;
+		adapter->fe->ops.delsys[1] = SYS_DVBC_ANNEX_B;
+		adapter->fe->ops.delsys[2] = SYS_ISDBT;
+		adapter->fe->ops.delsys[3] = SYS_DVBT;
+		adapter->fe->ops.delsys[4] = SYS_DVBT2;
 
 		/* attach tuner */
 		memset(&si2157_config, 0, sizeof(si2157_config));
@@ -994,23 +994,23 @@ static int tbsecp3_frontend_attach(struct tbsecp3_adapter *adapter)
 
 		/* sattelite tuner */
 		memset(adapter->fe2->ops.delsys, 0, MAX_DELSYS);
-		adapter->fe2->ops.delsys[0] = SYS_DVBS;
-		adapter->fe2->ops.delsys[1] = SYS_DVBS2;
-		adapter->fe2->ops.delsys[2] = SYS_DSS;
+		adapter->fe2->ops.delsys[0] = SYS_DSS;
+		adapter->fe2->ops.delsys[1] = SYS_DVBS;
+		adapter->fe2->ops.delsys[2] = SYS_DVBS2;
 		adapter->fe2->id = 1;
 		if (pci->subsystem_vendor == 0x6528) {
 			if (dvb_attach(av201x_attach, adapter->fe2, &tbs6522_av201x_cfg[1], i2c) == NULL) {
-				dprintk("frontend %d tuner attach failed", adapter->nr);
+				fprintk("frontend %d tuner attach failed", adapter->nr);
 				goto frontend_atach_fail;
 			}
 		} else{
 			if (dvb_attach(av201x_attach, adapter->fe2, &tbs6522_av201x_cfg[adapter->nr], i2c) == NULL) {
-				dprintk("frontend %d tuner attach failed", adapter->nr);
+				fprintk("frontend %d tuner attach failed", adapter->nr);
 				goto frontend_atach_fail;
 			}
 		}
 		if (tbsecp3_attach_sec(adapter, adapter->fe2) == NULL) {
-			dprintk("error attaching lnb control on adapter %d", adapter->nr);
+			fprintk("error attaching lnb control on adapter %d", adapter->nr);
 		}
 
 		tbsecp3_ca_init(adapter, adapter->nr);
@@ -1023,12 +1023,12 @@ static int tbsecp3_frontend_attach(struct tbsecp3_adapter *adapter)
 		if (dvb_attach(av201x_attach, adapter->fe, &tbs6902_av201x_cfg, tas2101_get_i2c_adapter(adapter->fe, 2)) == NULL) {
 			dvb_frontend_detach(adapter->fe);
 			adapter->fe = NULL;
-			dprintk("frontend %d tuner attach failed", adapter->nr);
+			fprintk("frontend %d tuner attach failed", adapter->nr);
 			goto frontend_atach_fail;
 		}
 
 		if (tbsecp3_attach_sec(adapter, adapter->fe) == NULL) {
-			dprintk("error attaching lnb control on adapter %d", adapter->nr);
+			fprintk("error attaching lnb control on adapter %d", adapter->nr);
 		}
 		break;
 	case 0x6903:
@@ -1049,7 +1049,7 @@ static int tbsecp3_frontend_attach(struct tbsecp3_adapter *adapter)
 		if (ctl == NULL) {
 			dvb_frontend_detach(adapter->fe);
 			adapter->fe = NULL;
-			dprintk("frontend %d tuner attach failed", adapter->nr);
+			fprintk("frontend %d tuner attach failed", adapter->nr);
 			goto frontend_atach_fail;
 		}
 
@@ -1059,7 +1059,7 @@ static int tbsecp3_frontend_attach(struct tbsecp3_adapter *adapter)
 		tbs6903_stv091x_cfg.tuner_set_bandwidth = ctl->tuner_set_bandwidth;
 
 		if (tbsecp3_attach_sec(adapter, adapter->fe) == NULL) {
-			dprintk("error attaching lnb control on adapter %d", adapter->nr);
+			fprintk("error attaching lnb control on adapter %d", adapter->nr);
 		}
 		break;
 	case 0x6904:
@@ -1070,12 +1070,12 @@ static int tbsecp3_frontend_attach(struct tbsecp3_adapter *adapter)
 		if (dvb_attach(av201x_attach, adapter->fe, &tbs6904_av201x_cfg, tas2101_get_i2c_adapter(adapter->fe, 2)) == NULL) {
 			dvb_frontend_detach(adapter->fe);
 			adapter->fe = NULL;
-			dprintk("frontend %d tuner attach failed", adapter->nr);
+			fprintk("frontend %d tuner attach failed", adapter->nr);
 			goto frontend_atach_fail;
 		}
 
 		if (tbsecp3_attach_sec(adapter, adapter->fe) == NULL) {
-			dprintk("error attaching lnb control on adapter %d", adapter->nr);
+			fprintk("error attaching lnb control on adapter %d", adapter->nr);
 		}
 #if 0
 		/* attach tuner */
@@ -1129,7 +1129,7 @@ static int tbsecp3_frontend_attach(struct tbsecp3_adapter *adapter)
 		//	adapter->fe->ops.diseqc_send_burst = max_send_burst;
 
 		if (tbsecp3_attach_sec(adapter, adapter->fe) == NULL) {
-			dprintk("error attaching lnb control on adapter %d", adapter->nr);
+			fprintk("error attaching lnb control on adapter %d", adapter->nr);
 		}
 		break;
 	case 0x6910:
@@ -1140,17 +1140,17 @@ static int tbsecp3_frontend_attach(struct tbsecp3_adapter *adapter)
 		if (dvb_attach(av201x_attach, adapter->fe, &tbs6910_av201x_cfg, tas2101_get_i2c_adapter(adapter->fe, 2)) == NULL) {
 			dvb_frontend_detach(adapter->fe);
 			adapter->fe = NULL;
-			dprintk("frontend %d tuner attach failed", adapter->nr);
+			fprintk("frontend %d tuner attach failed", adapter->nr);
 			goto frontend_atach_fail;
 		}
 		if (tbsecp3_attach_sec(adapter, adapter->fe) == NULL) {
-			dprintk("error attaching lnb control on adapter %d", adapter->nr);
+			fprintk("error attaching lnb control on adapter %d", adapter->nr);
 		}
 
 		tbsecp3_ca_init(adapter, adapter->nr);
 		break;
 	default:
-		dprintk("unknonw card");
+		fprintk("unknonw card");
 		return -ENODEV;
 		break;
 	}
@@ -1162,7 +1162,7 @@ frontend_atach_fail:
 	if (adapter->fe != NULL)
 		dvb_frontend_detach(adapter->fe);
 	adapter->fe = NULL;
-	dprintk("TBSECP3 frontend %d attach failed", adapter->nr);
+	fprintk("TBSECP3 frontend %d attach failed", adapter->nr);
 
 	return -ENODEV;
 }
@@ -1181,9 +1181,9 @@ int tbsecp3_dvb_init(struct tbsecp3_adapter *adapter)
 				   &adapter->dev->pci_dev->dev,
 				   adapter_nr);
 	if (ret < 0) {
-		dprintk("error registering adapter");
+		fprintk("error registering adapter");
 		if (ret == -ENFILE)
-			dprintk("increase DVB_MAX_ADAPTERS (%d)", DVB_MAX_ADAPTERS);
+			fprintk("increase DVB_MAX_ADAPTERS (%d)", DVB_MAX_ADAPTERS);
 		return ret;
 	}
 
@@ -1200,7 +1200,7 @@ int tbsecp3_dvb_init(struct tbsecp3_adapter *adapter)
 
 	ret = dvb_dmx_init(dvbdemux);
 	if (ret < 0) {
-		dprintk("dvb_dmx_init failed");
+		fprintk("dvb_dmx_init failed");
 		goto err0;
 	}
 
@@ -1212,7 +1212,7 @@ int tbsecp3_dvb_init(struct tbsecp3_adapter *adapter)
 
 	ret = dvb_dmxdev_init(dmxdev, adap);
 	if (ret < 0) {
-		dprintk("dvb_dmxdev_init failed");
+		fprintk("dvb_dmxdev_init failed");
 		goto err1;
 	}
 
@@ -1222,46 +1222,46 @@ int tbsecp3_dvb_init(struct tbsecp3_adapter *adapter)
 	fe_hw->source = DMX_FRONTEND_0;
 	ret = dvbdemux->dmx.add_frontend(&dvbdemux->dmx, fe_hw);
 	if ( ret < 0) {
-		dprintk("dvb_dmx_init failed");
+		fprintk("dvb_dmx_init failed");
 		goto err2;
 	}
 
 	fe_mem->source = DMX_MEMORY_FE;
 	ret = dvbdemux->dmx.add_frontend(&dvbdemux->dmx, fe_mem);
 	if (ret  < 0) {
-		dprintk("dvb_dmx_init failed");
+		fprintk("dvb_dmx_init failed");
 		goto err3;
 	}
 
 	ret = dvbdemux->dmx.connect_frontend(&dvbdemux->dmx, fe_hw);
 	if (ret < 0) {
-		dprintk("dvb_dmx_init failed");
+		fprintk("dvb_dmx_init failed");
 		goto err4;
 	}
 
 	ret = dvb_net_init(adap, &adapter->dvbnet, adapter->dmxdev.demux);
 	if (ret < 0) {
-		dprintk("dvb_net_init failed");
+		fprintk("dvb_net_init failed");
 		goto err5;
 	}
 
 	tbsecp3_frontend_attach(adapter);
 	if (adapter->fe == NULL) {
-		dprintk("frontend attach failed");
+		fprintk("frontend attach failed");
 		ret = -ENODEV;
 		goto err6;
 	}
 
 	ret = dvb_register_frontend(adap, adapter->fe);
 	if (ret < 0) {
-		dprintk("frontend register failed");
+		fprintk("frontend register failed");
 		goto err7;
 	}
 
 	if (adapter->fe2 != NULL) {
 		ret = dvb_register_frontend(adap, adapter->fe2);
 		if (ret < 0) {
-			dprintk("frontend2 register failed");
+			fprintk("frontend2 register failed");
 		}
 	}
 

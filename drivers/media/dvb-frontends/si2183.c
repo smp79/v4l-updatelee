@@ -116,9 +116,8 @@ static int si2183_cmd_execute_unlocked(struct i2c_client *client,
 	int ret;
 	unsigned long timeout;
 
-//	fprintk("W: %*ph", cmd->wlen, cmd->args);
-
 	if (cmd->wlen) {
+//		fprintk("W: %*ph", cmd->wlen, cmd->args);
 		memcpy(cmd->w_args, cmd->args, cmd->wlen);
 		/* write cmd and args for firmware */
 		ret = si2183_i2c_master_send_unlocked(client, cmd->args, cmd->wlen);
@@ -158,9 +157,8 @@ static int si2183_cmd_execute_unlocked(struct i2c_client *client,
 			ret = -ETIMEDOUT;
 			goto r_err;
 		}
+//		fprintk("R: %*ph", cmd->rlen, cmd->args);
 	}
-
-//	fprintk("R: %*ph", cmd->rlen, cmd->args);
 
 	return 0;
 w_err:
@@ -250,64 +248,58 @@ static int si2183_read_status(struct dvb_frontend *fe, enum fe_status *status)
 		goto err;
 	}
 
-	if ((dev->delivery_system != c->delivery_system) || (dev->delivery_system == 0))
-		return 0;
+	memcpy(cmd.args, "\x87\x00", 2);
+	cmd.wlen = 2;
+	cmd.rlen = 8;
+	ret = si2183_cmd_execute(client, &cmd);
 
-	switch (c->delivery_system) {
-	case SYS_DVBT:
-		memcpy(cmd.args, "\xa0\x01", 2);
-		cmd.wlen = 2;
-		cmd.rlen = 13;
-		dev->snr = 2;
+	switch (cmd.args[3]) {
+	case 0x08:
+		c->delivery_system = SYS_DVBS;
 		break;
-	case SYS_DVBC_ANNEX_A:
-		memcpy(cmd.args, "\x90\x01", 2);
-		cmd.wlen = 2;
-		cmd.rlen = 9;
-		dev->snr = 2;
-		break;
-	case SYS_DVBC_ANNEX_B:
-		memcpy(cmd.args, "\x98\x01", 2);
-		cmd.wlen = 2;
-		cmd.rlen = 10;
-		dev->snr = 2;
-		break;
-	case SYS_DVBT2:
-		memcpy(cmd.args, "\x50\x01", 2);
-		cmd.wlen = 2;
-		cmd.rlen = 14;
-		dev->snr = 2;
-		break;
-	case SYS_DVBS:
-		memcpy(cmd.args, "\x60\x01", 2);
-		cmd.wlen = 2;
-		cmd.rlen = 10;
-		dev->snr = 5;
-		break;
-	case SYS_DVBS2:
-		memcpy(cmd.args, "\x70\x01", 2);
-		cmd.wlen = 2;
-		cmd.rlen = 13;
-		dev->snr = 5;
-		break;
-	case SYS_ISDBT:
-		memcpy(cmd.args, "\xa4\x01", 2);
-		cmd.wlen = 2;
-		cmd.rlen = 14;
-		dev->snr = 2;
+	case 0x09:
+		c->delivery_system = SYS_DVBS2;
 		break;
 	default:
-		// FIXME: is there a default?
-		memcpy(cmd.args, "\x70\x01", 2);
-		cmd.wlen = 2;
-		cmd.rlen = 13;
-		dev->snr = 5;
+		fprintk("delivery system not found");
 		break;
 	}
 
-	ret = si2183_cmd_execute(client, &cmd);
-	if (ret) {
-		goto err;
+	switch (c->delivery_system) {
+	case SYS_DVBS:
+		memcpy(cmd.args, "\x60\x00", 2);
+		cmd.wlen = 2;
+		cmd.rlen = 10;
+		ret = si2183_cmd_execute(client, &cmd);
+
+		c->modulation = QPSK;
+		break;
+	case SYS_DVBS2:
+		memcpy(cmd.args, "\x70\x00", 2);
+		cmd.wlen = 2;
+		cmd.rlen = 13;
+		ret = si2183_cmd_execute(client, &cmd);
+
+		switch (cmd.args[8]) {
+		case 0xc3:
+			c->modulation = QPSK;
+			break;
+		case 0xce:
+			c->modulation = PSK_8;
+			break;
+		case 0xd4:
+			c->modulation = APSK_16;
+			break;
+		case 0xd5:
+			c->modulation = APSK_32;
+			break;
+		default:
+			fprintk("Modulation not found");
+			break;
+		}
+		break;
+	default:
+		break;
 	}
 
 	dev->stat_resp = cmd.args[2];
@@ -322,13 +314,18 @@ static int si2183_read_status(struct dvb_frontend *fe, enum fe_status *status)
 	default:
 		break;
 	}
-	if (config->algo == SI2183_NOTUNE)
+
+	if (config->algo == SI2183_FAILED) {
 		*status |= FE_TIMEDOUT;
+	}
 
 	c->cnr.len = 1;
 	c->cnr.stat[0].scale = FE_SCALE_DECIBEL;
-	c->cnr.stat[0].svalue = (s64) cmd.args[3] * 250;
-	dev->snr *= cmd.args[3] * 164;
+	c->cnr.stat[0].svalue = cmd.args[3] << 8;
+	c->strength.len = 1;
+	c->strength.stat[0].scale = FE_SCALE_DECIBEL;
+	c->strength.stat[0].svalue = (s64)cmd.args[6] << 8;
+
 	dev->fe_status = *status;
 
 	si2183_read_signal_strength(fe, &agc);
@@ -341,11 +338,6 @@ err:
 
 static int si2183_read_snr(struct dvb_frontend *fe, u16 *snr)
 {
-	struct i2c_client *client = fe->demodulator_priv;
-	struct si2183_dev *dev = i2c_get_clientdata(client);
-
-	*snr = (dev->fe_status & FE_HAS_LOCK) ? dev->snr : 0;
-
 	return 0;
 }
 
@@ -852,6 +844,7 @@ static int si2183_init(struct dvb_frontend *fe)
 	fprintk("");
 
 	config->algo = SI2183_NOTUNE;
+	config->warm = false;
 
 	if (dev->active_fe) {
 		dev->active_fe |= (1 << fe->id);
@@ -862,7 +855,7 @@ static int si2183_init(struct dvb_frontend *fe)
 	c->cnr.stat[0].scale = FE_SCALE_DECIBEL;
 
 	/* initialize */
-	memcpy(cmd.args, "\xc0\x12\x00\x0c\x00\x0d\x16\x00\x00\x00\x00\x00\x00", 13);
+	memcpy(cmd.args, "\xc0\x12\x00\x00\x00\x0d\x16\x00\x00\x00\x00\x00\x00", 13);
 	cmd.wlen = 13;
 	cmd.rlen = 0;
 	ret = si2183_cmd_execute(client, &cmd);
@@ -891,7 +884,7 @@ static int si2183_init(struct dvb_frontend *fe)
 	}
 
 	/* power up */
-	memcpy(cmd.args, "\xc0\x06\x01\x0f\x00\x20\x20\x01", 8);
+	memcpy(cmd.args, "\xc0\x06\x01\x0f\x00\x20\x30\x01", 8);
 	cmd.wlen = 8;
 	cmd.rlen = 1;
 	ret = si2183_cmd_execute(client, &cmd);
@@ -1157,10 +1150,10 @@ static int si2183_get_frontend_algo(struct dvb_frontend *fe)
 	struct i2c_client *client = fe->demodulator_priv;
 	struct si2183_config *config = client->dev.platform_data;
 
-	if (config->algo == SI2183_NOTUNE) {
-		return DVBFE_ALGO_NOTUNE;
-	} else {
+	if (config->algo == SI2183_TUNE) {
 		return DVBFE_ALGO_CUSTOM;
+	} else {
+		return DVBFE_ALGO_NOTUNE;
 	}
 }
 
@@ -1178,34 +1171,307 @@ static int si2183_dtv_tune(struct dvb_frontend *fe)
 
 static int si2183_search(struct dvb_frontend *fe)
 {
+	struct dtv_frontend_properties *c = &fe->dtv_property_cache;
 	struct i2c_client *client = fe->demodulator_priv;
 	struct si2183_config *config = client->dev.platform_data;
-	enum fe_status status = 0;
+	struct si2183_dev *dev = i2c_get_clientdata(client);
+	struct si2183_cmd cmd;
 	int ret, i;
+	u8 sr1, sr2;
+	u8 tmp1, tmp2;
+//	u32 pls_mode, pls_code;
+	enum fe_status status = 0;
+
+	if (config->algo != SI2183_TUNE)
+		return DVBFE_ALGO_SEARCH_FAILED;
+	config->algo = SI2183_NOTUNE; // Prevents retuning while searching
 
 	fprintk("");
 
-	config->algo = SI2183_TUNE;
+	if(dev->RF_switch)
+	{
+		switch (c->delivery_system) {
+		case SYS_DVBT:
+		case SYS_DVBT2:
+		case SYS_DVBC_ANNEX_A:
+		case SYS_DVBC_ANNEX_B:
+		case SYS_ISDBT:
+			dev->RF_switch(dev->base->i2c,dev->rf_in,1);
+			break;
+		case SYS_DVBS:
+		case SYS_DVBS2:
+		case SYS_DSS:
+		default:
+			dev->RF_switch(dev->base->i2c,dev->rf_in,0);
+			break;
 
-	/* set frontend */
-	ret = si2183_set_frontend(fe);
-	if (ret)
-		goto error;
+		}
+	}
 
-	/* wait frontend lock */
-	for (i = 0; i < 10; i++) {
-		fprintk("loop=%d", i);
-		msleep(200);
+	if (fe->ops.tuner_ops.set_params) {
+		ret = fe->ops.tuner_ops.set_params(fe);
+	}
+
+	fprintk("Blindscan");
+
+	memcpy(cmd.args, "\x87\x00", 2);
+	cmd.wlen = 2;
+	cmd.rlen = 8;
+	ret = si2183_cmd_execute(client, &cmd);
+
+	/*set SAT agc*/
+	memcpy(cmd.args, "\x8a\x08\x12\x0\x0\x0", 6);
+	cmd.wlen = 6;
+	cmd.rlen = 3;
+	ret = si2183_cmd_execute(client, &cmd);
+
+	memcpy(cmd.args, "\x8b\xcc", 2);
+	cmd.wlen = 2;
+	cmd.rlen = 3;
+	ret = si2183_cmd_execute(client, &cmd);
+
+	memcpy(cmd.args, "\x87\x00", 2);
+	cmd.wlen = 2;
+	cmd.rlen = 8;
+	ret = si2183_cmd_execute(client, &cmd);
+
+	/*set SAT agc*/
+	memcpy(cmd.args, "\x8a\x08\x12\x0\x0\x0", 6);
+	cmd.wlen = 6;
+	cmd.rlen = 3;
+	ret = si2183_cmd_execute(client, &cmd);
+
+	memcpy(cmd.args, "\x8b\xcc", 2);
+	cmd.wlen = 2;
+	cmd.rlen = 3;
+	ret = si2183_cmd_execute(client, &cmd);
+
+	memcpy(cmd.args, "\x71\xff\x00", 3);
+	cmd.wlen = 3;
+	cmd.rlen = 1;
+	ret = si2183_cmd_execute(client, &cmd);
+
+	memcpy(cmd.args, "\x73\x01\x00\x00\x01\x00\x00\x00", 8);
+	cmd.wlen = 8;
+	cmd.rlen = 1;
+	ret = si2183_cmd_execute(client, &cmd);
+
+	memcpy(cmd.args, "\x14\x00\x0a\x10\xa8\x04", 6);
+	cmd.wlen = 6;
+	cmd.rlen = 4;
+	ret = si2183_cmd_execute(client, &cmd);
+
+	/* dsp restart */
+	memcpy(cmd.args, "\x85", 1);
+	cmd.wlen = 1;
+	cmd.rlen = 1;
+	ret = si2183_cmd_execute(client, &cmd);
+
+	memcpy(cmd.args, "\x31\x03\x00\x00\x00\x00\x00\x00", 8);
+	cmd.wlen = 8;
+	cmd.rlen = 1;
+	ret = si2183_cmd_execute(client, &cmd);
+
+	memcpy(cmd.args, "\x71\x00\x00", 3);
+	cmd.wlen = 3;
+	cmd.rlen = 1;
+	ret = si2183_cmd_execute(client, &cmd);
+
+	memcpy(cmd.args, "\x14\x00\x03\x03\xc6\x3f", 6);
+	cmd.wlen = 6;
+	cmd.rlen = 4;
+	ret = si2183_cmd_execute(client, &cmd);
+
+	memcpy(cmd.args, "\x14\x00\x04\x03\x90\x41", 6);
+	cmd.wlen = 6;
+	cmd.rlen = 4;
+	ret = si2183_cmd_execute(client, &cmd);
+
+	if (!config->warm) {
+		memcpy(cmd.args, "\x14\x00\x05\x03\xE8\x03", 6);
+		cmd.wlen = 6;
+		cmd.rlen = 4;
+		ret = si2183_cmd_execute(client, &cmd);
+	}
+
+	if (!config->warm) {
+		memcpy(cmd.args, "\x14\x00\x06\x03\x50\xC3", 6);
+		cmd.wlen = 6;
+		cmd.rlen = 4;
+		ret = si2183_cmd_execute(client, &cmd);
+	}
+
+	memcpy(cmd.args, "\x14\x00\x08\x03\x03\x00", 6);
+	cmd.wlen = 6;
+	cmd.rlen = 4;
+	ret = si2183_cmd_execute(client, &cmd);
+
+	memcpy(cmd.args, "\x14\x00\x0a\x10\xf8\x06", 6);
+	cmd.wlen = 6;
+	cmd.rlen = 4;
+	ret = si2183_cmd_execute(client, &cmd);
+
+	if (!config->warm) {
+		memcpy(cmd.args, "\x14\x00\x02\x03\x01\x03", 6);
+		cmd.wlen = 6;
+		cmd.rlen = 4;
+		ret = si2183_cmd_execute(client, &cmd);
+	}
+
+	config->warm = true;
+
+	/* dsp restart */
+	memcpy(cmd.args, "\x85", 1);
+	cmd.wlen = 1;
+	cmd.rlen = 1;
+	ret = si2183_cmd_execute(client, &cmd);
+
+	memcpy(cmd.args, "\x31\x01\x00\x00\xB0\x53\x10\x00", 8);
+	cmd.wlen = 8;
+	cmd.rlen = 1;
+	ret = si2183_cmd_execute(client, &cmd);
+
+	for (i = 0; i < 20; i++) {
+		fprintk("BS loop=%d", i);
+		memcpy(cmd.args, "\x30\x01", 2);
+		cmd.wlen = 2;
+		cmd.rlen = 11;
+		ret = si2183_cmd_execute(client, &cmd);
+
+		if (cmd.args[1] != 0x00 && cmd.args[3] != 0x00 && cmd.args[4] != 0x00 && cmd.args[6] == 0x10)
+			break;
+		msleep(300);
+	}
+	if (i == 20) {
+		fprintk("DVBFE_ALGO_SEARCH_FAILED");
+		config->algo = SI2183_FAILED;
+		return DVBFE_ALGO_SEARCH_FAILED;
+	}
+
+	msleep(100);
+
+	tmp1 = cmd.args[4];
+	tmp2 = cmd.args[5];
+
+	memcpy(cmd.args, "\x31\x02\x00\x00\x00\x00\x10\x00", 8);
+	cmd.args[4] = tmp1;
+	cmd.args[5] = tmp2;
+	cmd.wlen = 8;
+	cmd.rlen = 1;
+	ret = si2183_cmd_execute(client, &cmd);
+
+	for (i = 0; i < 20; i++) {
+		fprintk("BS loop=%d", i);
+		memcpy(cmd.args, "\x30\x01", 2);
+		cmd.wlen = 2;
+		cmd.rlen = 11;
+		ret = si2183_cmd_execute(client, &cmd);
+
+		if (cmd.args[9] != 0x00) {
+			break;
+		}
+		msleep(300);
+	}
+	if (i == 20) {
+		fprintk("DVBFE_ALGO_SEARCH_FAILED");
+		config->algo = SI2183_FAILED;
+		return DVBFE_ALGO_SEARCH_FAILED;
+	}
+
+	fprintk("Fine Tune");
+
+//	if (c->delivery_system == SYS_DVBS2) {
+//		/* stream_id selection */
+
+//		// TEST
+//		c->stream_id = 0;
+
+//		cmd.args[0] = 0x71;
+//		cmd.args[1] = (u8) c->stream_id;
+//		cmd.args[2] = c->stream_id == NO_STREAM_ID_FILTER ? 0 : 1;
+//		cmd.wlen = 3;
+//		cmd.rlen = 1;
+//		ret = si2183_cmd_execute(client, &cmd);
+//		if (ret)
+//			fprintk("dvb-s2: err selecting stream_id");
+
+//		/* pls selection */
+//		pls_mode = c->stream_id == NO_STREAM_ID_FILTER ? 0 : (c->stream_id >> 26) & 3;
+//		pls_code = c->stream_id == NO_STREAM_ID_FILTER ? 0 : (c->stream_id >> 8) & 0x3FFFF;
+//		if (pls_mode)
+//			pls_code = gold_code_index(pls_code);
+
+//		// TEST
+//		pls_code = 1;
+
+//		cmd.args[0] = 0x73;
+//		cmd.args[1] = pls_code > 0;
+//		cmd.args[2] = cmd.args[3] = 0;
+//		cmd.args[4] = (u8) pls_code;
+//		cmd.args[5] = (u8) (pls_code >> 8);
+//		cmd.args[6] = (u8) (pls_code >> 16);
+//		cmd.args[7] = (u8) (pls_code >> 24);
+//		cmd.wlen = 8;
+//		cmd.rlen = 1;
+//		ret = si2183_cmd_execute(client, &cmd);
+//		if (ret)
+//			fprintk("dvb-s2: err set pls");
+//	}
+
+	sr1 = cmd.args[8];
+	sr2 = cmd.args[9];
+
+	memcpy(cmd.args, "\x14\x00\x08\x03\x00\x00", 6);
+	cmd.wlen = 6;
+	cmd.rlen = 4;
+	ret = si2183_cmd_execute(client, &cmd);
+
+	// Set SR
+	memcpy(cmd.args, "\x14\x00\x01\x14\x00\x00", 6);
+	cmd.args[4] = sr1;
+	cmd.args[5] = sr2;
+	cmd.wlen = 6;
+	cmd.rlen = 4;
+	ret = si2183_cmd_execute(client, &cmd);
+
+	c->symbol_rate = (sr2 << 8) | sr1;
+	c->symbol_rate *= 1000;
+
+	memcpy(cmd.args, "\x14\x00\x0a\x10\xf8\x04", 6);
+	cmd.wlen = 6;
+	cmd.rlen = 4;
+	ret = si2183_cmd_execute(client, &cmd);
+
+	/* dsp restart */
+	memcpy(cmd.args, "\x85", 1);
+	cmd.wlen = 1;
+	cmd.rlen = 1;
+	ret = si2183_cmd_execute(client, &cmd);
+
+	for (i = 0; i < 20; i++) {
+		fprintk("FT loop=%d", i);
+		memcpy(cmd.args, "\x87\x01", 2);
+		cmd.wlen = 2;
+		cmd.rlen = 8;
+		ret = si2183_cmd_execute(client, &cmd);
+
+		if (cmd.args[4] != 0x00 && cmd.args[5] != 0x00 && cmd.args[7] == 0x00)
+			break;
+		msleep(300);
+	}
+	if (i == 20) {
+		fprintk("DVBFE_ALGO_SEARCH_FAILED");
+		config->algo = SI2183_FAILED;
+		return DVBFE_ALGO_SEARCH_FAILED;
+	}
+
+	for (i = 0; i < 20; i++) {
+		fprintk("FT loop=%d", i);
 		ret = si2183_read_status(fe, &status);
-		if (ret)
-			goto error;
 
 		if (status & FE_HAS_LOCK)
 			break;
-		if (status & FE_TIMEDOUT) {
-			config->algo = SI2183_NOTUNE;
-			return DVBFE_ALGO_SEARCH_FAILED;
-		}
+		msleep(300);
 	}
 
 	/* check if we have a valid signal */
@@ -1214,14 +1480,9 @@ static int si2183_search(struct dvb_frontend *fe)
 		return DVBFE_ALGO_SEARCH_SUCCESS;
 	} else {
 		fprintk("DVBFE_ALGO_SEARCH_FAILED");
-		config->algo = SI2183_NOTUNE;
+		config->algo = SI2183_FAILED;
 		return DVBFE_ALGO_SEARCH_FAILED;
 	}
-
-error:
-	fprintk("ERROR");
-	config->algo = SI2183_NOTUNE;
-	return DVBFE_ALGO_SEARCH_ERROR;
 }
 
 static int si2183_get_spectrum_scan(struct dvb_frontend *fe, struct dvb_fe_spectrum_scan *s)
@@ -1236,6 +1497,7 @@ static int si2183_get_spectrum_scan(struct dvb_frontend *fe, struct dvb_fe_spect
 	fprintk("");
 
 	config->algo = SI2183_NOTUNE;
+	config->warm = false;
 	*s->type = SC_DBM;
 
 	if (!fe->ops.tuner_ops.set_params || !fe->ops.tuner_ops.get_rf_strength) {
@@ -1415,7 +1677,7 @@ static const struct dvb_frontend_ops si2183_ops = {
 	.delsys = {SYS_DVBT, SYS_DVBT2,
 		   SYS_ISDBT,
 		   SYS_DVBC_ANNEX_A,SYS_DVBC_ANNEX_B,
-		   SYS_DSS, SYS_DVBS, SYS_DVBS2},
+		   SYS_DVBS2, SYS_DVBS, SYS_DSS},
 	.info = {
 		.name = "Silicon Labs Si2183",
 		.symbol_rate_min = 100000,

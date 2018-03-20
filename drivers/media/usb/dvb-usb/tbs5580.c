@@ -24,7 +24,7 @@
 
 struct tbs5580_state {
 	struct i2c_client *i2c_client_demod;
-	struct i2c_client *i2c_client_tuner; 
+	struct i2c_client *i2c_client_tuner;
 	struct dvb_ca_en50221 ca;
 	struct mutex ca_mutex;
 };
@@ -38,7 +38,7 @@ static struct av201x_config tbs5580_av201x_cfg = {
 /* debug */
 static int dvb_usb_tbs5580_debug;
 module_param_named(debug, dvb_usb_tbs5580_debug, int, 0644);
-MODULE_PARM_DESC(debug, "set debugging level (1=info 2=xfer (or-able))." 
+MODULE_PARM_DESC(debug, "set debugging level (1=info 2=xfer (or-able))."
 							DVB_USB_DEBUG_STATUS);
 
 DVB_DEFINE_MOD_OPT_ADAPTER_NR(adapter_nr);
@@ -51,7 +51,7 @@ static int tbs5580_op_rw(struct usb_device *dev, u8 request, u16 value,
 
 	unsigned int pipe = (flags == TBS5580_READ_MSG) ?
 			usb_rcvctrlpipe(dev, 0) : usb_sndctrlpipe(dev, 0);
-	u8 request_type = (flags == TBS5580_READ_MSG) ? USB_DIR_IN : 
+	u8 request_type = (flags == TBS5580_READ_MSG) ? USB_DIR_IN :
 								USB_DIR_OUT;
 	u8buf = kmalloc(len, GFP_KERNEL);
 	if (!u8buf)
@@ -59,7 +59,7 @@ static int tbs5580_op_rw(struct usb_device *dev, u8 request, u16 value,
 
 	if (flags == TBS5580_WRITE_MSG)
 		memcpy(u8buf, data, len);
-	ret = usb_control_msg(dev, pipe, request, request_type | 
+	ret = usb_control_msg(dev, pipe, request, request_type |
 			USB_TYPE_VENDOR, value, index , u8buf, len, 2000);
 
 	if (flags == TBS5580_READ_MSG)
@@ -69,7 +69,7 @@ static int tbs5580_op_rw(struct usb_device *dev, u8 request, u16 value,
 }
 
 static int tbs5580_read_attribute_mem(struct dvb_ca_en50221 *ca,
-                                                	int slot, int address)
+							int slot, int address)
 {
 	struct dvb_usb_device *d = (struct dvb_usb_device *)ca->data;
 	struct tbs5580_state *state = (struct tbs5580_state *)d->priv;
@@ -139,7 +139,7 @@ static int tbs5580_write_attribute_mem(struct dvb_ca_en50221 *ca,
 	return 0;
 }
 
-static int tbs5580_read_cam_control(struct dvb_ca_en50221 *ca, int slot, 
+static int tbs5580_read_cam_control(struct dvb_ca_en50221 *ca, int slot,
 								u8 address)
 {
 	struct dvb_usb_device *d = (struct dvb_usb_device *)ca->data;
@@ -173,7 +173,7 @@ static int tbs5580_read_cam_control(struct dvb_ca_en50221 *ca, int slot,
 	return rbuf[0];
 }
 
-static int tbs5580_write_cam_control(struct dvb_ca_en50221 *ca, int slot, 
+static int tbs5580_write_cam_control(struct dvb_ca_en50221 *ca, int slot,
 							u8 address, u8 value)
 {
 	struct dvb_usb_device *d = (struct dvb_usb_device *)ca->data;
@@ -208,7 +208,7 @@ static int tbs5580_write_cam_control(struct dvb_ca_en50221 *ca, int slot,
 	return 0;
 }
 
-static int tbs5580_set_video_port(struct dvb_ca_en50221 *ca, 
+static int tbs5580_set_video_port(struct dvb_ca_en50221 *ca,
 							int slot, int enable)
 {
 	struct dvb_usb_device *d = (struct dvb_usb_device *)ca->data;
@@ -371,7 +371,7 @@ static int tbs5580_init(struct dvb_usb_adapter *a)
 }
 
 /* I2C */
-static int tbs5580_i2c_transfer(struct i2c_adapter *adap, 
+static int tbs5580_i2c_transfer(struct i2c_adapter *adap,
 					struct i2c_msg msg[], int num)
 {
 	struct dvb_usb_device *d = i2c_get_adapdata(adap);
@@ -451,7 +451,7 @@ static struct i2c_algorithm tbs5580_i2c_algo = {
 	.functionality = tbs5580_i2c_func,
 };
 
-static int tbs5580_set_voltage(struct dvb_frontend *fe, 
+static int tbs5580_set_voltage(struct dvb_frontend *fe,
 						enum fe_sec_voltage voltage)
 {
 	static u8 command_13v[1] = {0x00};
@@ -460,15 +460,15 @@ static int tbs5580_set_voltage(struct dvb_frontend *fe,
 		{.addr = TBS5580_VOLTAGE_CTRL, .flags = 0,
 			.buf = command_13v, .len = 1},
 	};
-	
+
 	struct dvb_usb_adapter *udev_adap =
 		(struct dvb_usb_adapter *)(fe->dvb->priv);
 	if (voltage == SEC_VOLTAGE_18)
 		msg[0].buf = command_18v;
 
-	
+
 	i2c_transfer(&udev_adap->dev->i2c_adap, msg, 1);
-	
+
 	return 0;
 }
 
@@ -493,7 +493,7 @@ static int tbs5580_read_mac_address(struct dvb_usb_device *d, u8 mac[6])
 				eepromline[i%16] = ibuf[0];
 				eeprom[i] = ibuf[0];
 			}
-			
+
 			if ((i % 16) == 15) {
 				deb_xfer("%02x: ", i - 15);
 				debug_dump(eepromline, 16, deb_xfer);
@@ -550,11 +550,11 @@ static int tbs5580_frontend_attach(struct dvb_usb_adapter *adap)
 
 	/* terrestrial tuner */
 	memset(adap->fe_adap[0].fe->ops.delsys, 0, MAX_DELSYS);
-	adap->fe_adap[0].fe->ops.delsys[0] = SYS_DVBT;
-	adap->fe_adap[0].fe->ops.delsys[1] = SYS_DVBT2;
-	adap->fe_adap[0].fe->ops.delsys[2] = SYS_DVBC_ANNEX_A;
-	adap->fe_adap[0].fe->ops.delsys[3] = SYS_ISDBT;
-	adap->fe_adap[0].fe->ops.delsys[4] = SYS_DVBC_ANNEX_B;
+	adap->fe_adap[0].fe->ops.delsys[0] = SYS_DVBC_ANNEX_A;
+	adap->fe_adap[0].fe->ops.delsys[1] = SYS_DVBC_ANNEX_B;
+	adap->fe_adap[0].fe->ops.delsys[2] = SYS_ISDBT;
+	adap->fe_adap[0].fe->ops.delsys[3] = SYS_DVBT;
+	adap->fe_adap[0].fe->ops.delsys[4] = SYS_DVBT2;
 
 	/* attach ter tuner */
 	memset(&si2157_config, 0, sizeof(si2157_config));
@@ -582,9 +582,9 @@ static int tbs5580_frontend_attach(struct dvb_usb_adapter *adap)
 
 	/*attach SAT tuner*/
 	memset(adap->fe_adap[0].fe2->ops.delsys, 0, MAX_DELSYS);
-	adap->fe_adap[0].fe2->ops.delsys[0] = SYS_DVBS;
-	adap->fe_adap[0].fe2->ops.delsys[1] = SYS_DVBS2;
-	adap->fe_adap[0].fe2->ops.delsys[2] = SYS_DSS;
+	adap->fe_adap[0].fe2->ops.delsys[0] = SYS_DSS;
+	adap->fe_adap[0].fe2->ops.delsys[1] = SYS_DVBS;
+	adap->fe_adap[0].fe2->ops.delsys[2] = SYS_DVBS2;
 	adap->fe_adap[0].fe2->id = 1;
 
 	if (dvb_attach(av201x_attach, adap->fe_adap[0].fe2, &tbs5580_av201x_cfg,
@@ -596,9 +596,9 @@ static int tbs5580_frontend_attach(struct dvb_usb_adapter *adap)
 		buf[1] = 0;
 		tbs5580_op_rw(d->udev, 0x8a, 0, 0,
 					buf, 2, TBS5580_WRITE_MSG);
-		
+
 		adap->fe_adap[0].fe2->ops.set_voltage = tbs5580_set_voltage;
-		
+
 	}
 
 	buf[0] = 0;
@@ -609,9 +609,9 @@ static int tbs5580_frontend_attach(struct dvb_usb_adapter *adap)
 	buf[1] = 1;
 	tbs5580_op_rw(d->udev, 0x8a, 0, 0,
 			buf, 2, TBS5580_WRITE_MSG);
-	
+
 	tbs5580_init(adap);
-	
+
 	strlcpy(adap->fe_adap[0].fe->ops.info.name,d->props.devices[0].name,52);
 	strcat(adap->fe_adap[0].fe->ops.info.name," DVB-T/T2/C/C2/ISDB-T");
 	strlcpy(adap->fe_adap[0].fe2->ops.info.name,d->props.devices[0].name,52);
@@ -741,7 +741,7 @@ static void tbs5580_disconnect(struct usb_interface *intf)
 {
 
 	struct dvb_usb_device *d = usb_get_intfdata(intf);
-#if 0	
+#if 0
 	struct tbs5580_state *st = d->priv;
 	struct i2c_client *client;
 
@@ -758,7 +758,7 @@ static void tbs5580_disconnect(struct usb_interface *intf)
 		module_put(client->dev.driver->owner);
 		i2c_unregister_device(client);
 	}
-#endif	
+#endif
 	tbs5580_uninit(d);
 	dvb_usb_device_exit(intf);
 }

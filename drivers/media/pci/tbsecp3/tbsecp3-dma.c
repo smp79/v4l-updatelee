@@ -38,8 +38,8 @@ static void tbsecp3_dma_tasklet(unsigned long adap)
 		next_buffer = (tbs_read(adapter->dma.base, TBSECP3_DMA_STAT) - TBSECP3_DMA_PRE_BUFFERS + 1) & (TBSECP3_DMA_BUFFERS - 1);
 		adapter->dma.cnt++;
 	}
-        else
-        {
+	else
+	{
 		next_buffer = (tbs_read(adapter->dma.base, TBSECP3_DMA_STAT) - TBSECP3_DMA_PRE_BUFFERS + 1) & (TBSECP3_DMA_BUFFERS - 1);
 		read_buffer = (u32)adapter->dma.next_buffer;
 
@@ -87,7 +87,7 @@ void tbsecp3_dma_enable(struct tbsecp3_adapter *adap)
 	adap->dma.cnt = 0;
 	adap->dma.next_buffer= 0;
 	tbs_read(adap->dma.base, TBSECP3_DMA_STAT);
-	tbs_write(TBSECP3_INT_BASE, TBSECP3_DMA_IE(adap->cfg->ts_in), 1); 
+	tbs_write(TBSECP3_INT_BASE, TBSECP3_DMA_IE(adap->cfg->ts_in), 1);
 	tbs_write(adap->dma.base, TBSECP3_DMA_EN, 1);
 	spin_unlock_irq(&adap->adap_lock);
 }
@@ -155,8 +155,8 @@ int tbsecp3_dma_init(struct tbsecp3_dev *dev)
 		if (!adapter->dma.buf[0])
 			goto err;
 
-		dev_dbg(&dev->pci_dev->dev,
-			"TS in %d: DMA page %d bytes, %d bytes (%d TS packets) per %d buffers\n", adapter->cfg->ts_in, 
+		fprintk(
+			"TS in %d: DMA page %d bytes, %d bytes (%d TS packets) per %d buffers", adapter->cfg->ts_in,
 			 adapter->dma.page_size, adapter->dma.buffer_size, adapter->dma.buffer_pkts, TBSECP3_DMA_BUFFERS);
 
 		adapter->dma.base = TBSECP3_DMA_BASE(adapter->cfg->ts_in);
@@ -172,7 +172,7 @@ int tbsecp3_dma_init(struct tbsecp3_dev *dev)
 	tbsecp3_dma_reg_init(dev);
 	return 0;
 err:
-	dev_err(&dev->pci_dev->dev, "dma: memory alloc failed\n");
+	fprintk("dma: memory alloc failed");
 	tbsecp3_dma_free(dev);
 	return -ENOMEM;
 }

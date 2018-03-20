@@ -25,6 +25,7 @@
 enum si2183_algo {
 	SI2183_NOTUNE,
 	SI2183_TUNE,
+	SI2183_FAILED,
 };
 
 struct si2183_config {
@@ -59,6 +60,7 @@ struct si2183_config {
 	u8 rf_in;
 
 	enum si2183_algo algo;
+	bool warm;
 
 	//update the FW.
 	void (*write_properties) (struct i2c_adapter *i2c,u8 reg, u32 buf);

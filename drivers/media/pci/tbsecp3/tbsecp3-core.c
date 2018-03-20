@@ -83,8 +83,8 @@ static int tbsecp3_adapters_attach(struct tbsecp3_dev *dev)
 	for (i = 0; i < dev->info->adapters; i++) {
 		ret = tbsecp3_dvb_init(&dev->adapter[i]);
 		if (ret) {
-			dev_err(&dev->pci_dev->dev,
-				"adapter%d attach failed\n",
+			fprintk(
+				"adapter%d attach failed",
 				dev->adapter[i].nr);
 			dev->adapter[i].nr = -1;
 		}
@@ -140,16 +140,16 @@ static bool tbsecp3_enable_msi(struct pci_dev *pci_dev, struct tbsecp3_dev *dev)
 	int err;
 
 	if (!enable_msi) {
-		dev_warn(&dev->pci_dev->dev,
-			"MSI disabled by module parameter 'enable_msi'\n");
+		fprintk(
+			"MSI disabled by module parameter 'enable_msi'");
 		return false;
 	}
 
 	err = pci_enable_msi(pci_dev);
 	if (err) {
-		dev_err(&dev->pci_dev->dev,
+		fprintk(
 			"Failed to enable MSI interrupt."
-			" Falling back to a shared IRQ\n");
+			" Falling back to a shared IRQ");
 		return false;
 	}
 
@@ -158,9 +158,9 @@ static bool tbsecp3_enable_msi(struct pci_dev *pci_dev, struct tbsecp3_dev *dev)
 				"tbsecp3", dev);
 	if (err) {
 		/* fall back to legacy interrupt */
-		dev_err(&dev->pci_dev->dev,
+		fprintk(
 			"Failed to get an MSI interrupt."
-			" Falling back to a shared IRQ\n");
+			" Falling back to a shared IRQ");
 		pci_disable_msi(pci_dev);
 		return false;
 	}
@@ -178,10 +178,10 @@ static int tbsecp3_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 
 	ret = pci_set_dma_mask(pdev, DMA_BIT_MASK(32));
 	if (ret) {
-		dev_err(&pdev->dev, "32-bit PCI DMA not supported\n");
+		fprintk("32-bit PCI DMA not supported");
 		goto err0;
 	}
-	
+
 	pci_set_master(pdev);
 
 	dev = kzalloc(sizeof(struct tbsecp3_dev), GFP_KERNEL);
@@ -194,7 +194,7 @@ static int tbsecp3_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 	pci_set_drvdata(pdev, dev);
 
 	dev->info = (struct tbsecp3_board *) id->driver_data;
-	dev_info(&pdev->dev, "%s\n", dev->info->name);
+	fprintk("%s", dev->info->name);
 
 	dev->lmmio = ioremap(pci_resource_start(pdev, 0),
 				pci_resource_len(pdev, 0));
@@ -225,7 +225,7 @@ static int tbsecp3_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 		ret = request_irq(pdev->irq, tbsecp3_irq_handler,
 				IRQF_SHARED, "tbsecp3", dev);
 		if (ret < 0) {
-			dev_err(&pdev->dev, "%s: can't get IRQ %d\n",
+			fprintk("%s: can't get IRQ %d",
 				dev->info->name, pdev->irq);
 			goto err4;
 		}
@@ -237,12 +237,12 @@ static int tbsecp3_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 	ret = tbsecp3_adapters_attach(dev);
 	if (ret < 0)
 		goto err5;
-	
-	dev_info(&pdev->dev, "%s: PCI %s, IRQ %d, MMIO 0x%lx\n",
+
+	fprintk("%s: PCI %s, IRQ %d, MMIO 0x%lx",
 		dev->info->name, pci_name(pdev), pdev->irq,
 		(unsigned long) pci_resource_start(pdev, 0));
 
-	//dev_info(&dev->pci_dev->dev, "%s ready\n", dev->info->name);
+	fprintk("%s ready", dev->info->name);
 	return 0;
 
 err5:
@@ -266,7 +266,7 @@ err1:
 	kfree(dev);
 err0:
 	pci_disable_device(pdev);
-	dev_err(&pdev->dev, "probe error\n");
+	fprintk("probe error");
 	return ret;
 }
 
@@ -275,7 +275,7 @@ static void tbsecp3_remove(struct pci_dev *pdev)
 	struct tbsecp3_dev *dev = pci_get_drvdata(pdev);
 
 	/* disable interrupts */
-	tbs_write(TBSECP3_INT_BASE, TBSECP3_INT_EN, 0); 
+	tbs_write(TBSECP3_INT_BASE, TBSECP3_INT_EN, 0);
 	free_irq(pdev->irq, dev);
 	if (dev->msi) {
 		pci_disable_msi(pdev);
@@ -318,7 +318,7 @@ static const struct pci_device_id tbsecp3_id_table[] = {
 	TBSECP3_ID(TBSECP3_BOARD_TBS6909),
 	TBSECP3_ID(TBSECP3_BOARD_TBS6910),
 	TBSECP3_ID(TBSECP3_BOARD_TBS6528),
-	TBSECP3_ID(TBSECP3_BOARD_TBS6590),	
+	TBSECP3_ID(TBSECP3_BOARD_TBS6590),
 	TBSECP3_ID(TBSECP3_BOARD_TBS6290SE),
 	TBSECP3_ID(TBSECP3_BOARD_TBS6281SE),
 	TBSECP3_ID(TBSECP3_BOARD_TBS6704),
