@@ -10,7 +10,7 @@
 
 	sudo apt-get install git build-essential linux-headers-generic \
 	ncurses-dev libproc-processtable-perl fakeroot libelf-dev libssl-dev \
-	bison flex
+	bison flex pigz
 
 # Then download the repository, aprox 1.9Gb
 

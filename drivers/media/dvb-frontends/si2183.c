@@ -19,7 +19,7 @@
 #include <linux/delay.h>
 #include <linux/math64.h>
 
-#define SI2183_DEBUG		0
+bool si2183_debug = true;
 
 #define SI2183_B60_FIRMWARE "dvb-demod-si2183-b60-01.fw"
 
@@ -109,7 +109,8 @@ static const struct si2183_command SI2183_DSP_RESET		= {{0x85}, 1, 1};
 static const struct si2183_command SI2183_GET_MODULATION	= {{0x87, 0x00}, 2, 8};
 static const struct si2183_command SI2183_SET_AGC_TER		= {{0x89, 0x41, 0x06, 0x12, 0x00, 0x00}, 6, 3};
 static const struct si2183_command SI2183_GET_RF_STRENGTH	= {{0x8a, 0x00, 0x00, 0x00, 0x00, 0x00}, 6, 3};
-static const struct si2183_command SI2183_SET_AGC_SAT		= {{0x8a, 0x1d, 0x12, 0x00, 0x00, 0x00}, 6, 3};
+static const struct si2183_command SI2183_SET_AGC_SAT		= {{0x8a, 0x08, 0x12, 0x00, 0x00, 0x00}, 6, 3};
+static const struct si2183_command SI2183_DISEQC		= {{0X8c, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, 8, 1};
 static const struct si2183_command SI2183_INIT			= {{0xc0, 0x12, 0x00, 0x00, 0x00, 0x0d, 0x16, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, 13, 0};
 static const struct si2183_command SI2183_RESUME		= {{0xc0, 0x06, 0x08, 0x0f, 0x00, 0x20, 0x21, 0x01}, 8, 1};
 static const struct si2183_command SI2183_POWER_ON		= {{0xc0, 0x06, 0x01, 0x0f, 0x00, 0x20, 0x30, 0x01}, 8, 1};
@@ -156,7 +157,7 @@ static int si2183_cmd_execute_unlocked(struct i2c_client *client,
 	unsigned long timeout;
 
 	if (cmd->wlen) {
-		if (SI2183_DEBUG)
+		if (si2183_debug)
 			fprintk("W: %*ph", cmd->wlen, cmd->args);
 		/* write cmd and args for firmware */
 		ret = si2183_i2c_master_send_unlocked(client, cmd->args, cmd->wlen);
@@ -196,7 +197,7 @@ static int si2183_cmd_execute_unlocked(struct i2c_client *client,
 			ret = -ETIMEDOUT;
 			goto r_err;
 		}
-		if (SI2183_DEBUG)
+		if (si2183_debug)
 			fprintk("R: %*ph", cmd->rlen, cmd->args);
 	}
 
@@ -897,24 +898,28 @@ static int si2183_select(struct i2c_mux_core *muxc, u32 chan)
 {
 	struct i2c_client *client = i2c_mux_priv(muxc);
 	struct si2183_command cmd;
+	bool debug_state = si2183_debug;
 
+	// minimize noise
+	si2183_debug = false;
 	cmd = si2183_CMD(client, SI2183_I2C_OPEN);
-	if (cmd.ret)
-		return cmd.ret;
 
-	return 0;
+	si2183_debug = debug_state;
+	return cmd.ret;
 }
 
 static int si2183_deselect(struct i2c_mux_core *muxc, u32 chan)
 {
 	struct i2c_client *client = i2c_mux_priv(muxc);
 	struct si2183_command cmd;
+	bool debug_state = si2183_debug;
 
+	// minimize noise
+	si2183_debug = false;
 	cmd = si2183_CMD(client, SI2183_I2C_CLOSE);
-	if (cmd.ret)
-		return cmd.ret;
 
-	return 0;
+	si2183_debug = debug_state;
+	return cmd.ret;
 }
 
 static int si2183_tune(struct dvb_frontend *fe, bool re_tune,
@@ -1157,6 +1162,7 @@ static int si2183_get_spectrum_scan(struct dvb_frontend *fe, struct dvb_fe_spect
 	struct si2183_command cmd;
 	int x, ret;
 	u16 strength = 0;
+	bool debug_state = si2183_debug;
 
 	fprintk("");
 
@@ -1195,6 +1201,9 @@ static int si2183_get_spectrum_scan(struct dvb_frontend *fe, struct dvb_fe_spect
 
 		si2183_set_frontend(fe);
 
+		// minimize noise
+		si2183_debug = false;
+
 		for (x = 0; x < s->num_freq; x++)
 		{
 			p->frequency = *(s->freq + x);
@@ -1207,6 +1216,9 @@ static int si2183_get_spectrum_scan(struct dvb_frontend *fe, struct dvb_fe_spect
 			fe->ops.tuner_ops.get_rf_strength(fe, &strength);
 			*(s->rf_level + x) = p->strength.stat[0].svalue;
 		}
+
+		// return debug
+		si2183_debug = debug_state;
 	}
 
 	return 0;
@@ -1220,7 +1232,7 @@ static int send_diseqc_cmd(struct dvb_frontend *fe,
 	struct si2183_command cmd;
 	u8 enable = 1;
 
-	cmd.args[0] = 0x8c;
+	cmd = SI2183_DISEQC;
 	cmd.args[1] = enable | (cont_tone << 1)
 		    | (tone_burst << 2) | (burst_sel << 3)
 		    | (end_seq << 4) | (msg_len << 5);
@@ -1228,7 +1240,7 @@ static int send_diseqc_cmd(struct dvb_frontend *fe,
 	if (msg_len > 0)
 		memcpy(&cmd.args[2], msg, msg_len);
 
-	cmd = si2183_cmd(client, cmd.args, 8, 1);
+	cmd = si2183_CMD(client, cmd);
 	return cmd.ret;
 }
 
