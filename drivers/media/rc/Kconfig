@@ -111,6 +111,15 @@ config IR_XMP_DECODER
 	---help---
 	   Enable this option if you have IR with XMP protocol, and
 	   if the IR is decoded in software
+
+config IR_IMON_DECODER
+	tristate "Enable IR raw decoder for the iMON protocol"
+	depends on RC_CORE
+	---help---
+	   Enable this option if you have iMON PAD or Antec Veris infrared
+	   remote control and you would like to use it with a raw IR
+	   receiver, or if you wish to use an encoder to transmit this IR.
+
 endif #RC_DECODERS
 
 menuconfig RC_DEVICES
@@ -174,6 +183,18 @@ config IR_IMON
 
 	   To compile this driver as a module, choose M here: the
 	   module will be called imon.
+
+config IR_IMON_RAW
+	tristate "SoundGraph iMON Receiver (early raw IR models)"
+	depends on USB_ARCH_HAS_HCD
+	depends on RC_CORE
+	select USB
+	---help---
+	   Say Y here if you want to use a SoundGraph iMON IR Receiver,
+	   early raw models.
+
+	   To compile this driver as a module, choose M here: the
+	   module will be called imon_raw.
 
 config IR_MCEUSB
 	tristate "Windows Media Center Ed. eHome Infrared Transceiver"

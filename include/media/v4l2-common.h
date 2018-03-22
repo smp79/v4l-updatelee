@@ -316,21 +316,37 @@ void v4l_bound_align_image(unsigned int *width, unsigned int wmin,
 			   unsigned int salign);
 
 /**
- * v4l2_find_nearest_format - find the nearest format size among a discrete
- *	set of resolutions.
+ * v4l2_find_nearest_size - Find the nearest size among a discrete
+ *	set of resolutions contained in an array of a driver specific struct.
  *
- * @sizes: array of &struct v4l2_frmsize_discrete image sizes.
- * @num_sizes: length of @sizes array.
+ * @array: a driver specific array of image sizes
+ * @width_field: the name of the width field in the driver specific struct
+ * @height_field: the name of the height field in the driver specific struct
  * @width: desired width.
  * @height: desired height.
  *
  * Finds the closest resolution to minimize the width and height differences
- * between what requested and the supported resolutions.
+ * between what requested and the supported resolutions. The size of the width
+ * and height fields in the driver specific must equal to that of u32, i.e. four
+ * bytes.
+ *
+ * Returns the best match or NULL if the length of the array is zero.
  */
-const struct v4l2_frmsize_discrete *
-v4l2_find_nearest_format(const struct v4l2_frmsize_discrete *sizes,
-			  const size_t num_sizes,
-			  s32 width, s32 height);
+#define v4l2_find_nearest_size(array, width_field, height_field, \
+			       width, height)				\
+	({								\
+		BUILD_BUG_ON(sizeof((array)->width_field) != sizeof(u32) || \
+			     sizeof((array)->height_field) != sizeof(u32)); \
+		(typeof(&(*(array))))__v4l2_find_nearest_size(		\
+			(array), ARRAY_SIZE(array), sizeof(*(array)),	\
+			offsetof(typeof(*(array)), width_field),	\
+			offsetof(typeof(*(array)), height_field),	\
+			width, height);					\
+	})
+const void *
+__v4l2_find_nearest_size(const void *array, size_t array_size,
+			 size_t entry_size, size_t width_offset,
+			 size_t height_offset, s32 width, s32 height);
 
 /**
  * v4l2_get_timestamp - helper routine to get a timestamp to be used when
