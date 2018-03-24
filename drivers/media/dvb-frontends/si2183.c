@@ -80,9 +80,10 @@ static const struct si2183_command SI2183_SET_INT_SENSE		= {{0x14, 0x00, 0x07, 0
 static const struct si2183_command SI2183_SET_TS_SERIAL		= {{0x14, 0x00, 0x08, 0x10, 0x0c, 0x23}, 6, 4};
 static const struct si2183_command SI2183_SET_TS_PARALLEL	= {{0x14, 0x00, 0x09, 0x10, 0x04, 0x01}, 6, 4};
 static const struct si2183_command SI2183_SET_MCNS_SYSTEM	= {{0x14, 0x00, 0x0a, 0x10, 0x18, 0x00}, 6, 4};
-static const struct si2183_command SI2183_SET_DVBT_SYSTEM	= {{0x14, 0x00, 0x0a, 0x10, 0x28, 0x00}, 6, 4};
+static const struct si2183_command SI2183_SET_DVBT_SYSTEM	= {{0x14, 0x00, 0x0a, 0x10, 0x20, 0x00}, 6, 4};
 static const struct si2183_command SI2183_SET_DVBC_SYSTEM	= {{0x14, 0x00, 0x0a, 0x10, 0x38, 0x00}, 6, 4};
 static const struct si2183_command SI2183_SET_ISDBT_SYSTEM	= {{0x14, 0x00, 0x0a, 0x10, 0x48, 0x00}, 6, 4};
+static const struct si2183_command SI2183_SET_DVBT2_SYSTEM	= {{0x14, 0x00, 0x0a, 0x10, 0x70, 0x00}, 6, 4};
 static const struct si2183_command SI2183_SET_DVBS_SYSTEM	= {{0x14, 0x00, 0x0a, 0x10, 0x88, 0x00}, 6, 4};
 static const struct si2183_command SI2183_SET_DVBS2_SYSTEM	= {{0x14, 0x00, 0x0a, 0x10, 0x98, 0x00}, 6, 4};
 static const struct si2183_command SI2183_SET_DSS_SYSTEM	= {{0x14, 0x00, 0x0a, 0x10, 0xa8, 0x00}, 6, 4};
@@ -572,7 +573,16 @@ static int si2183_set_dvbt(struct dvb_frontend *fe)
 
 	si2183_CMD(client, SI2183_SET_AGC_TER);
 
-	cmd = SI2183_SET_DVBT_SYSTEM;
+	switch (c->delivery_system) {
+	default:
+	case SYS_DVBT:
+		cmd = SI2183_SET_DVBT_SYSTEM;
+		break;
+	case SYS_DVBT2:
+		cmd = SI2183_SET_DVBT2_SYSTEM;
+		break;
+	}
+
 	if (c->bandwidth_hz == 0)
 		return -EINVAL;
 	else if (c->bandwidth_hz <= 2000000)
@@ -591,16 +601,6 @@ static int si2183_set_dvbt(struct dvb_frontend *fe)
 		cmd.args[4] = 0x0a;
 	else
 		cmd.args[4] = 0x0f;
-
-	switch (c->delivery_system) {
-	default:
-	case SYS_DVBT:
-		cmd.args[4] |= 0x20;
-		break;
-	case SYS_DVBT2:
-		cmd.args[4] |= 0x70;
-		break;
-	}
 	si2183_CMD(client, cmd);
 
 	/* hierarchy - HP = 0 / LP = 1 */
