@@ -586,21 +586,21 @@ static int si2183_set_dvbt(struct dvb_frontend *fe)
 	if (c->bandwidth_hz == 0)
 		return -EINVAL;
 	else if (c->bandwidth_hz <= 2000000)
-		cmd.args[4] = 0x02;
+		cmd.args[4] |= 0x02;
 	else if (c->bandwidth_hz <= 5000000)
-		cmd.args[4] = 0x05;
+		cmd.args[4] |= 0x05;
 	else if (c->bandwidth_hz <= 6000000)
-		cmd.args[4] = 0x06;
+		cmd.args[4] |= 0x06;
 	else if (c->bandwidth_hz <= 7000000)
-		cmd.args[4] = 0x07;
+		cmd.args[4] |= 0x07;
 	else if (c->bandwidth_hz <= 8000000)
-		cmd.args[4] = 0x08;
+		cmd.args[4] |= 0x08;
 	else if (c->bandwidth_hz <= 9000000)
-		cmd.args[4] = 0x09;
+		cmd.args[4] |= 0x09;
 	else if (c->bandwidth_hz <= 10000000)
-		cmd.args[4] = 0x0a;
+		cmd.args[4] |= 0x0a;
 	else
-		cmd.args[4] = 0x0f;
+		cmd.args[4] |= 0x0f;
 	si2183_CMD(client, cmd);
 
 	/* hierarchy - HP = 0 / LP = 1 */
