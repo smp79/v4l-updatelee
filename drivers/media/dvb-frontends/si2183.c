@@ -106,7 +106,7 @@ static const struct si2183_command SI2183_SET_PLSCODE		= {{0x73, 0x01, 0x00, 0x0
 static const struct si2183_command SI2183_GET_BER		= {{0x82, 0x00}, 2, 3};
 static const struct si2183_command SI2183_GET_UCB		= {{0x84, 0x00}, 2, 3};
 static const struct si2183_command SI2183_DSP_RESET		= {{0x85}, 1, 1};
-static const struct si2183_command SI2183_GET_MODULATION	= {{0x87, 0x00}, 2, 8};
+static const struct si2183_command SI2183_GET_SYSTEM		= {{0x87, 0x00}, 2, 8};
 static const struct si2183_command SI2183_SET_AGC_TER		= {{0x89, 0x41, 0x06, 0x12, 0x00, 0x00}, 6, 3};
 static const struct si2183_command SI2183_GET_RF_STRENGTH	= {{0x8a, 0x00, 0x00, 0x00, 0x00, 0x00}, 6, 3};
 static const struct si2183_command SI2183_SET_AGC_SAT		= {{0x8a, 0x08, 0x12, 0x00, 0x00, 0x00}, 6, 3};
@@ -282,7 +282,7 @@ static int si2183_read_status(struct dvb_frontend *fe, enum fe_status *status)
 		return -EAGAIN;
 	}
 
-	cmd = si2183_CMD(client, SI2183_GET_MODULATION);
+	cmd = si2183_CMD(client, SI2183_GET_SYSTEM);
 	switch (cmd.args[3]) {
 	case 0x08:
 		c->delivery_system = SYS_DVBS;
@@ -1007,13 +1007,13 @@ static int si2183_search(struct dvb_frontend *fe)
 
 	fprintk("Blindscan");
 
-	si2183_CMD(client, SI2183_GET_MODULATION);
+	si2183_CMD(client, SI2183_GET_SYSTEM);
 
 	si2183_CMD(client, SI2183_SET_AGC_SAT);
 
 	si2183_cmd(client, "\x8b\xcc", 2, 3);
 
-	si2183_CMD(client, SI2183_GET_MODULATION);
+	si2183_CMD(client, SI2183_GET_SYSTEM);
 
 	si2183_CMD(client, SI2183_SET_AGC_SAT);
 
@@ -1210,7 +1210,7 @@ static int si2183_get_spectrum_scan(struct dvb_frontend *fe, struct dvb_fe_spect
 
 			ret = fe->ops.tuner_ops.set_params(fe);
 
-			cmd = si2183_cmd(client, "\x8a\x00\x00\x00\x00\x00", 6, 3);
+			cmd = si2183_CMD(client, SI2183_GET_RF_STRENGTH);
 
 			strength = cmd.args[1];
 			fe->ops.tuner_ops.get_rf_strength(fe, &strength);
