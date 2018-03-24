@@ -82,7 +82,7 @@ static const struct si2183_command SI2183_SET_TS_PARALLEL	= {{0x14, 0x00, 0x09, 
 static const struct si2183_command SI2183_SET_MCNS_SYSTEM	= {{0x14, 0x00, 0x0a, 0x10, 0x18, 0x00}, 6, 4};
 static const struct si2183_command SI2183_SET_DVBT_SYSTEM	= {{0x14, 0x00, 0x0a, 0x10, 0x20, 0x00}, 6, 4};
 static const struct si2183_command SI2183_SET_DVBC_SYSTEM	= {{0x14, 0x00, 0x0a, 0x10, 0x38, 0x00}, 6, 4};
-static const struct si2183_command SI2183_SET_ISDBT_SYSTEM	= {{0x14, 0x00, 0x0a, 0x10, 0x48, 0x00}, 6, 4};
+static const struct si2183_command SI2183_SET_ISDBT_SYSTEM	= {{0x14, 0x00, 0x0a, 0x10, 0x40, 0x00}, 6, 4};
 static const struct si2183_command SI2183_SET_DVBT2_SYSTEM	= {{0x14, 0x00, 0x0a, 0x10, 0x70, 0x00}, 6, 4};
 static const struct si2183_command SI2183_SET_DVBS_SYSTEM	= {{0x14, 0x00, 0x0a, 0x10, 0x88, 0x00}, 6, 4};
 static const struct si2183_command SI2183_SET_DVBS2_SYSTEM	= {{0x14, 0x00, 0x0a, 0x10, 0x98, 0x00}, 6, 4};
@@ -636,23 +636,22 @@ static int si2183_set_isdbt(struct dvb_frontend *fe)
 	if (c->bandwidth_hz == 0)
 		return -EINVAL;
 	else if (c->bandwidth_hz <= 2000000)
-		cmd.args[4] = 0x02;
+		cmd.args[4] |= 0x02;
 	else if (c->bandwidth_hz <= 5000000)
-		cmd.args[4] = 0x05;
+		cmd.args[4] |= 0x05;
 	else if (c->bandwidth_hz <= 6000000)
-		cmd.args[4] = 0x06;
+		cmd.args[4] |= 0x06;
 	else if (c->bandwidth_hz <= 7000000)
-		cmd.args[4] = 0x07;
+		cmd.args[4] |= 0x07;
 	else if (c->bandwidth_hz <= 8000000)
-		cmd.args[4] = 0x08;
+		cmd.args[4] |= 0x08;
 	else if (c->bandwidth_hz <= 9000000)
-		cmd.args[4] = 0x09;
+		cmd.args[4] |= 0x09;
 	else if (c->bandwidth_hz <= 10000000)
-		cmd.args[4] = 0x0a;
+		cmd.args[4] |= 0x0a;
 	else
-		cmd.args[4] = 0x0f;
+		cmd.args[4] |= 0x0f;
 
-	cmd.args[4] |= 0x40;
 	si2183_CMD(client, cmd);
 
 	return 0;
