@@ -997,7 +997,7 @@ static int si2183_search(struct dvb_frontend *fe)
 
 	fprintk("");
 
-	if(dev->RF_switch)
+	if (dev->RF_switch)
 	{
 		switch (c->delivery_system) {
 		case SYS_DVBT:
@@ -1005,13 +1005,13 @@ static int si2183_search(struct dvb_frontend *fe)
 		case SYS_DVBC_ANNEX_A:
 		case SYS_DVBC_ANNEX_B:
 		case SYS_ISDBT:
-			dev->RF_switch(dev->base->i2c,dev->rf_in,1);
+			dev->RF_switch(dev->base->i2c, dev->rf_in, 1);
 			break;
 		case SYS_DVBS:
 		case SYS_DVBS2:
 		case SYS_DSS:
 		default:
-			dev->RF_switch(dev->base->i2c,dev->rf_in,0);
+			dev->RF_switch(dev->base->i2c, dev->rf_in, 0);
 			break;
 
 		}
