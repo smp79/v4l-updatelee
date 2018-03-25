@@ -514,12 +514,12 @@ static struct stv6120_config tbs6903_stv6120_1_cfg = {
 
 static struct av201x_config tbs6522_av201x_cfg[] = {
 {
-	.i2c_address = 0x63,
+	.i2c_address = 0xc6 >> 1,
 	.id          = ID_AV2018,
 	.xtal_freq   = 27000,
 },
 {
-	.i2c_address = 0x62,
+	.i2c_address = 0xc4 >> 1,
 	.id          = ID_AV2018,
 	.xtal_freq   = 27000,
 },
@@ -863,7 +863,7 @@ static int tbsecp3_frontend_attach(struct tbsecp3_adapter *adapter)
 
 		memset(&info, 0, sizeof(struct i2c_board_info));
 		strlcpy(info.type, "si2183", I2C_NAME_SIZE);
-		info.addr = adapter->nr ? 0x64 : 0x67;
+		info.addr = adapter->nr ? 0xc8 >> 1 : 0xce >> 1;
 		si2183_config.agc_mode = adapter->nr? 0x4 : 0x5;
 		info.platform_data = &si2183_config;
 		request_module(info.type);
@@ -896,7 +896,7 @@ static int tbsecp3_frontend_attach(struct tbsecp3_adapter *adapter)
 
 		memset(&info, 0, sizeof(struct i2c_board_info));
 		strlcpy(info.type, "si2157", I2C_NAME_SIZE);
-		info.addr = adapter->nr ? 0x61 : 0x60;
+		info.addr = adapter->nr ? 0xc2 >> 1 : 0xc0 >> 1;
 		info.platform_data = &si2157_config;
 		request_module(info.type);
 		client_tuner = i2c_new_device(i2c, &info);
