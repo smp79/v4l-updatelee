@@ -151,11 +151,30 @@ static int av201x_sleep(struct dvb_frontend *fe)
 	return ret;
 }
 
+static int av201x_set_bandwidth(struct dvb_frontend *fe, u32 bw)
+{
+	struct av201x_priv *priv = fe->tuner_priv;
+	u32 bf;
+	int ret;
+
+	/* check limits (4MHz < bw < 40MHz) */
+	if (bw > 40000)
+		bw = 40000;
+	if (bw < 4000)
+		bw = 4000;
+
+	/* bandwidth step = 211kHz */
+	bf = DIV_ROUND_CLOSEST(bw * 127, 21100);
+	ret = av201x_wr(priv, REG_BWFILTER, (u8) bf);
+
+	return ret;
+}
+
 static int av201x_set_params(struct dvb_frontend *fe)
 {
 	struct av201x_priv *priv = fe->tuner_priv;
 	struct dtv_frontend_properties *c = &fe->dtv_property_cache;
-	u32 n, bw, bf;
+	u32 n, bw;
 	u8 buf[5];
 	int ret;
 
@@ -184,16 +203,7 @@ static int av201x_set_params(struct dvb_frontend *fe)
 	/* set bandwidth */
 	bw  = c->symbol_rate;
 	bw += ((c->symbol_rate * 10) * 35) / 1000;
-
-	/* check limits (4MHz < bw < 40MHz) */
-	if (bw > 40000)
-		bw = 40000;
-	if (bw < 4000)
-		bw = 4000;
-
-	/* bandwidth step = 211kHz */
-	bf = DIV_ROUND_CLOSEST(bw * 127, 21100);
-	ret = av201x_wr(priv, REG_BWFILTER, (u8) bf);
+	av201x_set_bandwidth(fe, bw);
 
 	/* enable fine tune agc */
 	ret |= av201x_wr(priv, REG_FT_CTRL, AV201X_FT_EN | AV201X_FT_BLK);
@@ -249,6 +259,7 @@ static const struct dvb_tuner_ops av201x_tuner_ops = {
 	.init = av201x_init,
 	.sleep = av201x_sleep,
 	.set_params = av201x_set_params,
+	.set_bandwidth = av201x_set_bandwidth,
 	.get_rf_strength = av201x_get_rf_strength,
 };
 
