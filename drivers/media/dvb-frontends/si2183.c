@@ -290,7 +290,7 @@ static int si2183_read_status(struct dvb_frontend *fe, enum fe_status *status)
 	}
 
 	cmd = si2183_CMD(client, SI2183_GET_SYSTEM);
-	switch (cmd.args[3]) {
+	switch (cmd.args[3] & 0x0f) {
 	case 0x08:
 		c->delivery_system = SYS_DVBS;
 		break;
@@ -318,24 +318,112 @@ static int si2183_read_status(struct dvb_frontend *fe, enum fe_status *status)
 	case SYS_DVBS:
 		cmd = si2183_CMD(client, SI2183_GET_DVBS_PARAMETERS);
 		c->modulation = QPSK;
+		switch (cmd.args[9] & 0x0f) {
+		case 0x01:
+			c->fec_inner = FEC_1_2;		//not verified
+			break;
+		case 0x02:
+			c->fec_inner = FEC_2_3;		//not verified
+			break;
+		case 0x03:
+			c->fec_inner = FEC_3_4;
+			break;
+		case 0x05:
+			c->fec_inner = FEC_5_6;
+			break;
+		case 0x07:
+			c->fec_inner = FEC_7_8;		//not verified
+			break;
+		default:
+			fprintk("Unknown FEC");
+			break;
+		}
 		break;
 	case SYS_DVBS2:
 		cmd = si2183_CMD(client, SI2183_GET_DVBS2_PARAMETERS);
-		switch (cmd.args[8]) {
-		case 0xc3:
+		switch ((cmd.args[10] ^ 0x10)) {
+		case 0x08:
+			c->rolloff = ROLLOFF_35;
+			break;
+		case 0x09:
+			c->rolloff = ROLLOFF_25;
+			break;
+		case 0x0a:
+			c->rolloff = ROLLOFF_20;
+			break;
+//		case 0x0b:
+//			c->rolloff = ROLLOFF_15;
+//			break;
+//		case 0x0c:
+//			c->rolloff = ROLLOFF_10;
+//			break;
+//		case 0x0d:
+//			c->rolloff = ROLLOFF_05;
+//			break;
+		default:
+			fprintk("Unknown rolloff");
+			break;
+		}
+		switch ((cmd.args[8] >> 7)) {
+		case 0:
+			c->pilot = PILOT_ON;
+			break;
+		case 1:
+			c->pilot = PILOT_OFF;
+			break;
+		}
+		switch ((cmd.args[8] >> 6) & 0x01) {
+		case 0:
+			c->inversion = INVERSION_ON;
+			break;
+		case 1:
+			c->inversion = INVERSION_OFF;
+			break;
+		}
+		switch (cmd.args[8] & 0x0f) {
+		case 0x03:
 			c->modulation = QPSK;
 			break;
-		case 0xce:
+		case 0x0e:
 			c->modulation = PSK_8;
 			break;
-		case 0xd4:
+		case 0x04:
 			c->modulation = APSK_16;
 			break;
-		case 0xd5:
+		case 0x05:
 			c->modulation = APSK_32;
 			break;
 		default:
-			fprintk("Modulation not found");
+			fprintk("Unkown modulation");
+			break;
+		}
+		switch (cmd.args[9]) {
+		case 0x00:
+			c->fec_inner = FEC_1_2;
+			break;
+		case 0x01:
+			c->fec_inner = FEC_3_5;
+			break;
+		case 0x02:
+			c->fec_inner = FEC_2_3;
+			break;
+		case 0x03:
+			c->fec_inner = FEC_3_4;
+			break;
+		case 0x04:
+			c->fec_inner = FEC_4_5;
+			break;
+		case 0x05:
+			c->fec_inner = FEC_5_6;
+			break;
+		case 0x08:
+			c->fec_inner = FEC_8_9;
+			break;
+		case 0x09:
+			c->fec_inner = FEC_9_10;
+			break;
+		default:
+			fprintk("Unkown FEC");
 			break;
 		}
 		break;
