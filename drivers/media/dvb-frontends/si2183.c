@@ -116,6 +116,7 @@ static const struct si2183_command SI2183_GET_RF_STRENGTH	= {{0x8a, 0x00, 0x00, 
 static const struct si2183_command SI2183_SET_AGC_SAT		= {{0x8a, 0x1d, 0x12, 0x00, 0x00, 0x00}, 6, 3};
 static const struct si2183_command SI2183_SET_AGC_SAT2		= {{0x8a, 0x08, 0x12, 0x00, 0x00, 0x00}, 6, 3};
 static const struct si2183_command SI2183_DISEQC		= {{0x8c, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, 8, 1};
+static const struct si2183_command SI2183_GET_IQ_SAMPLE 	= {{0x8f, 0x0f, 0xf8, 0x05}, 4, 5};
 static const struct si2183_command SI2183_GET_DVBT_PARAMETERS	= {{0x0a, 0x01}, 2, 13};
 static const struct si2183_command SI2183_GET_ISDBT_PARAMETERS	= {{0xa4, 0x01}, 2, 14};
 static const struct si2183_command SI2183_INIT			= {{0xc0, 0x12, 0x00, 0x0c, 0x00, 0x0d, 0x16, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, 13, 0};
@@ -1346,6 +1347,28 @@ static int si2183_get_spectrum_scan(struct dvb_frontend *fe, struct dvb_fe_spect
 	return 0;
 }
 
+static int si2183_get_constellation_samples(struct dvb_frontend *fe, struct dvb_fe_constellation_samples *s)
+{
+	struct i2c_client *client = fe->demodulator_priv;
+	struct si2183_command cmd;
+	u32 x;
+	bool debug_state = si2183_debug;
+
+	// minimize noise
+	si2183_debug = false;
+
+	for (x = 0 ; x < s->num ; x++) {
+		cmd = si2183_CMD(client, SI2183_GET_IQ_SAMPLE);
+		s->samples[x].imaginary= cmd.args[1]; //just taking a guess, no docs
+		s->samples[x].real = cmd.args[2];
+	}
+
+	// return debug
+	si2183_debug = debug_state;
+
+	return 0;
+}
+
 static int send_diseqc_cmd(struct dvb_frontend *fe,
 	u8 cont_tone, u8 tone_burst, u8 burst_sel,
 	u8 end_seq, u8 msg_len, u8 *msg)
@@ -1495,7 +1518,8 @@ static const struct dvb_frontend_ops si2183_ops = {
 			FE_HAS_EXTENDED_CAPS
 	},
 	.extended_info = {
-		.extended_caps	= FE_CAN_SPECTRUMSCAN
+		.extended_caps	= FE_CAN_SPECTRUMSCAN |
+				  FE_CAN_IQ
 	},
 
 	.get_tune_settings	= si2183_get_tune_settings,
@@ -1516,7 +1540,8 @@ static const struct dvb_frontend_ops si2183_ops = {
 
 	.search			= si2183_search,
 	.dtv_tune		= si2183_dtv_tune,
-	.get_spectrum_scan	= si2183_get_spectrum_scan,
+	.get_spectrum_scan		= si2183_get_spectrum_scan,
+	.get_constellation_samples	= si2183_get_constellation_samples,
 
 	.set_tone		= si2183_set_tone,
 	.diseqc_send_burst	= si2183_diseqc_send_burst,
