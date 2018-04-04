@@ -319,6 +319,7 @@ static int si2183_read_status(struct dvb_frontend *fe, enum fe_status *status)
 	case SYS_DVBS:
 		cmd = si2183_CMD(client, SI2183_GET_DVBS_PARAMETERS);
 		c->modulation = QPSK;
+		c->rolloff = ROLLOFF_35;
 		switch (cmd.args[9] & 0x0f) {
 		case 0x01:
 			c->fec_inner = FEC_1_2;		//not verified
