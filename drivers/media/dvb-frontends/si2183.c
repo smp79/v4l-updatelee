@@ -343,23 +343,26 @@ static int si2183_read_status(struct dvb_frontend *fe, enum fe_status *status)
 		break;
 	case SYS_DVBS2:
 		cmd = si2183_CMD(client, SI2183_GET_DVBS2_PARAMETERS);
-		switch ((cmd.args[10] ^ 0x10)) {
-		case 0x08:
+		switch ((cmd.args[10] & 0x03)) {
+		case 0:
 			c->rolloff = ROLLOFF_35;
 			break;
-		case 0x09:
+		case 1:
 			c->rolloff = ROLLOFF_25;
 			break;
-		case 0x0a:
+		case 2:
 			c->rolloff = ROLLOFF_20;
 			break;
-//		case 0x0b:
+/* fixme - should we ever come across alternating RO bit pattern of 11,
+   would be a sign we are on an S2x signal and the receiver
+   should switch to the LO RO, so we should be able to indicate that. */
+//		case 0:
 //			c->rolloff = ROLLOFF_15;
 //			break;
-//		case 0x0c:
+//		case 1:
 //			c->rolloff = ROLLOFF_10;
 //			break;
-//		case 0x0d:
+//		case 2:
 //			c->rolloff = ROLLOFF_05;
 //			break;
 		default:
