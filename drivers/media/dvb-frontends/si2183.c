@@ -322,10 +322,10 @@ static int si2183_read_status(struct dvb_frontend *fe, enum fe_status *status)
 		c->rolloff = ROLLOFF_35;
 		switch (cmd.args[9] & 0x0f) {
 		case 0x01:
-			c->fec_inner = FEC_1_2;		//not verified
+			c->fec_inner = FEC_1_2;
 			break;
 		case 0x02:
-			c->fec_inner = FEC_2_3;		//not verified
+			c->fec_inner = FEC_2_3;
 			break;
 		case 0x03:
 			c->fec_inner = FEC_3_4;
@@ -334,7 +334,7 @@ static int si2183_read_status(struct dvb_frontend *fe, enum fe_status *status)
 			c->fec_inner = FEC_5_6;
 			break;
 		case 0x07:
-			c->fec_inner = FEC_7_8;		//not verified
+			c->fec_inner = FEC_7_8;
 			break;
 		default:
 			fprintk("Unknown FEC");
@@ -400,11 +400,8 @@ static int si2183_read_status(struct dvb_frontend *fe, enum fe_status *status)
 			break;
 		}
 		switch (cmd.args[9]) {
-		case 0x00:
-			c->fec_inner = FEC_1_2;
-			break;
 		case 0x01:
-			c->fec_inner = FEC_3_5;
+			c->fec_inner = FEC_1_2;
 			break;
 		case 0x02:
 			c->fec_inner = FEC_2_3;
@@ -418,11 +415,26 @@ static int si2183_read_status(struct dvb_frontend *fe, enum fe_status *status)
 		case 0x05:
 			c->fec_inner = FEC_5_6;
 			break;
+		case 0x07:
+			c->fec_inner = FEC_7_8;
+			break;
 		case 0x08:
 			c->fec_inner = FEC_8_9;
 			break;
 		case 0x09:
 			c->fec_inner = FEC_9_10;
+			break;
+		case 0x0a:
+			c->fec_inner = FEC_1_3;
+			break;
+		case 0x0b:
+			c->fec_inner = FEC_1_4;
+			break;
+		case 0x0c:
+			c->fec_inner = FEC_2_5;
+			break;
+		case 0x0d:
+			c->fec_inner = FEC_3_5;
 			break;
 		default:
 			fprintk("Unkown FEC");
