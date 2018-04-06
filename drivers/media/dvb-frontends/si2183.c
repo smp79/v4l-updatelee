@@ -319,12 +319,13 @@ static int si2183_read_status(struct dvb_frontend *fe, enum fe_status *status)
 	case SYS_DVBS:
 		cmd = si2183_CMD(client, SI2183_GET_DVBS_PARAMETERS);
 		c->modulation = QPSK;
+		c->rolloff = ROLLOFF_35;
 		switch (cmd.args[9] & 0x0f) {
 		case 0x01:
-			c->fec_inner = FEC_1_2;		//not verified
+			c->fec_inner = FEC_1_2;
 			break;
 		case 0x02:
-			c->fec_inner = FEC_2_3;		//not verified
+			c->fec_inner = FEC_2_3;
 			break;
 		case 0x03:
 			c->fec_inner = FEC_3_4;
@@ -333,7 +334,7 @@ static int si2183_read_status(struct dvb_frontend *fe, enum fe_status *status)
 			c->fec_inner = FEC_5_6;
 			break;
 		case 0x07:
-			c->fec_inner = FEC_7_8;		//not verified
+			c->fec_inner = FEC_7_8;
 			break;
 		default:
 			fprintk("Unknown FEC");
@@ -342,23 +343,26 @@ static int si2183_read_status(struct dvb_frontend *fe, enum fe_status *status)
 		break;
 	case SYS_DVBS2:
 		cmd = si2183_CMD(client, SI2183_GET_DVBS2_PARAMETERS);
-		switch ((cmd.args[10] ^ 0x10)) {
-		case 0x08:
+		switch ((cmd.args[10] & 0x03)) {
+		case 0:
 			c->rolloff = ROLLOFF_35;
 			break;
-		case 0x09:
+		case 1:
 			c->rolloff = ROLLOFF_25;
 			break;
-		case 0x0a:
+		case 2:
 			c->rolloff = ROLLOFF_20;
 			break;
-//		case 0x0b:
+/* fixme - should we ever come across alternating RO bit pattern of 11,
+   would be a sign we are on an S2x signal and the receiver
+   should switch to the LO RO, so we should be able to indicate that. */
+//		case 0:
 //			c->rolloff = ROLLOFF_15;
 //			break;
-//		case 0x0c:
+//		case 1:
 //			c->rolloff = ROLLOFF_10;
 //			break;
-//		case 0x0d:
+//		case 2:
 //			c->rolloff = ROLLOFF_05;
 //			break;
 		default:
@@ -399,11 +403,8 @@ static int si2183_read_status(struct dvb_frontend *fe, enum fe_status *status)
 			break;
 		}
 		switch (cmd.args[9]) {
-		case 0x00:
-			c->fec_inner = FEC_1_2;
-			break;
 		case 0x01:
-			c->fec_inner = FEC_3_5;
+			c->fec_inner = FEC_1_2;
 			break;
 		case 0x02:
 			c->fec_inner = FEC_2_3;
@@ -417,11 +418,26 @@ static int si2183_read_status(struct dvb_frontend *fe, enum fe_status *status)
 		case 0x05:
 			c->fec_inner = FEC_5_6;
 			break;
+		case 0x07:
+			c->fec_inner = FEC_7_8;
+			break;
 		case 0x08:
 			c->fec_inner = FEC_8_9;
 			break;
 		case 0x09:
 			c->fec_inner = FEC_9_10;
+			break;
+		case 0x0a:
+			c->fec_inner = FEC_1_3;
+			break;
+		case 0x0b:
+			c->fec_inner = FEC_1_4;
+			break;
+		case 0x0c:
+			c->fec_inner = FEC_2_5;
+			break;
+		case 0x0d:
+			c->fec_inner = FEC_3_5;
 			break;
 		default:
 			fprintk("Unkown FEC");
