@@ -1092,7 +1092,6 @@ static int si2183_search(struct dvb_frontend *fe)
 	struct si2183_command cmd;
 	int ret, i;
 	u8 tmp[20];
-//	u32 pls_mode, pls_code;
 	enum fe_status status = 0;
 
 	if (config->algo != SI2183_TUNE)
@@ -1261,7 +1260,6 @@ static int si2183_search(struct dvb_frontend *fe)
 
 		cmd = si2183_cmd(client, "\x87\x01", 2, 8);
 		if (cmd.args[2] == 0x0e && cmd.args[4] != 0x00 && cmd.args[5] != 0x00)
-//		if (((cmd.args[2] >> 1) & 3) != 0x00)
 			break;
 
 		msleep(100);
