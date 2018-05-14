@@ -549,12 +549,10 @@ static struct cx22702_config cxusb_cx22702_config = {
 };
 
 static struct lgdt330x_config cxusb_lgdt3303_config = {
-	.demod_address = 0x0e,
 	.demod_chip    = LGDT3303,
 };
 
 static struct lgdt330x_config cxusb_aver_lgdt3303_config = {
-	.demod_address       = 0x0e,
 	.demod_chip          = LGDT3303,
 	.clock_polarity_flip = 2,
 };
@@ -772,6 +770,7 @@ static int cxusb_lgdt3303_frontend_attach(struct dvb_usb_adapter *adap)
 
 	adap->fe_adap[0].fe = dvb_attach(lgdt330x_attach,
 					 &cxusb_lgdt3303_config,
+					 0x0e,
 					 &adap->dev->i2c_adap);
 	if ((adap->fe_adap[0].fe) != NULL)
 		return 0;
@@ -781,8 +780,10 @@ static int cxusb_lgdt3303_frontend_attach(struct dvb_usb_adapter *adap)
 
 static int cxusb_aver_lgdt3303_frontend_attach(struct dvb_usb_adapter *adap)
 {
-	adap->fe_adap[0].fe = dvb_attach(lgdt330x_attach, &cxusb_aver_lgdt3303_config,
-			      &adap->dev->i2c_adap);
+	adap->fe_adap[0].fe = dvb_attach(lgdt330x_attach,
+					 &cxusb_aver_lgdt3303_config,
+					 0x0e,
+					 &adap->dev->i2c_adap);
 	if (adap->fe_adap[0].fe != NULL)
 		return 0;
 

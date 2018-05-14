@@ -1751,7 +1751,7 @@ static int lgdt3306a_dtv_tune(struct dvb_frontend *fe)
 	return 0;
 }
 
-static int lgdt3306a_search(struct dvb_frontend *fe)
+static enum dvbfe_search lgdt3306a_search(struct dvb_frontend *fe)
 {
 	struct lgdt3306a_state *state = fe->demodulator_priv;
 	enum fe_status status = 0;
