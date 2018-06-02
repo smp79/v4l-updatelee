@@ -19,6 +19,10 @@
 #ifndef _DDBRIDGE_MCI_H_
 #define _DDBRIDGE_MCI_H_
 
+#define MCI_DEMOD_MAX                       8
+#define MCI_TUNER_MAX                       4
+#define DEMOD_UNUSED                        (0xFF)
+
 #define MCI_CONTROL                         (0x500)
 #define MCI_COMMAND                         (0x600)
 #define MCI_RESULT                          (0x680)
@@ -147,6 +151,6 @@ struct mci_result {
 struct dvb_frontend
 *ddb_mci_attach(struct ddb_input *input,
 		int mci_type, int nr,
-		int (**fn_set_input)(struct dvb_frontend *, int));
+		int (**fn_set_input)(struct dvb_frontend *fe, int input));
 
 #endif /* _DDBRIDGE_MCI_H_ */
