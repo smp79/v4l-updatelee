@@ -865,6 +865,13 @@ static void v4l_print_default(const void *arg, bool write_only)
 	pr_cont("driver-specific ioctl\n");
 }
 
+static void v4l_print_tbs(const void *arg, bool write_only)
+{
+	const struct v4l2_tbs_data *p = arg;
+
+	pr_cont("baseaddr=0x%x, reg=0x%x, value=0x%x\n", p->baseaddr, p->reg, p->value);
+}
+
 static int check_ext_ctrls(struct v4l2_ext_controls *c, int allow_priv)
 {
 	__u32 i;
@@ -1853,6 +1860,23 @@ static int v4l_overlay(const struct v4l2_ioctl_ops *ops,
 	return ops->vidioc_overlay(file, fh, *(unsigned int *)arg);
 }
 
+static int v4l_tbs_g_ctrls(const struct v4l2_ioctl_ops *ops,
+				struct file *file, void *fh, void *arg)
+{
+	if(ops->vidioc_tbs_g_ctrls)
+		return ops->vidioc_tbs_g_ctrls(file, fh, (struct v4l2_tbs_data *)arg);
+	else
+		return -1;
+}
+static int v4l_tbs_s_ctrls(const struct v4l2_ioctl_ops *ops,
+				struct file *file, void *fh, void *arg)
+{
+	if(ops->vidioc_tbs_s_ctrls)
+		return ops->vidioc_tbs_s_ctrls(file, fh, (struct v4l2_tbs_data *)arg);
+	else
+		return -1;
+}
+
 static int v4l_reqbufs(const struct v4l2_ioctl_ops *ops,
 				struct file *file, void *fh, void *arg)
 {
@@ -2637,6 +2661,8 @@ static struct v4l2_ioctl_info v4l2_ioctls[] = {
 	IOCTL_INFO(VIDIOC_ENUM_FREQ_BANDS, v4l_enum_freq_bands, v4l_print_freq_band, 0),
 	IOCTL_INFO(VIDIOC_DBG_G_CHIP_INFO, v4l_dbg_g_chip_info, v4l_print_dbg_chip_info, INFO_FL_CLEAR(v4l2_dbg_chip_info, match)),
 	IOCTL_INFO(VIDIOC_QUERY_EXT_CTRL, v4l_query_ext_ctrl, v4l_print_query_ext_ctrl, INFO_FL_CTRL | INFO_FL_CLEAR(v4l2_query_ext_ctrl, id)),
+	IOCTL_INFO(VIDIOC_TBS_G_CTL, v4l_tbs_g_ctrls, v4l_print_tbs, 0),
+	IOCTL_INFO(VIDIOC_TBS_S_CTL, v4l_tbs_s_ctrls, v4l_print_tbs, INFO_FL_PRIO),
 };
 #define V4L2_IOCTLS ARRAY_SIZE(v4l2_ioctls)
 

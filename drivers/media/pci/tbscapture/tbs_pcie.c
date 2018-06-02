@@ -234,6 +234,25 @@ static int tbs_open(struct file *file)
 		
 }
 
+static int tbs_vidioc_get_ctrl(struct file *file, void *fh,
+			        struct v4l2_tbs_data * data)
+{
+	struct tbs_video *videodev = video_drvdata(file);
+	struct tbs_pcie_dev *dev = videodev->dev;
+	data->value  = TBS_PCIE_READ(data->baseaddr, data->reg);
+	printk("read :baseaddr=0x%x, reg=0x%x, value=0x%x\n", data->baseaddr, data->reg, data->value);
+	return 0;
+}
+static int tbs_vidioc_set_ctrl(struct file *file, void *fh,
+			        struct v4l2_tbs_data * data)
+{
+	struct tbs_video *videodev = video_drvdata(file);
+	struct tbs_pcie_dev *dev = videodev->dev;
+	printk("write: baseaddr=0x%x, reg=0x%x, value=0x%x\n", data->baseaddr, data->reg, data->value);
+	TBS_PCIE_WRITE(data->baseaddr,data->reg,data->value);
+	return 0;
+}
+
 static const struct v4l2_file_operations tbs_fops = {
 	.owner		= THIS_MODULE,
 	.open		= tbs_open,//v4l2_fh_open,
@@ -268,8 +287,11 @@ static const struct v4l2_ioctl_ops tbs_ioctl_fops = {
 	.vidioc_subscribe_event = v4l2_ctrl_subscribe_event,
 	.vidioc_unsubscribe_event = v4l2_event_unsubscribe,
 	.vidioc_g_parm = tbs_vidioc_g_parm,
+	.vidioc_tbs_g_ctrls = tbs_vidioc_get_ctrl,
+	.vidioc_tbs_s_ctrls = tbs_vidioc_set_ctrl,
 };
-
+//long (*vidioc_default)(struct file *file, void *fh,
+//			       bool valid_prio, unsigned int cmd, void *arg);
 /* calc max # of buffers from size (must not exceed the 4MB virtual
  * address space per DMA channel) */
 static int tbs_buffer_count(unsigned int size, unsigned int count)
@@ -397,7 +419,6 @@ static int tbs_start_streaming(struct vb2_queue *q, unsigned int count)
 {
 	struct tbs_video *videodev = q->drv_priv;
 	start_video_dma_transfer(videodev);
-
 	videodev->seqnr = 0;	
 	return 0;
 }
@@ -406,6 +427,18 @@ static void tbs_stop_streaming(struct vb2_queue *q)
 {
 	struct tbs_video *videodev = q->drv_priv;
 	unsigned long flags;
+	int offset,regval;
+	int index = videodev->index>>1;
+	struct tbs_pcie_dev *dev = videodev->dev;
+
+	if(index)
+		offset = 32;//video1 read address
+	else
+		offset = 8;//video0 read and write address
+
+	//disable PtoI: bit24 set to default value 0
+	regval =0x0;
+	TBS_PCIE_WRITE(0x0, offset, regval);
 
 	if(videodev->seqnr){
 		//vb2_wait_for_all_buffers(q);		
@@ -624,10 +657,11 @@ void video_data_process(struct work_struct *p_work)
 			memcpy(buf->mem+(i)*videodev->width*2,
 				(u8*)videodev->dmabuf[videodev->seqnr&1].cpu+(i>>1)*videodev->width*2,videodev->width*2);
 		}
+	buf->vb.sequence = videodev->seqnr++;
 	}else{
+		buf->vb.sequence = videodev->seqnr++;
 		memcpy(buf->mem,(u8*)videodev->dmabuf[videodev->seqnr&1].cpu,videodev->dmabuf[videodev->seqnr&1].size);
 	}
-	buf->vb.sequence = videodev->seqnr++;
 	vb2_buffer_done(&buf->vb.vb2_buf, VB2_BUF_STATE_DONE);
 	spin_unlock_irqrestore(&videodev->slock, flags);
 
@@ -684,8 +718,10 @@ static irqreturn_t tbs_pcie_irq(int irq, void *dev_id)
 
 	if (stat & 0x00000020){//video 0
 		ret = TBS_PCIE_READ(TBS_DMA_BASE_1, 0);
+//printk("video 0 ret: %8x\n",ret);
 		if(dev->video[0].Interlaced){
-			if(ret == 0x1010100){
+		//	if(ret == 0x1010100){
+			if((ret & 0x1010000)==0x1010000){
 				next_video_dma_transfer(&dev->video[0],0);
 				queue_work(wq,&dev->video[0].videowork);
 			}else{
@@ -706,8 +742,10 @@ static irqreturn_t tbs_pcie_irq(int irq, void *dev_id)
 
 	if (stat & 0x00000080){//video 1
 		ret = TBS_PCIE_READ(TBS_DMA_BASE_3, 0);
+//printk("video 1 ret: %8x\n",ret);
 		if(dev->video[1].Interlaced){
-			if(ret == 0x1010100){
+		//	if(ret == 0x1010100){
+			if((ret & 0x1010000)==0x1010000){
 				next_video_dma_transfer(&dev->video[1],0);
 				queue_work(wq,&dev->video[1].videowork);
 			}else{
@@ -751,9 +789,22 @@ static void tbs_get_video_param(struct tbs_pcie_dev *dev,int index)
 	struct tbs_adapter *tbs_adap;
 	u8 tmp[2];
 	u32 tmp_B,v_refq=0;
-	
+	int regval;
+	int offset;
+	int ptoi = 0;
+	int itoi = 0;
+
 	tbs_adap = &dev->tbs_pcie_adap[index];
 
+	i2c_read_reg(&tbs_adap->i2c->i2c_adap,0x98, 0x6f,tmp,1);
+	if((tmp[0]&0x01)==0)
+	{
+		printk("HDMI cable is not connect! \n");
+
+		dev->video[index].width = 1280;		
+		dev->video[index].height = 720;
+		return;
+	}
 	i2c_read_reg(&tbs_adap->i2c->i2c_adap,0x68, 0x07,tmp, 2);
 	dev->video[index].width = (tmp[0]&0x1f)*256+tmp[1];		
 	i2c_read_reg(&tbs_adap->i2c->i2c_adap,0x68, 0x09,tmp, 2);
@@ -765,17 +816,58 @@ static void tbs_get_video_param(struct tbs_pcie_dev *dev,int index)
 		v_refq = (unsigned char) ((103663 + (tmp_B -1)) / tmp_B);	
 	dev->video[index].fps=v_refq;
 
+	if(index)
+		offset = 20;//video1 read address
+	else
+		offset = 8;//video0 read and write address
+	ptoi  = TBS_PCIE_READ(0x0, offset);
+	
+	if(index)
+		offset = 32;//video1 write address
+	else
+		offset = 8;
+
 	if(v_refq>30 && dev->video[index].width==1920 && dev->video[index].height==1080) 		
 	{
-		printk("HDMI Progressive change to Interlaced Input  \n");
+		printk("HDMI 1080 50/60 Progressive change to Interlaced Input  \n");
 		dev->video[index].Interlaced = 1;
-	}else{
+		
+		//enable PtoI: bit24 set to 1 by gpio offset address 8
+		regval =0x1;
+		TBS_PCIE_WRITE(0x0, offset, regval);
+
+	}
+	else if((v_refq>50) && (dev->video[index].width==1280) && (dev->video[index].height==720)) 		
+	{
+		printk("HDMI 720 60 Progressive change to Interlaced Input  \n");
+		dev->video[index].Interlaced = 1;
+		
+		//enable PtoI: bit24 set to 1 by gpio offset address 8
+		regval =0x1;
+		TBS_PCIE_WRITE(0x0, offset, regval);
+
+	}
+	else{
+		//disable PtoI: bit24 set to default value 0
+		//regval =0x0;
+		//TBS_PCIE_WRITE(0x0, offset, regval);
+
 		i2c_read_reg(&tbs_adap->i2c->i2c_adap,0x68,0x0b,tmp,1);
 		if (tmp[0]&0x20){
 			printk("HDMI Interlaced Input  \n");
 			dev->video[index].Interlaced = 1;
 			dev->video[index].height<<=1;
-		}else{
+
+			//disable PtoI: bit24 set to default value 0
+			regval =0x0;
+			TBS_PCIE_WRITE(0x0, offset, regval);
+		}
+		else if(ptoi ==1) // deal to ptoi 
+		{
+			printk("HDMI Progressive change to Interlaced Input  \n");
+			dev->video[index].Interlaced = 1;
+		}
+		else{
 			printk("HDMI Progressive Input  \n");
 			dev->video[index].Interlaced = 0;
 		}
@@ -783,12 +875,39 @@ static void tbs_get_video_param(struct tbs_pcie_dev *dev,int index)
 	printk("pix:%d line:%d frameRate:%d\n",dev->video[index].width,dev->video[index].height,v_refq);	
 
 }
+static void tbs6314_mac(struct tbs_adapter *tbs_adap)
+{
+	struct tbs_pcie_dev *dev = tbs_adap->dev;
+	u8 tmp[8];
 
+	//read mac address:
+	tbs_adap = &dev->tbs_pcie_adap[0];
+	i2c_read_reg(&tbs_adap->i2c->i2c_adap,0xa0, 0xa0,tmp, 4);
+	i2c_read_reg(&tbs_adap->i2c->i2c_adap,0xa0, 0xa4,tmp+4, 2);
+	printk("mac address : %x, %x, %x, %x, %x, %x\n", tmp[0],tmp[1],tmp[2],tmp[3],tmp[4],tmp[5]);
+
+}
+static void tbs6312_mac(struct tbs_adapter *tbs_adap)
+{
+	struct tbs_pcie_dev *dev = tbs_adap->dev;
+	u8 tmp[8];
+
+	//read mac address:
+	tbs_adap = &dev->tbs_pcie_adap[1];
+	i2c_read_reg(&tbs_adap->i2c->i2c_adap,0xa0, 0xa0,tmp, 4);
+	i2c_read_reg(&tbs_adap->i2c->i2c_adap,0xa0, 0xa4,tmp+4, 2);
+	printk("mac address : %x, %x, %x, %x, %x, %x\n", tmp[0],tmp[1],tmp[2],tmp[3],tmp[4],tmp[5]);
+	i2c_read_reg(&tbs_adap->i2c->i2c_adap,0xa0, 0xb0,tmp, 4);
+	i2c_read_reg(&tbs_adap->i2c->i2c_adap,0xa0, 0xb4,tmp+4, 2);
+	printk("mac address : %x, %x, %x, %x, %x, %x\n", tmp[0],tmp[1],tmp[2],tmp[3],tmp[4],tmp[5]);	
+
+}
 static void tbs_adapters_init(struct tbs_pcie_dev *dev)
 {
 	struct tbs_adapter *tbs_adap;
+	struct pci_dev *pci = dev->pdev;
 	int i;
-	u8 tmp[2];
+	u8 tmp[8];
 
 	/* disable all interrupts */
 	TBS_PCIE_WRITE(TBS_INT_BASE, TBS_INT_ENABLE, 0x00000001); 
@@ -799,26 +918,48 @@ static void tbs_adapters_init(struct tbs_pcie_dev *dev)
 	TBS_PCIE_WRITE(TBS_DMA_BASE_2, TBS_DMA_START, 0x00000000);
 	TBS_PCIE_WRITE(TBS_DMA_BASE_3, TBS_DMA_START, 0x00000000);
 	
-	for (i = 0; i <2; i++) {
-		tbs_adap = &dev->tbs_pcie_adap[i];
-		tbs_adap->dev = dev;
-		tbs_adap->count = i;
-		tbs_adap->i2c = &dev->i2c_bus[i];
-		//read 7611 id and init chip here
-		i2c_read_reg(&tbs_adap->i2c->i2c_adap,0x98, 0xea,tmp, 2);
-		printk("7611 chip id : %x, %x\n", tmp[0],tmp[1]);
-
-		//reset
-		tmp[0] = 0xff;
-		tmp[1] = 0x80;
-		i2c_write_reg(&tbs_adap->i2c->i2c_adap,0x98, tmp,2);
-		mdelay(200);//sleep
-
-		i2c_write_tab_new(&tbs_adap->i2c->i2c_adap, fw7611);
-		mdelay(200);
-
-		tbs_get_video_param(dev,i);
+	switch(pci->subsystem_vendor){
+	case 0x6312:
+		printk("tbs6312 card\n");
+		dev->nr = 2;
+		break;
+	case 0x6314:
+		printk("tbs6314 card\n");
+		dev->nr = 1;
+		break;
+	default:
+		printk("unknonw card\n");
 	}
+	for (i = 0; i <dev->nr; i++) {
+	tbs_adap = &dev->tbs_pcie_adap[i];
+	tbs_adap->dev = dev;
+	tbs_adap->count = i;
+	tbs_adap->i2c = &dev->i2c_bus[i];
+	//read 7611 id and init chip here
+	i2c_read_reg(&tbs_adap->i2c->i2c_adap,0x98, 0xea,tmp, 2);
+	printk("7611 chip id : %x, %x\n", tmp[0],tmp[1]);
+
+	//reset
+	tmp[0] = 0xff;
+	tmp[1] = 0x80;
+	i2c_write_reg(&tbs_adap->i2c->i2c_adap,0x98, tmp,2);
+	mdelay(200);//sleep
+
+	i2c_write_tab_new(&tbs_adap->i2c->i2c_adap, fw7611);
+	mdelay(200);
+
+	tbs_get_video_param(dev,i);
+	}
+
+	switch(pci->subsystem_vendor){
+	case 0x6312:
+		tbs6312_mac(tbs_adap);
+		break;
+	case 0x6314:
+		tbs6314_mac(tbs_adap);
+		break;
+	}
+
 }
 
 int tbs_video_register(struct tbs_pcie_dev *dev)
@@ -827,20 +968,16 @@ int tbs_video_register(struct tbs_pcie_dev *dev)
 	struct vb2_queue *q ;
 	int i;
 	int err=-1;
-	
-	err = v4l2_device_register(&dev->pdev->dev, &dev->video[0].v4l2_dev);
-	if(err<0){
-		printk(KERN_ERR " v4l2_device_register 0 error! \n");
-		return -1;
-	}
-	err = v4l2_device_register(&dev->pdev->dev, &dev->video[1].v4l2_dev);
-	if(err<0){
-		printk(KERN_ERR " v4l2_device_register 1 error! \n");
-		v4l2_device_unregister(&dev->video[0].v4l2_dev);
-		return -1;
+	for(i=0;i<dev->nr;i++){
+		err = v4l2_device_register(&dev->pdev->dev, &dev->video[i].v4l2_dev);
+		if(err<0){
+			printk(KERN_ERR " v4l2_device_register %d error! \n",i);
+			return -1;
+		}
+
 	}
 	
-	for(i=0;i<2;i++){
+	for(i=0;i<dev->nr;i++){
 		vdev = &(dev->video[i].vdev);
 		q = &(dev->video[i].vq);
 		if (NULL == vdev){
@@ -906,7 +1043,7 @@ int tbs_video_register(struct tbs_pcie_dev *dev)
 	}
 	return 0;
 fail:
-	for(i=0;i<2;i++){
+	for(i=0;i<dev->nr;i++){
 		if(!dev->video[i].dmabuf[0].cpu){
 				pci_free_consistent(dev->pdev,  4095*1024, dev->video[i].dmabuf[0].cpu, dev->video[i].dmabuf[0].dma);
 				dev->video[i].dmabuf[0].cpu =NULL;
@@ -1096,7 +1233,7 @@ int tbs_audio_register(struct tbs_pcie_dev *dev)
 	int ret;
 	int i;
 	char audioname[100];
-	for(i=0;i<2;i++){
+	for(i=0;i<dev->nr;i++){
 		sprintf(audioname,"tbs_pcie audio %d",i);
 		ret = snd_card_new(&dev->pdev->dev, -1, audioname, THIS_MODULE,	sizeof(struct tbs_audio), &card);
 		if (ret < 0){
@@ -1126,7 +1263,7 @@ int tbs_audio_register(struct tbs_pcie_dev *dev)
 	}
 	return 0;
 fail1:
-	for(i=0;i<2;i++){
+	for(i=0;i<dev->nr;i++){
 		if(dev->audio[i].card)
 			snd_card_free(dev->audio[i].card);
 		dev->audio[i].card=NULL;
@@ -1249,6 +1386,8 @@ fail0:
 
 static const struct pci_device_id tbs_pci_table[] = {
 	MAKE_ENTRY(0x544d, 0x6178, 0x6312, 0x0002, NULL),
+	MAKE_ENTRY(0x544d, 0x6178, 0x6312, 0x2000, NULL),
+	MAKE_ENTRY(0x544d, 0x6178, 0x6314, 0x1000, NULL),
 	{ }
 };
 MODULE_DEVICE_TABLE(pci, tbs_pci_table);

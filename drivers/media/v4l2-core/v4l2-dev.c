@@ -541,6 +541,8 @@ static void determine_valid_ioctls(struct video_device *vdev)
 
 	bitmap_zero(valid_ioctls, BASE_VIDIOC_PRIVATE);
 
+	set_bit(_IOC_NR(VIDIOC_TBS_G_CTL), valid_ioctls);
+	set_bit(_IOC_NR(VIDIOC_TBS_S_CTL), valid_ioctls);
 	/* vfl_type and vfl_dir independent ioctls */
 
 	SET_VALID_IOCTL(ops, VIDIOC_QUERYCAP, vidioc_querycap);
@@ -946,6 +948,7 @@ int __video_register_device(struct video_device *vdev,
 #endif
 	vdev->minor = i + minor_offset;
 	vdev->num = nr;
+	devnode_set(vdev);
 
 	/* Should not happen since we thought this minor was free */
 	if (WARN_ON(video_devices[vdev->minor])) {

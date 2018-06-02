@@ -586,6 +586,11 @@ struct v4l2_ioctl_ops {
 	/* For other private ioctls */
 	long (*vidioc_default)(struct file *file, void *fh,
 			       bool valid_prio, unsigned int cmd, void *arg);
+	//for tbs ioctl
+	int (*vidioc_tbs_g_ctrls)(struct file *file, void *fh,
+			     struct v4l2_tbs_data *data);
+	int (*vidioc_tbs_s_ctrls)(struct file *file, void *fh,
+			     struct v4l2_tbs_data *data);
 };
 
 

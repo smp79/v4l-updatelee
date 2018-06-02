@@ -61,7 +61,6 @@
 //#define TBS_AUDIO_CELL_SIZE 2944   //44.1k
 #define TBS_AUDIO_CELL_SIZE 4096   //48k
 #define DMA_VIDEO_CELL         ( (videodev->Interlaced==1) ? (videodev->width*videodev->height) : (videodev->width*videodev->height*2) )
-
 //undefine in fpga now
 #define	RISC_INT_BIT		0x08000000
 #define	RISC_SYNCO		0xC0000000

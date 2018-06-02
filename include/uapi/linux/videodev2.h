@@ -423,6 +423,13 @@ struct v4l2_capability {
 	__u32	reserved[3];
 };
 
+struct v4l2_tbs_data
+{
+	__u32 baseaddr;
+	__u32 reg;
+	__u32 value;
+};
+
 /* Values for 'capabilities' field */
 #define V4L2_CAP_VIDEO_CAPTURE		0x00000001  /* Is a video capture device */
 #define V4L2_CAP_VIDEO_OUTPUT		0x00000002  /* Is a video output device */
@@ -2405,6 +2412,9 @@ struct v4l2_create_buffers {
 #define VIDIOC_DBG_G_CHIP_INFO  _IOWR('V', 102, struct v4l2_dbg_chip_info)
 
 #define VIDIOC_QUERY_EXT_CTRL	_IOWR('V', 103, struct v4l2_query_ext_ctrl)
+
+#define VIDIOC_TBS_G_CTL	_IOWR('V', 105, struct v4l2_tbs_data)
+#define VIDIOC_TBS_S_CTL	_IOWR('V', 106, struct v4l2_tbs_data)
 
 /* Reminder: when adding new ioctls please add support for them to
    drivers/media/v4l2-core/v4l2-compat-ioctl32.c as well! */
