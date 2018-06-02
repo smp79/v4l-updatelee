@@ -19,7 +19,6 @@
 #ifndef _MEDIA_DEVICE_H
 #define _MEDIA_DEVICE_H
 
-#include <linux/kref.h>
 #include <linux/list.h>
 #include <linux/mutex.h>
 
@@ -159,16 +158,6 @@ struct media_device {
 	void (*disable_source)(struct media_entity *entity);
 
 	const struct media_device_ops *ops;
-};
-
-/**
- * struct media_device_devres - Media device device resource
- * @mdev:	pointer to struct media_device
- * @kref:	Object refcount
- */
-struct media_device_devres {
-	struct media_device mdev;
-	struct kref kref;
 };
 
 /* We don't need to include pci.h or usb.h here */
@@ -452,10 +441,6 @@ static inline int media_device_register_entity_notify(
 static inline void media_device_unregister_entity_notify(
 					struct media_device *mdev,
 					struct media_entity_notify *nptr)
-{
-}
-
-static inline void media_device_unregister_devres(struct media_device *mdev)
 {
 }
 

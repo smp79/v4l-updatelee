@@ -36,7 +36,6 @@
 #include "mb86a16.h"
 #include "stv6110x.h"
 #include "stv090x.h"
-#include "stv091x.h"
 #include "tas2101.h"
 #include "av201x.h"
 #include "cx24117.h"
@@ -51,6 +50,7 @@
 #include "si2157.h"
 
 #include "stv6120.h"
+#include "stv091x.h"
 #include "tbsci-i2c.h"
 #include "tbs-ci.h"
 

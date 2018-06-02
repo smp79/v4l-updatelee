@@ -96,6 +96,7 @@ struct tbs_audio{
 struct tbs_pcie_dev {
 	struct pci_dev			*pdev;
 	void __iomem			*mmio;
+	int 				nr;
 	
 	struct tbs_audio		audio[2];
 	struct tbs_video		video[2];

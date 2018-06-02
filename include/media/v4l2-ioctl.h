@@ -586,6 +586,11 @@ struct v4l2_ioctl_ops {
 	/* For other private ioctls */
 	long (*vidioc_default)(struct file *file, void *fh,
 			       bool valid_prio, unsigned int cmd, void *arg);
+	//for tbs ioctl
+	int (*vidioc_tbs_g_ctrls)(struct file *file, void *fh,
+			     struct v4l2_tbs_data *data);
+	int (*vidioc_tbs_s_ctrls)(struct file *file, void *fh,
+			     struct v4l2_tbs_data *data);
 };
 
 
@@ -657,18 +662,6 @@ int v4l2_video_std_construct(struct v4l2_standard *vs,
 void v4l_printk_ioctl(const char *prefix, unsigned int cmd);
 
 struct video_device;
-
-
-/**
- * v4l2_ioctl_get_lock - get the mutex (if any) that it is need to lock for
- *	a given command.
- *
- * @vdev: Pointer to struct &video_device.
- * @cmd: Ioctl name.
- *
- * .. note:: Internal use only. Should not be used outside V4L2 core.
- */
-struct mutex *v4l2_ioctl_get_lock(struct video_device *vdev, unsigned int cmd);
 
 /* names for fancy debug output */
 extern const char *v4l2_field_names[];

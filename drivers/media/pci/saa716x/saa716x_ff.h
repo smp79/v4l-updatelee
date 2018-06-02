@@ -90,6 +90,7 @@
 #define MAX_RESULT_LEN		256
 #define MAX_DATA_LEN		(1024 * 1024)
 
+#define TS_SIZE        188
 #define TSOUT_LEN		(1024 * TS_SIZE)
 
 #define TSOUT_STAT_RESET	0

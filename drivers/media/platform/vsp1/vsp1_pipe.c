@@ -348,7 +348,7 @@ void vsp1_pipeline_frame_end(struct vsp1_pipeline *pipe)
  * from the input RPF alpha.
  */
 void vsp1_pipeline_propagate_alpha(struct vsp1_pipeline *pipe,
-				   struct vsp1_dl_list *dl, unsigned int alpha)
+				   struct vsp1_dl_body *dlb, unsigned int alpha)
 {
 	if (!pipe->uds)
 		return;
@@ -361,7 +361,7 @@ void vsp1_pipeline_propagate_alpha(struct vsp1_pipeline *pipe,
 	    pipe->uds_input->type == VSP1_ENTITY_BRS)
 		alpha = 255;
 
-	vsp1_uds_set_alpha(pipe->uds, dl, alpha);
+	vsp1_uds_set_alpha(pipe->uds, dlb, alpha);
 }
 
 /*
@@ -386,73 +386,3 @@ void vsp1_pipeline_propagate_partition(struct vsp1_pipeline *pipe,
 	}
 }
 
-void vsp1_pipelines_suspend(struct vsp1_device *vsp1)
-{
-	unsigned long flags;
-	unsigned int i;
-	int ret;
-
-	/*
-	 * To avoid increasing the system suspend time needlessly, loop over the
-	 * pipelines twice, first to set them all to the stopping state, and
-	 * then to wait for the stop to complete.
-	 */
-	for (i = 0; i < vsp1->info->wpf_count; ++i) {
-		struct vsp1_rwpf *wpf = vsp1->wpf[i];
-		struct vsp1_pipeline *pipe;
-
-		if (wpf == NULL)
-			continue;
-
-		pipe = wpf->entity.pipe;
-		if (pipe == NULL)
-			continue;
-
-		spin_lock_irqsave(&pipe->irqlock, flags);
-		if (pipe->state == VSP1_PIPELINE_RUNNING)
-			pipe->state = VSP1_PIPELINE_STOPPING;
-		spin_unlock_irqrestore(&pipe->irqlock, flags);
-	}
-
-	for (i = 0; i < vsp1->info->wpf_count; ++i) {
-		struct vsp1_rwpf *wpf = vsp1->wpf[i];
-		struct vsp1_pipeline *pipe;
-
-		if (wpf == NULL)
-			continue;
-
-		pipe = wpf->entity.pipe;
-		if (pipe == NULL)
-			continue;
-
-		ret = wait_event_timeout(pipe->wq, vsp1_pipeline_stopped(pipe),
-					 msecs_to_jiffies(500));
-		if (ret == 0)
-			dev_warn(vsp1->dev, "pipeline %u stop timeout\n",
-				 wpf->entity.index);
-	}
-}
-
-void vsp1_pipelines_resume(struct vsp1_device *vsp1)
-{
-	unsigned long flags;
-	unsigned int i;
-
-	/* Resume all running pipelines. */
-	for (i = 0; i < vsp1->info->wpf_count; ++i) {
-		struct vsp1_rwpf *wpf = vsp1->wpf[i];
-		struct vsp1_pipeline *pipe;
-
-		if (wpf == NULL)
-			continue;
-
-		pipe = wpf->entity.pipe;
-		if (pipe == NULL)
-			continue;
-
-		spin_lock_irqsave(&pipe->irqlock, flags);
-		if (vsp1_pipeline_ready(pipe))
-			vsp1_pipeline_run(pipe);
-		spin_unlock_irqrestore(&pipe->irqlock, flags);
-	}
-}

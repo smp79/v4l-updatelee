@@ -189,6 +189,7 @@ struct tbsecp3_board tbsecp3_boards[] = {
 		.name		= "Turbosight TBS 6209 (Octa DVB-T/T2/C2/C(j83-a/b/c)/ISDB-T)",
 		.i2c_speed  = 39,
 		.eeprom_i2c	= 0,
+		.eeprom_addr = 0x10,
 		.adapters	= 8,
 		.adap_config ={
 			{

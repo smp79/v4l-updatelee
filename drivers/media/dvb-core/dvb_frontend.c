@@ -1432,6 +1432,7 @@ static int dtv_property_process_get(struct dvb_frontend *fe,
 	case DTV_DVBT2_PLP_ID_LEGACY:
 		tvp->u.data = c->stream_id;
 		break;
+
 	/* Physical layer scrambling support */
 	case DTV_SCRAMBLING_SEQUENCE_INDEX:
 		tvp->u.data = c->scrambling_sequence_index;
