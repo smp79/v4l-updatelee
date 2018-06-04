@@ -21,11 +21,10 @@
 #include <media/demux.h>
 #include <media/dvb_demux.h>
 #include <media/dmxdev.h>
-#include <media/ttpci/dvb_filter.h>
+#include "dvb_filter.h"
 #include <media/dvb_net.h>
 #include <media/dvb_ringbuffer.h>
 #include <media/dvb_frontend.h>
-
 #include "ves1820.h"
 #include "ves1x93.h"
 #include "stv0299.h"

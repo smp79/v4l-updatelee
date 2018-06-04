@@ -110,9 +110,8 @@ static struct si2157_config hauppauge_hvr2255_tuner_config = {
 	.if_port = 1,
 };
 
-static int si2157_attach_priv(struct saa7164_port *port,
-	struct i2c_adapter *adapter, struct dvb_frontend *fe,
-	u8 addr8bit, struct si2157_config *cfg)
+static int si2157_attach(struct saa7164_port *port, struct i2c_adapter *adapter,
+	struct dvb_frontend *fe, u8 addr8bit, struct si2157_config *cfg)
 {
 	struct i2c_board_info bi;
 	struct i2c_client *tuner;
@@ -625,13 +624,11 @@ int saa7164_dvb_register(struct saa7164_port *port)
 		if (port->dvb.frontend != NULL) {
 
 			if (port->nr == 0) {
-				si2157_attach_priv(port,
-					      &dev->i2c_bus[0].i2c_adap,
+				si2157_attach(port, &dev->i2c_bus[0].i2c_adap,
 					      port->dvb.frontend, 0xc0,
 					      &hauppauge_hvr2255_tuner_config);
 			} else {
-				si2157_attach_priv(port,
-					      &dev->i2c_bus[1].i2c_adap,
+				si2157_attach(port, &dev->i2c_bus[1].i2c_adap,
 					      port->dvb.frontend, 0xc0,
 					      &hauppauge_hvr2255_tuner_config);
 			}
