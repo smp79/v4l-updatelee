@@ -505,7 +505,7 @@ static struct stv090x_config technisat_usb2_stv090x_config = {
 	.ts1_tei        = 1,
 
 	.repeater_level = STV090x_RPTLEVEL_64,
-	.adc1_range		= STV090x_ADC_1Vpp,
+	.adc1_range	= STV090x_ADC_1Vpp,
 
 	.tuner_bbgain   = 6,
 };

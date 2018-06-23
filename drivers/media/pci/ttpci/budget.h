@@ -8,7 +8,7 @@
 #include <media/demux.h>
 #include <media/dvb_demux.h>
 #include <media/dmxdev.h>
-#include <media/ttpci/dvb_filter.h>
+#include "dvb_filter.h"
 #include <media/dvb_net.h>
 
 #include <linux/module.h>

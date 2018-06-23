@@ -2,7 +2,7 @@
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/string.h>
-#include <media/ttpci/dvb_filter.h>
+#include "dvb_filter.h"
 
 static u32 freq[4] = {480, 441, 320, 0};
 
