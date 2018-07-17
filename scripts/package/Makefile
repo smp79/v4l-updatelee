@@ -44,8 +44,10 @@ if test "$(objtree)" != "$(srctree)"; then \
 	false; \
 fi ; \
 $(srctree)/scripts/setlocalversion --save-scmversion; \
-tar -cz $(RCS_TAR_IGNORE) -f $(2).tar.gz \
-	--transform 's:^:$(2)/:S' $(TAR_CONTENT) $(3); \
+#tar -cz $(RCS_TAR_IGNORE) -f $(2).tar.gz \
+#	--transform 's:^:$(2)/:S' $(TAR_CONTENT) $(3); \
+tar -c $(RCS_TAR_IGNORE) \
+	--transform 's:^:$(2)/:S' $(TAR_CONTENT) $(3) | pigz -p 12 > $(2).tar.gz; \
 rm -f $(objtree)/.scmversion
 
 # rpm-pkg
@@ -88,8 +90,8 @@ quiet_cmd_builddeb = BUILDDEB
 		$(srctree)/scripts/package/builddeb $@
 
 deb-pkg: FORCE
-	$(MAKE) clean
-#	$(CONFIG_SHELL) $(srctree)/scripts/package/mkdebian
+#	$(MAKE) clean
+	$(CONFIG_SHELL) $(srctree)/scripts/package/mkdebian
 	$(call cmd,src_tar,$(KDEB_SOURCENAME))
 	$(MAKE) KBUILD_SRC=
 	+$(call cmd,builddeb)
