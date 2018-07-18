@@ -69,5 +69,17 @@
 #define	RISC_LINESTART		0x90000000
 #define	RISC_INLINE		0xA0000000
 
+/* ASI == SDI excep baseaddress */ 
+#define ASI0_BASEADDRESS  0x5000
+#define ASI_CHIP_RST  	0x00
+#define ASI_SPI_CONFIG  0x04
+#define ASI_SPI_CMD  	0x08
+#define ASI_SPI_WT_32  	0x0c
+#define ASI_SPI_ENABLE  0x10
+
+#define ASI_STATUS  	0x00
+#define ASI_SPI_RD_32   0x04
+
+
 
 #endif

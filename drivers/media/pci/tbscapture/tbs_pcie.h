@@ -109,4 +109,10 @@ struct tbs_pcie_dev {
 	
 };
 
+/* tbsecp3-asi.c */
+extern u8 sdi_CheckFree(struct tbs_pcie_dev *dev,int asi_base_addr, unsigned char OpbyteNum);
+extern bool sdi_chip_reset(struct tbs_pcie_dev *dev,int asi_base_addr);
+extern int sdi_read16bit(struct tbs_pcie_dev *dev,int asi_base_addr,int reg_addr);
+extern bool sdi_write16bit(struct tbs_pcie_dev *dev,int asi_base_addr, int reg_addr, int data16bit);
+
 #endif
