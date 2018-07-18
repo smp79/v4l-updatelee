@@ -1,5 +1,5 @@
 before_script:
-  - apt-get update -qq && apt-get install -y -qq build-essential ncurses-dev libproc-processtable-perl fakeroot libelf-dev libssl-dev bison flex pigz
+  - apt-get update -qq && apt-get install -y -qq build-essential ncurses-dev libproc-processtable-perl fakeroot libelf-dev libssl-dev bison flex pigz bc
 
 deb-pkg:
   script:
