@@ -1,0 +1,9 @@
+before_script:
+  - apt-get update -qq && apt-get install -y -qq apt-get install git build-essential linux-headers-generic ncurses-dev libproc-processtable-perl fakeroot libelf-dev libssl-dev bison flex pigz
+
+deb-pkg:
+  script:
+    - make -j12 deb-pkg
+    - mkdir public
+    - mv ../linux*deb public/
+
