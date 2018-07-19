@@ -10,13 +10,13 @@ test:
   stage: test
   script: 
     - echo "Running tests"
-    - make modules
+    - make -j4 modules
 
 build:
   stage: build
   script: 
     - echo "Building the app"
-    - make deb-pkg
+    - make -j4 deb-pkg
   when: manual
 
 deploy:
