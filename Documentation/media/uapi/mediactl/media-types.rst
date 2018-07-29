@@ -37,9 +37,12 @@ Types and flags used to represent the media graph elements
 .. _MEDIA-ENT-F-PROC-VIDEO-LUT:
 .. _MEDIA-ENT-F-PROC-VIDEO-SCALER:
 .. _MEDIA-ENT-F-PROC-VIDEO-STATISTICS:
+.. _MEDIA-ENT-F-PROC-VIDEO-ENCODER:
+.. _MEDIA-ENT-F-PROC-VIDEO-DECODER:
 .. _MEDIA-ENT-F-VID-MUX:
 .. _MEDIA-ENT-F-VID-IF-BRIDGE:
-.. _MEDIA-ENT-F-DTV-DECODER:
+.. _MEDIA-ENT-F-DV-DECODER:
+.. _MEDIA-ENT-F-DV-ENCODER:
 
 .. cssclass:: longtable
 
@@ -188,6 +191,16 @@ Types and flags used to represent the media graph elements
 	  received on its sink pad and outputs the statistics data on
 	  its source pad.
 
+    *  -  ``MEDIA_ENT_F_PROC_VIDEO_ENCODER``
+       -  Video (MPEG, HEVC, VPx, etc.) encoder. An entity capable of
+          compressing video frames. Must have one sink pad and at least
+	  one source pad.
+
+    *  -  ``MEDIA_ENT_F_PROC_VIDEO_DECODER``
+       -  Video (MPEG, HEVC, VPx, etc.) decoder. An entity capable of
+          decompressing a compressed video stream into uncompressed video
+	  frames. Must have one sink pad and at least one source pad.
+
     *  -  ``MEDIA_ENT_F_VID_MUX``
        - Video multiplexer. An entity capable of multiplexing must have at
          least two sink pads and one source pad, and must pass the video
@@ -200,11 +213,18 @@ Types and flags used to represent the media graph elements
          MIPI CSI-2, etc.), and outputs them on its source pad to an output
          video bus of another type (eDP, MIPI CSI-2, parallel, etc.).
 
-    *  -  ``MEDIA_ENT_F_DTV_DECODER``
+    *  -  ``MEDIA_ENT_F_DV_DECODER``
        -  Digital video decoder. The basic function of the video decoder is
 	  to accept digital video from a wide variety of sources
 	  and output it in some digital video standard, with appropriate
 	  timing signals.
+
+    *  -  ``MEDIA_ENT_F_DV_ENCODER``
+       -  Digital video encoder. The basic function of the video encoder is
+	  to accept digital video from some digital video standard with
+	  appropriate timing signals (usually a parallel video bus with sync
+	  signals) and output this to a digital video output connector such
+	  as HDMI or DisplayPort.
 
 ..  tabularcolumns:: |p{5.5cm}|p{12.0cm}|
 

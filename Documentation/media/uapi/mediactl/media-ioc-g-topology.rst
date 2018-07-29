@@ -131,18 +131,29 @@ desired arrays with the media graph elements.
 
     *  -  __u32
        -  ``id``
-       -  Unique ID for the entity.
+       -  Unique ID for the entity. Do not expect that the ID will
+	  always be the same for each instance of the device. In other words,
+	  do not hardcode entity IDs in an application.
 
     *  -  char
        -  ``name``\ [64]
-       -  Entity name as an UTF-8 NULL-terminated string.
+       -  Entity name as an UTF-8 NULL-terminated string. This name must be unique
+          within the media topology.
 
     *  -  __u32
        -  ``function``
        -  Entity main function, see :ref:`media-entity-functions` for details.
 
     *  -  __u32
-       -  ``reserved``\ [6]
+       -  ``flags``
+       -  Entity flags, see :ref:`media-entity-flag` for details.
+	  Only valid if ``MEDIA_V2_ENTITY_HAS_FLAGS(media_version)``
+	  returns true. The ``media_version`` is defined in struct
+	  :c:type:`media_device_info` and can be retrieved using
+	  :ref:`MEDIA_IOC_DEVICE_INFO`.
+
+    *  -  __u32
+       -  ``reserved``\ [5]
        -  Reserved for future extensions. Drivers and applications must set
 	  this array to zero.
 
@@ -158,7 +169,9 @@ desired arrays with the media graph elements.
 
     *  -  __u32
        -  ``id``
-       -  Unique ID for the interface.
+       -  Unique ID for the interface. Do not expect that the ID will
+	  always be the same for each instance of the device. In other words,
+	  do not hardcode interface IDs in an application.
 
     *  -  __u32
        -  ``intf_type``
@@ -176,7 +189,7 @@ desired arrays with the media graph elements.
     *  -  struct media_v2_intf_devnode
        -  ``devnode``
        -  Used only for device node interfaces. See
-	  :c:type:`media_v2_intf_devnode` for details..
+	  :c:type:`media_v2_intf_devnode` for details.
 
 
 .. tabularcolumns:: |p{1.6cm}|p{3.2cm}|p{12.7cm}|
@@ -207,7 +220,9 @@ desired arrays with the media graph elements.
 
     *  -  __u32
        -  ``id``
-       -  Unique ID for the pad.
+       -  Unique ID for the pad. Do not expect that the ID will
+	  always be the same for each instance of the device. In other words,
+	  do not hardcode pad IDs in an application.
 
     *  -  __u32
        -  ``entity_id``
@@ -218,7 +233,14 @@ desired arrays with the media graph elements.
        -  Pad flags, see :ref:`media-pad-flag` for more details.
 
     *  -  __u32
-       -  ``reserved``\ [5]
+       -  ``index``
+       -  Pad index, starts at 0. Only valid if ``MEDIA_V2_PAD_HAS_INDEX(media_version)``
+	  returns true. The ``media_version`` is defined in struct
+	  :c:type:`media_device_info` and can be retrieved using
+	  :ref:`MEDIA_IOC_DEVICE_INFO`.
+
+    *  -  __u32
+       -  ``reserved``\ [4]
        -  Reserved for future extensions. Drivers and applications must set
 	  this array to zero.
 
@@ -234,7 +256,9 @@ desired arrays with the media graph elements.
 
     *  -  __u32
        -  ``id``
-       -  Unique ID for the link.
+       -  Unique ID for the link. Do not expect that the ID will
+	  always be the same for each instance of the device. In other words,
+	  do not hardcode link IDs in an application.
 
     *  -  __u32
        -  ``source_id``
