@@ -1,5 +1,8 @@
 before_script:
-  - apt-get update -qq && apt-get install -y -qq build-essential ncurses-dev libproc-processtable-perl fakeroot libelf-dev libssl-dev bison flex pigz bc
+  - pwd
+  - ls -la 
+  - cd
+  - ls -la 
 
 stages:
   - test
@@ -10,13 +13,11 @@ test:
   stage: test
   script: 
     - echo "Running tests"
-    - make -j4 modules
 
 build:
   stage: build
   script: 
     - echo "Building the app"
-    - make -j4 deb-pkg
   when: manual
 
 deploy:
