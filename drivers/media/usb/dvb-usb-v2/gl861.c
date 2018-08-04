@@ -4,7 +4,7 @@
  *	under the terms of the GNU General Public License as published by the
  *	Free Software Foundation, version 2.
  *
- * see Documentation/dvb/README.dvb-usb for more information
+ * see Documentation/media/dvb-drivers/dvb-usb.rst for more information
  */
 #include "gl861.h"
 
@@ -26,10 +26,14 @@ static int gl861_i2c_msg(struct dvb_usb_device *d, u8 addr,
 	if (wo) {
 		req = GL861_REQ_I2C_WRITE;
 		type = GL861_WRITE;
+		buf = kmemdup(wbuf, wlen, GFP_KERNEL);
 	} else { /* rw */
 		req = GL861_REQ_I2C_READ;
 		type = GL861_READ;
+		buf = kmalloc(rlen, GFP_KERNEL);
 	}
+	if (!buf)
+		return -ENOMEM;
 
 	switch (wlen) {
 	case 1:
@@ -42,24 +46,19 @@ static int gl861_i2c_msg(struct dvb_usb_device *d, u8 addr,
 	default:
 		dev_err(&d->udev->dev, "%s: wlen=%d, aborting\n",
 				KBUILD_MODNAME, wlen);
+		kfree(buf);
 		return -EINVAL;
 	}
-	buf = NULL;
-	if (rlen > 0) {
-		buf = kmalloc(rlen, GFP_KERNEL);
-		if (!buf)
-			return -ENOMEM;
-	}
+
 	usleep_range(1000, 2000); /* avoid I2C errors */
 
 	ret = usb_control_msg(d->udev, usb_rcvctrlpipe(d->udev, 0), req, type,
 			      value, index, buf, rlen, 2000);
-	if (rlen > 0) {
-		if (ret > 0)
-			memcpy(rbuf, buf, rlen);
-		kfree(buf);
-	}
 
+	if (!wo && ret > 0)
+		memcpy(rbuf, buf, rlen);
+
+	kfree(buf);
 	return ret;
 }
 

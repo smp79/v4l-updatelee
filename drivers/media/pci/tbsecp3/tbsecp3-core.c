@@ -328,6 +328,7 @@ static const struct pci_device_id tbsecp3_id_table[] = {
 	TBSECP3_ID(TBSECP3_BOARD_TBS690a),
 	TBSECP3_ID(TBSECP3_BOARD_TBS6301),
 	TBSECP3_ID(TBSECP3_BOARD_TBS6304),
+	TBSECP3_ID(TBSECP3_BOARD_TBS6308),
 	{0}
 };
 MODULE_DEVICE_TABLE(pci, tbsecp3_id_table);

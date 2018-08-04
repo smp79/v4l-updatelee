@@ -3,12 +3,14 @@
     Copyright (C) 2017 www.tbsdtv.com
 */
 
+#include <linux/version.h>
 #include <linux/pci.h>
 #include "tbs_pcie.h"
 #include "tbs_pcie-reg.h"
 
 static void tbs_adapters_init(struct tbs_pcie_dev *dev);
-static void tbs_get_video_param(struct tbs_pcie_dev *dev,int index);
+static void tbs_hdmi_video_param(struct tbs_pcie_dev *dev,int index);
+static void tbs_sdi_video_param(struct tbs_pcie_dev *dev,int index);
 
 struct workqueue_struct *wq;
 
@@ -227,7 +229,13 @@ static ssize_t tbs_read(struct file *file,char *buf,size_t count, loff_t *ppos)
 static int tbs_open(struct file *file)
 {
 	struct tbs_video *videodev = video_drvdata(file);
-	tbs_get_video_param(videodev->dev, videodev->index>>1);
+	struct pci_dev *pci = videodev->dev->pdev;
+	if(pci->subsystem_vendor == 0x6324) //tbs6324 sdi
+	{
+		tbs_sdi_video_param(videodev->dev, videodev->index>>1);
+	}
+	else //hdmi
+		tbs_hdmi_video_param(videodev->dev, videodev->index>>1);
 	if(videodev->width==0 || videodev->height==0 )
 		return -1;
 	return 0;
@@ -721,7 +729,7 @@ static irqreturn_t tbs_pcie_irq(int irq, void *dev_id)
 //printk("video 0 ret: %8x\n",ret);
 		if(dev->video[0].Interlaced){
 		//	if(ret == 0x1010100){
-			if((ret & 0x1010000)==0x1010000){
+			if((ret & 0x1000000)==0x1000000){
 				next_video_dma_transfer(&dev->video[0],0);
 				queue_work(wq,&dev->video[0].videowork);
 			}else{
@@ -745,13 +753,12 @@ static irqreturn_t tbs_pcie_irq(int irq, void *dev_id)
 //printk("video 1 ret: %8x\n",ret);
 		if(dev->video[1].Interlaced){
 		//	if(ret == 0x1010100){
-			if((ret & 0x1010000)==0x1010000){
+			if((ret & 0x1000000)==0x1000000){
 				next_video_dma_transfer(&dev->video[1],0);
 				queue_work(wq,&dev->video[1].videowork);
 			}else{
 				next_video_dma_transfer(&dev->video[1],1);
 			}
-
 		}else{
 			next_video_dma_transfer(&dev->video[1],1);
 			queue_work(wq,&dev->video[1].videowork);
@@ -783,8 +790,243 @@ static irqreturn_t tbs_pcie_irq(int irq, void *dev_id)
 	TBS_PCIE_WRITE(TBS_INT_BASE, TBS_INT_ENABLE, 0x00000001);
 	return IRQ_HANDLED;
 }
+static void signaltable(u32 val, u32 *wid, u32 *high,u32 *freq, u32 *interlaced )
+{
+	switch(val)
+	{
+		case 0x16:
+		case 0x17:
+		case 0x1B:
+		case 0x19:
+			// 720(1440)*480i @ 59.94/60hz
+			*wid = 720;
+			*high = 480;
+			*freq = 60;
+			*interlaced = 1;
+		break;
+		case 0x18:
+		case 0x1A:
+			// 720(1440)*576i @ 50hz 
+			*wid = 720;
+			*high = 576;///2;
+			*freq = 50;
+			*interlaced = 1;
+		break;
+		case 0x20:
+		case 0x00:
+			// 1280*720p @ 59.94/60hz
+			*wid = 1280;
+			*high = 720;
+			*freq = 60;
+			*interlaced = 0;
+		break;
+		case 0x24:
+		case 0x04:
+			// 1280*720p @ 50hz
+			*wid = 1280;
+			*high = 720;
+			*freq = 50;
+			*interlaced = 0;
+		break;
+		case 0x2a:
+		case 0x0a:
+			// 1920*1080i @ 59.94/60hz
+			*wid = 1920;
+			*high = 1080;
+			*freq = 60;
+			*interlaced = 1;
+		break;
+		case 0x2c:
+		case 0x0c:
+			// 1920*1080i @ 50hz 
+			*wid = 1920;
+			*high = 1080;
+			*freq = 50;
+			*interlaced = 1;
+		break;
+		case 0x0b:
+			// 1920*1080p @ 29.97/30hz
+			*wid = 1920;
+			*high = 1080;
+			*freq = 30;
+			*interlaced = 0;
+		break;
+		case 0x0d:
+			// 1920*1080p @ 25hz
+			*wid = 1920;
+			*high = 1080;
+			*freq = 25;
+			*interlaced = 0; 
+		break;
+		case 0x30:
+		case 0x10:
+			// 1920*1080p @ 23.98/24hz
+			*wid = 1920;
+			*high = 1080;
+			*freq = 24;
+			*interlaced = 0;
+		break;
+		case 0x2b:
+			// 1920*1080p @ 59.94/60hz
+			*wid = 1920;
+			*high = 1080;
+			*freq = 60;
+			*interlaced = 0;
+		break;
+		case 0x2d:
+			// 1280*720p @ 50hz
+			*wid = 1920;
+			*high = 1080;
+			*freq = 50;
+			*interlaced = 0;
+		break;
 
-static void tbs_get_video_param(struct tbs_pcie_dev *dev,int index)
+		/////// add /////////////////
+		case 0x02:
+			// 1280*720p @ 30
+			*wid = 1280;
+			*high = 720;
+			*freq = 30;
+			*interlaced = 0;
+		break;
+		case 0x03:
+			// 1280*720p @ 30 -EM
+			*wid = 1280;
+			*high = 720;
+			*freq = 30;
+			*interlaced = 0;
+		break;
+		case 0x05:
+			// 1280*720p @ 50 -EM
+			*wid = 1280;
+			*high = 720;
+			*freq = 50;
+			*interlaced = 0;
+		break;
+		case 0x06:
+			// 1280*720p @ 25
+			*wid = 1280;
+			*high = 720;
+			*freq = 25;
+			*interlaced = 0;
+		break;
+		case 0x07:
+			// 1280*720p @ 25 -EM
+			*wid = 1280;
+			*high = 720;
+			*freq = 25;
+			*interlaced = 0;
+		break;
+		case 0x08:
+			// 1280*720p @ 24
+			*wid = 1280;
+			*high = 720;
+			*freq = 24;
+			*interlaced = 0;
+		break;
+		case 0x09:
+			// 1280*720p @ 24 -EM
+			*wid = 1280;
+			*high = 720;
+			*freq = 24;
+			*interlaced = 0;
+		break;
+		case 0x12:
+			// 1920*1080p @ 24 -
+			*wid = 1920;
+			*high = 1080;
+			*freq = 24;
+			*interlaced = 0;
+		break;
+		case 0x14:
+			// 1920*1080i @ 50
+			*wid = 1920;
+			*high = 1080;
+			*freq = 50;
+			*interlaced = 1;
+		break;
+		case 0x15:
+			// 1920*1035i @ 60
+			*wid = 1920;
+			*high = 1035;
+			*freq = 60;
+			*interlaced = 1;
+		break;
+		case 0x26:
+			// 1280*720p @ 25
+			*wid = 1280;
+			*high = 720;
+			*freq = 25;
+			*interlaced = 0;
+		break;
+		case 0x28:
+			// 1280*720p @ 24
+			*wid = 1280;
+			*high = 720;
+			*freq = 24;
+			*interlaced = 0;
+		break;
+		default:
+			// 1920*1080p @ 25hz
+			*wid = 1920;
+			*high = 1080;
+			*freq = 25;
+			*interlaced = 0;
+		break;
+	}
+	return;
+
+}
+static void tbs_sdi_video_param(struct tbs_pcie_dev *dev,int index)
+{
+	u32 v_regdata;
+	u32 v_width,v_height, v_interlaced,v_refq=0;
+	int regval;
+	int ptoi = 0;
+	int itoi = 0;
+
+	v_regdata = sdi_read16bit(dev,ASI0_BASEADDRESS,0x06);
+	v_regdata = (v_regdata & 0x3f00)>>8;
+	//printk("SDI signal reg value : %x\n", v_regdata);
+
+	if(v_regdata==0x1d)
+	{
+		printk("SDI cable is not connect! \n");
+
+		dev->video[index].width = 1280;		
+		dev->video[index].height = 720;
+		return;
+	}
+
+	signaltable(v_regdata,&v_width,&v_height,&v_refq,&v_interlaced);
+	dev->video[index].width = v_width;
+	dev->video[index].height = v_height;
+	dev->video[index].fps = v_refq;
+
+	if(!v_interlaced && v_refq>30 && dev->video[index].width==1920 && dev->video[index].height==1080) 		
+	{
+		printk("HDMI 1080 50/60 Progressive change to Interlaced Input  \n");
+		dev->video[index].Interlaced = 1;
+		
+		//enable PtoI: bit24 set to 1 by gpio offset address 8
+		regval =0x1;
+		TBS_PCIE_WRITE(0x0, 8, regval);
+
+	}
+	else{
+		//disable PtoI: bit24 set to default value 0
+		regval =0x0;
+		TBS_PCIE_WRITE(0x0, 8, regval);
+		dev->video[index].Interlaced = v_interlaced;
+		if(v_interlaced)
+			printk("HDMI Interlaced Input  \n");
+		else
+			printk("HDMI Progressive Input  \n");
+	}
+	printk("pix:%d line:%d frameRate:%d IorP:%d regvalue:%x\n",dev->video[index].width,dev->video[index].height,v_refq,dev->video[index].Interlaced,v_regdata );	
+
+}
+static void tbs_hdmi_video_param(struct tbs_pcie_dev *dev,int index)
 {
 	struct tbs_adapter *tbs_adap;
 	u8 tmp[2];
@@ -917,7 +1159,6 @@ static void tbs_adapters_init(struct tbs_pcie_dev *dev)
 	TBS_PCIE_WRITE(TBS_DMA_BASE_1, TBS_DMA_START, 0x00000000);
 	TBS_PCIE_WRITE(TBS_DMA_BASE_2, TBS_DMA_START, 0x00000000);
 	TBS_PCIE_WRITE(TBS_DMA_BASE_3, TBS_DMA_START, 0x00000000);
-	
 	switch(pci->subsystem_vendor){
 	case 0x6312:
 		printk("tbs6312 card\n");
@@ -927,28 +1168,53 @@ static void tbs_adapters_init(struct tbs_pcie_dev *dev)
 		printk("tbs6314 card\n");
 		dev->nr = 1;
 		break;
+	case 0x6324:
+		printk("tbs6324 card\n");
+		dev->nr = 1;
+		break;
 	default:
 		printk("unknonw card\n");
 	}
+
 	for (i = 0; i <dev->nr; i++) {
 	tbs_adap = &dev->tbs_pcie_adap[i];
 	tbs_adap->dev = dev;
 	tbs_adap->count = i;
 	tbs_adap->i2c = &dev->i2c_bus[i];
-	//read 7611 id and init chip here
-	i2c_read_reg(&tbs_adap->i2c->i2c_adap,0x98, 0xea,tmp, 2);
-	printk("7611 chip id : %x, %x\n", tmp[0],tmp[1]);
+	if(pci->subsystem_vendor == 0x6324) //tbs6324 sdi
+	{
+		// init asi
+		int regdata;
+		u8 mpbuf[4];
+		mpbuf[0] = 0; //0--3 select value
+		TBS_PCIE_WRITE( TBS_GPIO_BASE, 0x34 , *(u32 *)&mpbuf[0]); // select chip : 13*8 =104=0x68 select address
 
-	//reset
-	tmp[0] = 0xff;
-	tmp[1] = 0x80;
-	i2c_write_reg(&tbs_adap->i2c->i2c_adap,0x98, tmp,2);
-	mdelay(200);//sleep
+		sdi_chip_reset(dev,ASI0_BASEADDRESS);  //asi chip reset;
 
-	i2c_write_tab_new(&tbs_adap->i2c->i2c_adap, fw7611);
-	mdelay(200);
+		mpbuf[0] = 1; //active spi bus from "z"
+		TBS_PCIE_WRITE( ASI0_BASEADDRESS, ASI_SPI_ENABLE, *(u32 *)&mpbuf[0]);
+		regdata = sdi_read16bit(dev,ASI0_BASEADDRESS,0x24);
+		printk("GS2971 chip id : %x\n",regdata);
+		tbs_sdi_video_param(dev,i);
+		
+	}
+	else
+	{
+		//read 7611 id and init chip here
+		i2c_read_reg(&tbs_adap->i2c->i2c_adap,0x98, 0xea,tmp, 2);
+		printk("7611 chip id : %x, %x\n", tmp[0],tmp[1]);
 
-	tbs_get_video_param(dev,i);
+		//reset
+		tmp[0] = 0xff;
+		tmp[1] = 0x80;
+		i2c_write_reg(&tbs_adap->i2c->i2c_adap,0x98, tmp,2);
+		mdelay(200);//sleep
+
+		i2c_write_tab_new(&tbs_adap->i2c->i2c_adap, fw7611);
+		mdelay(200);
+		tbs_hdmi_video_param(dev,i);
+	}
+	
 	}
 
 	switch(pci->subsystem_vendor){
@@ -1038,7 +1304,7 @@ int tbs_video_register(struct tbs_pcie_dev *dev)
 			printk(KERN_ERR " v4l2_device_register failed!\n");
 			goto fail;
 		}else{
-			printk(" TBS 6312 HDMI Capture %d register OK! \n",i);
+			printk(" TBS HDMI Capture %d register OK! \n",i);
 		}
 	}
 	return 0;
@@ -1100,16 +1366,26 @@ int tbs_pcie_audio_open(struct snd_pcm_substream *substream)
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	struct tbs_adapter *tbs_adap;
 	unsigned int rate,setrate=44100;
+	struct pci_dev *pci = chip->dev->pdev;
 
 	u8 tmp[2];
 	chip->substream = substream;
 	runtime->hw = mycard_capture_stero;
 	
-	tbs_adap = &chip->dev->tbs_pcie_adap[chip->index>>1];
-	i2c_read_reg(&tbs_adap->i2c->i2c_adap,0x68, 0x39,tmp, 1);	
-	rate = cs_data_fs[tmp[0]&15];
-	if(rate)
-		setrate = rate;
+	if(pci->subsystem_vendor == 0x6324) //tbs6324 sdi
+	{
+		setrate=48000;//sdi
+		//printk(KERN_INFO " tbs6324 sdi audio set to 48000\n");
+	}
+	else
+	{
+		tbs_adap = &chip->dev->tbs_pcie_adap[chip->index>>1];
+		i2c_read_reg(&tbs_adap->i2c->i2c_adap,0x68, 0x39,tmp, 1);	
+		rate = cs_data_fs[tmp[0]&15];
+		if(rate)
+			setrate = rate;
+	}
+	
 	//printk(KERN_INFO "%s() index:%x rate:%d setrate:%d tmp[0]:%d\n",__func__, chip->index,rate,setrate,tmp[0]&15);
 	snd_pcm_hw_constraint_minmax(runtime,SNDRV_PCM_HW_PARAM_RATE,setrate,setrate);
 	return 0;
@@ -1388,6 +1664,7 @@ static const struct pci_device_id tbs_pci_table[] = {
 	MAKE_ENTRY(0x544d, 0x6178, 0x6312, 0x0002, NULL),
 	MAKE_ENTRY(0x544d, 0x6178, 0x6312, 0x2000, NULL),
 	MAKE_ENTRY(0x544d, 0x6178, 0x6314, 0x1000, NULL),
+	MAKE_ENTRY(0x544d, 0x6178, 0x6324, 0x8000, NULL), // sdi
 	{ }
 };
 MODULE_DEVICE_TABLE(pci, tbs_pci_table);

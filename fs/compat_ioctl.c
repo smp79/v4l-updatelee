@@ -38,8 +38,6 @@
 #include <linux/ppp-ioctl.h>
 #include <linux/if_pppox.h>
 #include <linux/mtio.h>
-#include <linux/auto_fs.h>
-#include <linux/auto_fs4.h>
 #include <linux/tty.h>
 #include <linux/vt_kern.h>
 #include <linux/fb.h>
@@ -192,34 +190,6 @@ static int do_video_stillpicture(struct file *file,
 
 	err =  put_user(compat_ptr(fp), &up_native->iFrame);
 	err |= put_user(size, &up_native->size);
-	if (err)
-		return -EFAULT;
-
-	err = do_ioctl(file, cmd, (unsigned long) up_native);
-
-	return err;
-}
-
-struct compat_video_spu_palette {
-	int length;
-	compat_uptr_t palette;
-};
-
-static int do_video_set_spu_palette(struct file *file,
-		unsigned int cmd, struct compat_video_spu_palette __user *up)
-{
-	struct video_spu_palette __user *up_native;
-	compat_uptr_t palp;
-	int length, err;
-
-	err  = get_user(palp, &up->palette);
-	err |= get_user(length, &up->length);
-	if (err)
-		return -EFAULT;
-
-	up_native = compat_alloc_user_space(sizeof(struct video_spu_palette));
-	err  = put_user(compat_ptr(palp), &up_native->palette);
-	err |= put_user(length, &up_native->length);
 	if (err)
 		return -EFAULT;
 
@@ -1349,8 +1319,6 @@ static long do_ioctl_trans(unsigned int cmd,
 		return do_video_get_event(file, cmd, argp);
 	case VIDEO_STILLPICTURE:
 		return do_video_stillpicture(file, cmd, argp);
-	case VIDEO_SET_SPU_PALETTE:
-		return do_video_set_spu_palette(file, cmd, argp);
 	}
 
 	/*

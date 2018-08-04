@@ -18,7 +18,47 @@
 #include "tbsecp3.h"
 
 struct tbsecp3_board tbsecp3_boards[] = {
+	[TBSECP3_BOARD_TBS6308] = {
+		.name		= "TurboSight TBS 6304 HDMI Capture",
+		.adapters	= 8,
+		.i2c_speed	= 39,
+		.eeprom_i2c	= 0,
+		.adap_config	= {
+			{
+				.ts_in = 0,
+				.i2c_bus_nr = 0,
+			}, 
+			{
+				.ts_in = 1,
+				.i2c_bus_nr = 0,
+			},
+			{
+				.ts_in = 2,
+				.i2c_bus_nr = 0,
+			},
+			{
+				.ts_in = 3,
+				.i2c_bus_nr = 0,
+			},
+			{
+				.ts_in = 4,
+				.i2c_bus_nr = 0,
+			},
+			{
+				.ts_in = 5,
+				.i2c_bus_nr = 0,
+			},
+			{
+				.ts_in = 6,
+				.i2c_bus_nr = 0,
+			},
+			{
+				.ts_in = 7,
+				.i2c_bus_nr = 0,
 
+			}
+		}
+	},
     // added by pzw in 2017,12,12
 	[TBSECP3_BOARD_TBS6304] = {
  	 	.name		= "TurboSight TBS 6304 HDMI Capture ",

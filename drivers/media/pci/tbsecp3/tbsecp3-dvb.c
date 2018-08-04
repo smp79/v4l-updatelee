@@ -87,16 +87,16 @@ static void mcu_24cxx_write(struct i2c_adapter *i2c,u32 bassaddr,u8 reg, u32 buf
 	return ;
 }
 
-static void tbs6304_read_mac(struct tbsecp3_adapter *adap)
+static int tbs6304_read_mac(struct tbsecp3_adapter *adap)
 {
 	struct tbsecp3_dev *dev = adap->dev;
-
+	int ret = 1;
 	int i =0;
 	u32 postaddr;
 	unsigned char tmpbuf[4]={0};
 	unsigned char rdbuffer[8]={0};
-
-	postaddr =  0x80 *adap->nr +0x08;
+	
+	postaddr =  0x80 *(adap->nr) +0x08;
 
 	tmpbuf[0] = 0x31; //24cxx read;
 	tmpbuf[1] = 6;  //how many byte;
@@ -115,15 +115,16 @@ static void tbs6304_read_mac(struct tbsecp3_adapter *adap)
 	}
 	if(i==100)
 	{
-		printk(" the receiver always busy !\n");
+		ret = 0;
+		//printk(" the receiver always busy !\n");
 		//check mcu status
 		*(u32 *)tmpbuf = tbs_read( BASE_ADDRESS_24CXX,  STATUS_MAC16_24CXX );
 		if((tmpbuf[0]&0x4) == 1) // bit2==1 mcu busy
 		{
-			printk("MCU status is busy!!!\n" );
+			//printk("MCU status is busy!!!\n" );
 			// release cs;
 			tbs_write( BASE_ADDRESS_24CXX,  CS_RELEASE, *(u32 *)&tmpbuf[0] );
-			return;
+			ret = 0;
 		}
 		
 	}
@@ -139,45 +140,151 @@ static void tbs6304_read_mac(struct tbsecp3_adapter *adap)
 	}
 	if(i==100)
 	{
-		printk(" wait wt_24cxx_done timeout! \n");
+		ret = 0;
+		//printk(" wait wt_24cxx_done timeout! \n");
 	}
 	//read back to host;
 	*(u32 *)rdbuffer = tbs_read(  BASE_ADDRESS_24CXX, DATA0_24CXX );
 	*(u32 *)&rdbuffer[4] = tbs_read(  BASE_ADDRESS_24CXX, DATA1_24CXX );
-	
-	memcpy(adap->dvb_adapter.proposed_mac, rdbuffer,6);
-	printk(" tbs6304 adapter %d ,mac address: %x,%x,%x,%x,%x,%x \n",adap->dvb_adapter.num,rdbuffer[0],rdbuffer[1],rdbuffer[2],rdbuffer[3],rdbuffer[4],rdbuffer[5]);
+	if(ret!=0)
+	{
+		memcpy(adap->dvb_adapter.proposed_mac, rdbuffer,6);
+		printk("adapter %d ,mac address: %x,%x,%x,%x,%x,%x \n",adap->dvb_adapter.num,rdbuffer[0],rdbuffer[1],rdbuffer[2],rdbuffer[3],rdbuffer[4],rdbuffer[5]);
+	}
 
-	return ;
+	return ret;
 };
+static void tbs_write_ext(struct tbsecp3_adapter *adap, u32 baseaddr, u8 address, u32 data)
+{
+    struct tbsecp3_dev *dev = adap->dev;
+    int i = 0;
+    u32 uAddr = baseaddr + address;
+    u32 tmp = ((uAddr & 0xff00) >> 8) | ((uAddr & 0x00ff) << 8);
+    tbs_write(0x1000,4, data);
+    tbs_write(0x1000,0, (((tmp << 16) & 0xffff0000) + 0x00000000));
 
+    while (0xff == tbs_read(0x1000,0)) {
+	//msleep(1);
+        if (10000 == i) {
+           //printk("rdReg32_Extern:rdReg32(0x1000) time out\n");
+           return;
+        }
+        i++;
+    }
+    return;
+
+}
+
+static u32 tbs_read_ext(struct tbsecp3_adapter *adap, u32 baseaddr, u8 address)
+{
+    struct tbsecp3_dev *dev = adap->dev;
+    int i = 0;
+    u32 uAddr = baseaddr + address;
+    u32 tmp = ((uAddr & 0xff00) >> 8) | ((uAddr & 0x00ff) << 8);
+    tbs_write(0x1000,0, (((tmp << 16) & 0xffff0000) + 0x00000080));
+    while (0xff == tbs_read(0x1000,0)) {
+	//msleep(1);
+        if (10000 == i) {
+           //printk("rdReg32_Extern:rdReg32(0x1000) time out\n");
+           return 0;
+        }
+        i++;
+    }
+    return tbs_read(0x1000,4);
+}
+
+static int tbs6308_read_mac_ext(struct tbsecp3_adapter *adap)
+{
+	int ret = 1;
+	int i =0;
+	u32 postaddr;
+	unsigned char tmpbuf[4]={0};
+	unsigned char rdbuffer[8]={0};
+	
+	postaddr =  0x80 *((adap->nr)%4) +0x08;
+
+	tmpbuf[0] = 0x31; //24cxx read;
+	tmpbuf[1] = 6;  //how many byte;
+	tmpbuf[2] = (postaddr >> 8);
+	tmpbuf[3] = (postaddr & 255); //24cxx sub_address,0x08 for mac
+
+	
+	tbs_write_ext( adap, BASE_ADDRESS_24CXX, CMD_24CXX, *(u32 *)&tmpbuf[0] );
+	//wait... until the data are received correctly;
+	for(i=0;i<200;i++)
+	{
+		msleep(1);
+		*(u32 *)tmpbuf = tbs_read_ext( adap, BASE_ADDRESS_24CXX, STATUS_MAC16_24CXX );
+		if((tmpbuf[0]&1) == 0)
+			break;
+	}
+	if(i==200)
+	{
+		//printk(" the receiver always busy !\n");
+		ret = 0;
+		//check mcu status
+		*(u32 *)tmpbuf = tbs_read_ext(adap, BASE_ADDRESS_24CXX,  STATUS_MAC16_24CXX );
+		if((tmpbuf[0]&0x4) == 1) // bit2==1 mcu busy
+		{
+			//printk("MCU status is busy!!!\n" );
+			// release cs;
+			tbs_write_ext( adap,BASE_ADDRESS_24CXX,  CS_RELEASE, *(u32 *)&tmpbuf[0] );
+			ret = 0;
+		}
+		
+	}
+	// release cs;
+	tbs_write_ext( adap, BASE_ADDRESS_24CXX, CS_RELEASE, *(u32 *)&tmpbuf[0] );
+	//check the write finished;
+	for (i = 0; i < 200; i++) {
+		msleep(1);
+		*(u32 *)tmpbuf = tbs_read_ext( adap, BASE_ADDRESS_24CXX, STATUS_MAC16_24CXX );
+		if ((tmpbuf[0] & 1) == 1)
+			break;
+	}
+	if (i == 200) {
+		//printk(" wait wt_24cxx_done timeout! \n");
+		ret=0;
+	}
+	//read back to host;
+	*(u32 *)rdbuffer = tbs_read_ext( adap, BASE_ADDRESS_24CXX, DATA0_24CXX );
+	*(u32 *)&rdbuffer[4] = tbs_read_ext( adap, BASE_ADDRESS_24CXX, DATA1_24CXX );
+	
+	if (ret != 0) {
+		memcpy(adap->dvb_adapter.proposed_mac, rdbuffer,6);
+		printk("adapter %d ,mac address: %x,%x,%x,%x,%x,%x \n",adap->dvb_adapter.num,rdbuffer[0],rdbuffer[1],rdbuffer[2],rdbuffer[3],rdbuffer[4],rdbuffer[5]);
+	}
+	return ret;
+};
 
 static void tbs6301_read_mac(struct tbsecp3_adapter *adap)
 {
 	struct tbsecp3_dev *dev = adap->dev;
-	int i = 0;
-	unsigned char tmpbuf[4] = {0};
-	unsigned char rdbuffer[8] = {0};
+
+	int i =0;
+	unsigned char tmpbuf[4]={0};
+	unsigned char rdbuffer[8]={0};
 
 	tmpbuf[0] = 0x31; //24cxx read;
 	tmpbuf[1] = 6;    //how many byte;
 	tmpbuf[2] = 0;
 	tmpbuf[3] = 0x08; //24cxx sub_address,0x08 for mac
 
-	tbs_write(BASE_ADDRESS_24CXX, CMD_24CXX, *(u32 *)&tmpbuf[0]);
-	// wait... until the data are received correctly;
+	tbs_write( BASE_ADDRESS_24CXX, CMD_24CXX, *(u32 *)&tmpbuf[0] );
+	//wait... until the data are received correctly;
 	for (i = 0; i < 100; i++) {
 		msleep(1);
 		*(u32 *)tmpbuf = tbs_read(BASE_ADDRESS_24CXX, STATUS_MAC16_24CXX);
-		if ((tmpbuf[0]&1) == 0)
+		if ((tmpbuf[0] & 1) == 0)
 			break;
 	}
 	if (i == 100) {
-		fprintk("the receiver always busy !");
-		// check mcu status
-		*(u32 *)tmpbuf = tbs_read(BASE_ADDRESS_24CXX,  STATUS_MAC16_24CXX);
-		if ((tmpbuf[0]&0x4) == 1) { // bit2==1 mcu busy
-			fprintk("MCU status is busy!!!");
+		printk(" the receiver always busy !\n");
+		//check mcu status
+		*(u32 *)tmpbuf = tbs_read( BASE_ADDRESS_24CXX,  STATUS_MAC16_24CXX );
+		if((tmpbuf[0]&0x4) == 1) // bit2==1 mcu busy
+		{
+			printk("MCU status is busy!!!\n" );
 			// release cs;
 			tbs_write(BASE_ADDRESS_24CXX,  CS_RELEASE, *(u32 *)&tmpbuf[0]);
 			return;
@@ -290,6 +397,7 @@ static int set_mac_address(struct tbsecp3_adapter *adap)
 		eep_addr = 0xa0;
 	eep_addr += 0x10 * adap->nr;
 	ret = i2c_transfer(i2c, msg, 2);
+	ret = i2c_transfer(i2c, msg, 2);
 	if (ret != 2) {
 		fprintk("error reading MAC address for adapter %d", adap->nr);
 	} else {
@@ -359,6 +467,18 @@ static struct av201x_config tbs6902_av201x_cfg = {
 	.xtal_freq	 = 27000,		/* kHz */
 };
 
+static struct tas2101_config tbs6308_demod_cfg = {
+       		 .i2c_address   = 0x60,
+		.id            = ID_TAS2101,
+		.init          = {0xb0, 0x32, 0x81, 0x57, 0x64, 0x9a, 0x33}, // 0xb1
+		.init2         = 0,
+		.write_properties = ecp3_spi_write,  
+		.read_properties = ecp3_spi_read,
+
+		.mcuWrite_properties = mcu_24cxx_write,  
+		.mcuRead_properties = mcu_24cxx_read,    
+
+};
 
 static struct tas2101_config tbs6304_demod_cfg[] = {
 {
@@ -517,18 +637,6 @@ static int max_set_voltage(struct i2c_adapter *i2c, enum fe_sec_voltage voltage,
 	return 0;
 }
 
-static int max_send_master_cmd(struct dvb_frontend *fe, struct dvb_diseqc_master_cmd *cmd)
-{
-	//printk("send master cmd\n");
-	return 0;
-}
-
-static int max_send_burst(struct dvb_frontend *fe, enum fe_sec_mini_cmd burst)
-{
-	//printk("send burst: %d\n", burst);
-	return 0;
-}
-
 static void RF_switch(struct i2c_adapter *i2c,u8 rf_in,u8 flag) //flag : 0: dvbs/s2 signal 1:Terrestrial and cable signal
 {
 	struct tbsecp3_i2c *i2c_adap = i2c_get_adapdata(i2c);
@@ -632,17 +740,30 @@ static int tbsecp3_frontend_attach(struct tbsecp3_adapter *adapter)
 	adapter->i2c_client_demod = NULL;
 	adapter->i2c_client_tuner = NULL;
 
-	if (0x6304 != pci->subsystem_vendor){
+	if ((0x6304 != pci->subsystem_vendor) && (0x6308 != pci->subsystem_vendor)) {
 		reset_demod(adapter);
 		set_mac_address(adapter);
 	}
 
 	switch (pci->subsystem_vendor) {
+	case 0x6308:
+		adapter->fe = dvb_attach(tas2971_attach, &tbs6308_demod_cfg, i2c);
+		if (adapter->fe == NULL)
+			goto frontend_atach_fail;
+		if (adapter->nr <4) {
+			if (tbs6304_read_mac(adapter) == 0)
+				tbs6304_read_mac(adapter);
+		} else {
+			if (tbs6308_read_mac_ext(adapter) == 0)
+				tbs6308_read_mac_ext(adapter); //try again
+		}
+		break;
 	case 0x6304:
 		adapter->fe = dvb_attach(tas2971_attach, &tbs6304_demod_cfg[adapter->nr], i2c);
 		if (adapter->fe == NULL)
 			goto frontend_atach_fail;
-		tbs6304_read_mac(adapter);
+		if (tbs6304_read_mac(adapter) == 0)
+			tbs6304_read_mac(adapter);
 		break;
 	case 0x6301:
 		adapter->fe = dvb_attach(tas2971_attach, &tbs6301_demod_cfg, i2c);
