@@ -4,7 +4,7 @@
 #
 # 
 
-# This will set you up with Linux 4.16.0
+# This will set you up with Linux 4.19.0-rc1
 
 # Download any dependancies that you might need
 
@@ -58,6 +58,11 @@
 # To update just the include headers
 
 	sudo make headers_install INSTALL_HDR_PATH=/usr
+
+# If you have crazy slow boot times it might be related to urandom
+
+	sudo apt-get install haveged
+	sudo systemctl enable haveged 
 
 #
 # Tested with
