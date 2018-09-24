@@ -2253,6 +2253,7 @@ File: qed/qed_init_values_zipped-8.33.1.0.bin
 File: qed/qed_init_values_zipped-8.33.11.0.bin
 File: qed/qed_init_values-8.33.12.0.bin
 File: qed/qed_init_values_zipped-8.37.2.0.bin
+File: qed/qed_init_values_zipped-8.37.7.0.bin
 
 Licence:
   This file contains firmware data derived from proprietary unpublished
@@ -2491,7 +2492,7 @@ Version: 8.5.0.0.55
 File: ti-connectivity/wl18xx-fw-3.bin
 Version: 8.8.0.0.13
 File: ti-connectivity/wl18xx-fw-4.bin
-Version: 8.9.0.0.76
+Version: 8.9.0.0.79
 
 Licence: Redistributable. See LICENCE.ti-connectivity for details.
 
@@ -3079,23 +3080,23 @@ Version: BT_StonePeak_C0_REL_59_0001
 File: intel/ibt-hw-37.8.10-fw-1.10.3.11.e.bseq
 Version: BT_StonePeak_D0_REL_50_0002
 File: intel/ibt-hw-37.8.10-fw-22.50.19.14.f.bseq
-Version: BT_StonePeak_D1_REL_54_00003
+Version: BT_StonePeak_D1_REL_52_00005
 File: intel/ibt-11-5.ddc
-Version: LnP/SfP_REL0473
+Version: LnP/SfP_REL0487
 File: intel/ibt-11-5.sfi
-Version: BT_LightningPeak_REL0473
+Version: BT_LightningPeak_REL0487
 File: intel/ibt-12-16.ddc
-Version: BT_WindStormPeak_REL0226
+Version: BT_WindStormPeak_REL0244
 File: intel/ibt-12-16.sfi
-Version: BT_WindStormPeak_REL0226
+Version: BT_WindStormPeak_REL0244
 File: intel/ibt-17-16-1.sfi
-Version: BT_JeffersonPeak_B0_B0_REL0263
+Version: BT_JeffersonPeak_B0_B0_REL0329
 File: intel/ibt-17-16-1.ddc
-Version: BT_JeffersonPeak_B0_B0_REL0263
+Version: BT_JeffersonPeak_B0_B0_REL0329
 File: intel/ibt-17-2.sfi
-Version: BT_JeffersonPeak_B0_B0_REL0263
+Version: BT_JeffersonPeak_B0_B0_REL0329
 File: intel/ibt-17-2.ddc
-Version: BT_JeffersonPeak_B0_B0_REL0263
+Version: BT_JeffersonPeak_B0_B0_REL0329
 File: intel/ibt-17-0-1.sfi
 Version: BT_JeffersonPeak_A0_B0_REL0201
 File: intel/ibt-17-0-1.ddc
@@ -3105,13 +3106,13 @@ Version: BT_JeffersonPeak_A0_B0_REL0201
 File: intel/ibt-17-1.ddc
 Version: BT_JeffersonPeak_A0_B0_REL0201
 File: intel/ibt-18-16-1.sfi
-Version: BT_ThunderPeak_B0_B0_REL0263
+Version: BT_ThunderPeak_B0_B0_REL0329
 File: intel/ibt-18-16-1.ddc
-Version: BT_ThunderPeak_B0_B0_REL0263
+Version: BT_ThunderPeak_B0_B0_REL0329
 File: intel/ibt-18-2.sfi
-Version: BT_ThunderPeak_B0_B0_REL0263
+Version: BT_ThunderPeak_B0_B0_REL0329
 File: intel/ibt-18-2.ddc
-Version: BT_ThunderPeak_B0_B0_REL0263
+Version: BT_ThunderPeak_B0_B0_REL0329
 File: intel/ibt-18-0-1.sfi
 Version: BT_ThunderPeak_A0_B0_REL0201
 File: intel/ibt-18-0-1.ddc
@@ -3136,6 +3137,7 @@ File: rtl_bt/rtl8723d_fw.bin
 File: rtl_bt/rtl8723d_config.bin
 File: rtl_bt/rtl8821c_fw.bin
 File: rtl_bt/rtl8821c_config.bin
+File: rtl_bt/rtl8822cu_fw.bin
 
 Licence: Redistributable. See LICENCE.rtlwifi_firmware.txt for details.
 
@@ -3144,6 +3146,7 @@ From https://github.com/troy-tan/driver_store
 Files rtl_bt/rtl8822b_* came directly from Realtek. These files are
 updated on April 14, 2017.
 Files rtl_bt/rtl8821c_* and rtl_bt/rtl8723d_* came directly from Realtek.
+File rtl_bt/rtl8822cu_fw.bin came directly from Realtek.
 
 --------------------------------------------------------------------------
 
@@ -3916,6 +3919,15 @@ Version: 3.1
 
 Licence: Redistributable. See LICENCE.rockchip for details.
 
+--------------------------------------------------------------------------
+
+Driver: mt76x0 - MediaTek MT76x0u Wireless MACs
+
+File: mediatek/mt7610u.bin
+Version: 2.6
+
+Licence: Redistributable. See LICENCE.mediatek for details.
+
 ---------------------------------------------------------------------------
 
 Driver: mt76x2e - MediaTek MT76x2 Wireless MACs
@@ -3927,6 +3939,18 @@ File: mt7662_rom_patch.bin
 Version: 0.0.2_P69
 
 Licence: Redistributable. See LICENCE.ralink_a_mediatek_company_firmware for details
+
+---------------------------------------------------------------------------
+
+Driver: mt76x2u - MediaTek MT76x2u Wireless MACs
+
+File: mediatek/mt7662u.bin
+Version: 1.5
+
+File: mediatek/mt7662u_rom_patch.bin
+Version: 0.0.2_P48
+
+Licence: Redistributable. See LICENCE.mediatek for details.
 
 --------------------------------------------------------------------------
 
@@ -3973,7 +3997,7 @@ Link: netronome/flower/nic_AMDA0096-0001_2x10.nffw -> netronome/flower/nic_AMDA0
 Link: netronome/flower/nic_AMDA0097-0001_8x10.nffw -> netronome/flower/nic_AMDA0097.nffw
 Link: netronome/flower/nic_AMDA0099-0001_1x10_1x25.nffw -> netronome/flower/nic_AMDA0099.nffw
 
-Version: AOTC-2.9.A.16
+Version: AOTC-2.9.A.31
 
 Licence: Redistributable. See LICENCE.Netronome for details
 
@@ -4017,7 +4041,7 @@ File: qcom/venus-5.2/venus.b03
 File: qcom/venus-5.2/venus.b04
 File: qcom/venus-5.2/venus.mbn
 
-Version: 5.2-00009
+Version: 5.2-00023
 
 Licence: Redistributable. See LICENSE.qcom and qcom/NOTICE.txt for details
 
@@ -4064,6 +4088,7 @@ File: mellanox/mlxsw_spectrum-13.1420.122.mfa2
 File: mellanox/mlxsw_spectrum-13.1530.152.mfa2
 File: mellanox/mlxsw_spectrum-13.1620.192.mfa2
 File: mellanox/mlxsw_spectrum-13.1702.6.mfa2
+File: mellanox/mlxsw_spectrum-13.1703.4.mfa2
 
 Licence:
  Copyright (c) 2017-2018 Mellanox Technologies, Ltd. All rights reserved.
@@ -4095,3 +4120,12 @@ Licence:
  CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  POSSIBILITY OF SUCH DAMAGE.
+
+--------------------------------------------------------------------------
+
+Driver: cdns-mhdp - Cadence MHDP DP bridge
+
+File: cadence/mhdp8546.bin
+Version: 1.2.12
+
+Licence: Redistributable. See LICENCE.cadence for details

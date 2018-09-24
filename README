@@ -12,14 +12,22 @@
 	ncurses-dev libproc-processtable-perl fakeroot libelf-dev libssl-dev \
 	bison flex pigz
 
+# Download the DEB's
+# https://drive.google.com/open?id=1QMPSOdn1XxTVELycvR7A-e-pr75hKJJe
+# https://drive.google.com/open?id=1Hwz2xRA_PdduYPq7EQwO4_fz8fx8ULYT
+# https://drive.google.com/open?id=1LLAfiAZkKozFFE1b2Cqo0SgzPHvGuMKV
+# https://drive.google.com/open?id=1OoqbosaM3hEvL3DOAAZ0PwI6-01w2fcy
+
+# Or
+
 # Then download the repository, aprox 1.9Gb
 
-	git clone https://bitbucket.org/updatelee/v4l-updatelee
+	git clone https://gitlab.com/updatelee/v4l-updatelee
 	cd v4l-updatelee
 
 # If you don't need the entire repo history, to conserve bandwidth downloading, please use
 
-	git clone --depth 1 https://bitbucket.org/updatelee/v4l-updatelee
+	git clone --depth 1 https://gitlab.com/updatelee/v4l-updatelee
 	cd v4l-updatelee
 
 # To compile and install first select any additional media drivers you want compiled.
