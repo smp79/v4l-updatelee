@@ -1645,6 +1645,10 @@ static int stb0899_get_frontend(struct dvb_frontend *fe,
 	switch (state->delsys) {
 		case SYS_DVBS:
 		case SYS_DSS:
+			if(stb0899_read_reg(state, STB0899_IQSWAP & 4)) {
+				p->inversion = INVERSION_ON;
+				} else
+				p->inversion = INVERSION_OFF;
 			reg = stb0899_read_reg(state, STB0899_PLPARM);
 			switch (STB0899_GETFIELD(VITCURPUN, reg)) {
 				case 13:
