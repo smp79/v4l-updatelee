@@ -10,13 +10,9 @@
 
 	sudo apt-get install git build-essential linux-headers-generic \
 	ncurses-dev libproc-processtable-perl fakeroot libelf-dev libssl-dev \
-	bison flex pigz
+	bison flex pigz pkg-config
 
-# Download the DEB's
-# https://drive.google.com/open?id=1QMPSOdn1XxTVELycvR7A-e-pr75hKJJe
-# https://drive.google.com/open?id=1Hwz2xRA_PdduYPq7EQwO4_fz8fx8ULYT
-# https://drive.google.com/open?id=1LLAfiAZkKozFFE1b2Cqo0SgzPHvGuMKV
-# https://drive.google.com/open?id=1OoqbosaM3hEvL3DOAAZ0PwI6-01w2fcy
+# Download deb's from https://drive.google.com/open?id=1CXn1Z6Xwy3pTHuLYuwirXy4K4vQaVZcU
 
 # Or
 

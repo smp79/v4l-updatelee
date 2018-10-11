@@ -922,10 +922,17 @@ static int lgdt3305_read_status(struct dvb_frontend *fe, enum fe_status *status)
 
 	if (fe->ops.tuner_ops.get_rf_strength) {
 		ret = fe->ops.tuner_ops.get_rf_strength(fe, &strength);
+		if (ret == 0){
+			lg_dbg("strength=%d\n", strength);
+		} else {
+			lg_dbg("fe->ops.tuner_ops.get_rf_strength() failed\n");
+		}
 	}
 	*status = 0;
 
+	msleep(100); // aero-m lgdt3305_read_reg: error (addr 59 reg 0003 error (ret == -121)
 	ret = lgdt3305_read_reg(state, LGDT3305_GEN_STATUS, &val);
+	msleep(100); // aero-m lgdt3305_read_reg: error (addr 59 reg 0003 error (ret == -121)
 	if (lg_fail(ret))
 		goto fail;
 
