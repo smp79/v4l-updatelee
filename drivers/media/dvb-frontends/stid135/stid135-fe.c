@@ -43,12 +43,21 @@ module_param(mode, int, 0444);
 MODULE_PARM_DESC(mode,
 		"Multi-switch mode: 0=quattro/quad 1=normal direct connection");
 
+static unsigned int ts_nosync=1;
+module_param(ts_nosync, int, 0644);
+MODULE_PARM_DESC(ts_nosync, "TS FIFO Minimum latence mode (default:on)");
+
+static unsigned int rfsource;
+module_param(rfsource, int, 0644);
+MODULE_PARM_DESC(rfsource, "RF source selection for direct connection mode (default:0 - auto)");
+
 struct stv_base {
 	struct list_head     stvlist;
 
 	u8                   adr;
 	struct i2c_adapter  *i2c;
 	struct mutex         i2c_lock;
+	struct mutex         status_lock;
 	int                  count;
 	u32                  extclk;
 	u8                   ts_mode;
@@ -206,9 +215,11 @@ static int stid135_init(struct dvb_frontend *fe)
 
 	dev_dbg(&state->base->i2c->dev, "%s: demod %d + tuner %d\n", __func__, state->nr, state->rf_in);
 
+	mutex_lock(&state->base->status_lock);
 	err |= fe_stid135_tuner_enable(p_params->handle_demod, state->rf_in + 1);
 	err |= fe_stid135_diseqc_init(state->base->handle, state->rf_in + 1, FE_SAT_DISEQC_2_3_PWM);
 	err |= fe_stid135_set_rfmux_path(p_params->handle_demod, state->nr + 1, state->rf_in + 1);
+	mutex_unlock(&state->base->status_lock);
 
 	if (err != FE_LLA_NO_ERROR)
 		dev_err(&state->base->i2c->dev, "%s: enable tuner %d + demod %d error %d !\n", __func__, state->rf_in, state->nr, err);
@@ -255,6 +266,7 @@ static int stid135_set_parameters(struct dvb_frontend *fe)
 	search_params.modcode		= FE_SAT_DUMMY_PLF;
 	search_params.search_range	= 10000000;
 	search_params.puncture_rate	= FE_SAT_PR_UNKNOWN;
+	search_params.ts_nosync 	= ts_nosync;
 	switch (p->delivery_system)
 	{
 	  case SYS_DSS:
@@ -274,6 +286,8 @@ static int stid135_set_parameters(struct dvb_frontend *fe)
 
 	err = FE_STiD135_GetLoFreqHz(state->base->handle, &(search_params.lo_frequency));
 	search_params.lo_frequency *= 1000000;
+
+	mutex_lock(&state->base->status_lock);
 
 	dev_dbg(&state->base->i2c->dev, "%s: demod %d + tuner %d\n", __func__, state->nr, state->rf_in);
 	err |= fe_stid135_set_rfmux_path(p_params->handle_demod, state->nr + 1, state->rf_in + 1);
@@ -302,6 +316,7 @@ static int stid135_set_parameters(struct dvb_frontend *fe)
 		dev_err(&state->base->i2c->dev, "%s: fe_stid135_set_pls error %d !\n", __func__, err);
 
 	err |= fe_stid135_search(state->base->handle, state->nr + 1, &search_params, &search_results, 0);
+	mutex_unlock(&state->base->status_lock);
 
 	if (err != FE_LLA_NO_ERROR)
 	{
@@ -334,8 +349,147 @@ static int stid135_set_parameters(struct dvb_frontend *fe)
 static int stid135_get_frontend(struct dvb_frontend *fe, struct dtv_frontend_properties *p)
 {
 	struct stv *state = fe->demodulator_priv;
+	fe_lla_error_t err = FE_LLA_NO_ERROR;
+	BOOL locked;
+	struct fe_sat_signal_info signal_info;
+
+	mutex_lock(&state->base->status_lock);
+	err = fe_stid135_get_lock_status(state->base->handle, state->nr + 1, &locked);
+	mutex_unlock(&state->base->status_lock);
+
+	if (err != FE_LLA_NO_ERROR) {
+		dev_warn(&state->base->i2c->dev, "%s: fe_stid135_get_lock_status error %d !\n", __func__, err);
+		return 0;
+	}
 	
-	return 0;
+	if (!locked)
+		return 0;
+
+	mutex_lock(&state->base->status_lock);
+	err = fe_stid135_get_signal_info(state->base->handle, state->nr + 1, &signal_info, 0);
+	mutex_unlock(&state->base->status_lock);
+
+	if (err != FE_LLA_NO_ERROR) {
+		dev_warn(&state->base->i2c->dev, "%s: fe_stid135_get_signal_info error %d !\n", __func__, err);
+		return 0;
+	}
+	if (!signal_info.locked)
+		 return 0;
+
+	switch (signal_info.standard) {
+	case FE_SAT_DSS_STANDARD:
+		p->delivery_system = SYS_DSS;
+		break;
+	case FE_SAT_DVBS2_STANDARD:
+		p->delivery_system = SYS_DVBS2;
+		break;
+	case FE_SAT_DVBS1_STANDARD:
+	default:
+		p->delivery_system = SYS_DVBS;
+    	}
+
+	switch (signal_info.modulation) {
+	case FE_SAT_MOD_8PSK:
+		p->modulation = PSK_8;
+		break;
+	case FE_SAT_MOD_16APSK:
+		p->modulation = APSK_16;
+		break;
+	case FE_SAT_MOD_64APSK:
+		p->modulation = APSK_64;
+		break;
+	case FE_SAT_MOD_128APSK:
+		p->modulation = APSK_128;
+		break;
+	case FE_SAT_MOD_256APSK:
+		p->modulation = APSK_256;
+		break;
+	case FE_SAT_MOD_1024APSK:
+		p->modulation = APSK_1024;
+		break;
+	case FE_SAT_MOD_8PSK_L:
+		p->modulation = APSK_8L;
+		break;
+	case FE_SAT_MOD_16APSK_L:
+		p->modulation = APSK_16L;
+		break;
+	case FE_SAT_MOD_64APSK_L:
+		p->modulation = APSK_64L;
+		break;
+	case FE_SAT_MOD_256APSK_L:
+		p->modulation = APSK_256L;
+		break;
+	case FE_SAT_MOD_QPSK:
+	default:
+		p->modulation = QPSK;
+    	}
+
+    	switch (signal_info.roll_off) {
+	  case FE_SAT_05:
+		p->rolloff = ROLLOFF_5;
+		break;
+	  case FE_SAT_10:
+		p->rolloff = ROLLOFF_10;
+		break;
+	  case FE_SAT_15:
+		p->rolloff = ROLLOFF_15;
+		break;
+	  case FE_SAT_20:
+		p->rolloff = ROLLOFF_20;
+		break;
+	  case FE_SAT_25:
+		p->rolloff = ROLLOFF_25;
+		break;
+	  case FE_SAT_35:
+		p->rolloff = ROLLOFF_35;
+		break;
+	  default:
+		p->rolloff = ROLLOFF_AUTO;
+	}
+
+	p->inversion = signal_info.spectrum == FE_SAT_IQ_SWAPPED ? INVERSION_ON : INVERSION_OFF;
+	if (p->delivery_system == SYS_DVBS2) {
+		enum fe_code_rate modcod2fec[0x20] = {
+			FEC_NONE, FEC_1_4, FEC_1_3, FEC_2_5,
+			FEC_1_2, FEC_3_5, FEC_2_3, FEC_3_4,
+			FEC_4_5, FEC_5_6, FEC_8_9, FEC_9_10,
+			FEC_3_5, FEC_2_3, FEC_3_4, FEC_5_6,
+			FEC_8_9, FEC_9_10, FEC_2_3, FEC_3_4,
+			FEC_4_5, FEC_5_6, FEC_8_9, FEC_9_10,
+			FEC_3_4, FEC_4_5, FEC_5_6, FEC_8_9,
+			FEC_9_10
+		};
+		if (signal_info.modcode < FE_SAT_MODCODE_UNKNOWN)
+			p->fec_inner = modcod2fec[signal_info.modcode];
+		else
+			p->fec_inner = FEC_AUTO;
+		p->pilot = signal_info.pilots == FE_SAT_PILOTS_ON ? PILOT_ON : PILOT_OFF;
+	}
+	else {
+		switch (signal_info.puncture_rate) {
+		case FE_SAT_PR_1_2:
+			p->fec_inner = FEC_1_2;
+			break;
+		case FE_SAT_PR_2_3:
+			p->fec_inner = FEC_2_3;
+			break;
+		case FE_SAT_PR_3_4:
+			p->fec_inner = FEC_3_4;
+			break;
+		case FE_SAT_PR_5_6:
+			p->fec_inner = FEC_5_6;
+			break;
+		case FE_SAT_PR_6_7:
+			p->fec_inner = FEC_6_7;
+			break;
+		case FE_SAT_PR_7_8:
+			p->fec_inner = FEC_7_8;
+			break;
+		default:
+			p->fec_inner = FEC_NONE;
+		}
+	}
+    	return 0;
 }
 
 static int stid135_read_status(struct dvb_frontend *fe, enum fe_status *status)
@@ -343,7 +497,9 @@ static int stid135_read_status(struct dvb_frontend *fe, enum fe_status *status)
 	struct stv *state = fe->demodulator_priv;
 	struct dtv_frontend_properties *p = &fe->dtv_property_cache;
 	fe_lla_error_t err = FE_LLA_NO_ERROR;
-	struct fe_sat_tracking_info track_info;
+	BOOL locked;
+	s32 pband_rf;
+	struct fe_sat_tracking_info track_info;	
 
 	*status = 0;
 	p->strength.len = 1;
@@ -355,16 +511,45 @@ static int stid135_read_status(struct dvb_frontend *fe, enum fe_status *status)
 	p->pre_bit_count.len =1;
 	p->pre_bit_count.stat[0].scale = FE_SCALE_NOT_AVAILABLE;
 
+	mutex_lock(&state->base->status_lock);
+	err = fe_stid135_get_lock_status(state->base->handle, state->nr + 1, &locked);
+	mutex_unlock(&state->base->status_lock);
+
+	if (err != FE_LLA_NO_ERROR) {
+		dev_warn(&state->base->i2c->dev, "%s: fe_stid135_get_lock_status error %d !\n", __func__, err);
+		return 0;
+	}
+	
+	if (!locked) {
+		mutex_lock(&state->base->status_lock);
+		err = fe_stid135_get_band_power_demod_not_locked(state->base->handle, state->nr + 1, &pband_rf);
+		mutex_unlock(&state->base->status_lock);
+
+		if (err != FE_LLA_NO_ERROR) {
+			dev_warn(&state->base->i2c->dev, "%s: fe_stid135_get_band_power_demod_not_locked error %d !\n", __func__, err);
+			return 0;
+		}
+
+		*status |= FE_HAS_SIGNAL;
+
+		p->strength.len = 2;
+		p->strength.stat[0].scale = FE_SCALE_DECIBEL;
+		p->strength.stat[0].svalue = pband_rf;
+		
+		p->strength.stat[1].scale = FE_SCALE_RELATIVE;
+		p->strength.stat[1].uvalue = (100 + pband_rf/1000) * 656;
+		return 0;
+	}
+	  
+	mutex_lock(&state->base->status_lock);
 	err = fe_stid135_tracking(state->base->handle, state->nr + 1, &track_info);
+	mutex_unlock(&state->base->status_lock);
 
 	if (err != FE_LLA_NO_ERROR) {
 		dev_warn(&state->base->i2c->dev, "%s: fe_stid135_tracking error %d !\n", __func__, err);
 		return 0;
 	}
-	
-	if (!track_info.locked)
-		return 0;
-	  
+
 	*status |= FE_HAS_SIGNAL | FE_HAS_CARRIER
 		    | FE_HAS_VITERBI | FE_HAS_SYNC | FE_HAS_LOCK;
 
@@ -457,7 +642,9 @@ static int stid135_set_tone(struct dvb_frontend *fe, enum fe_sec_tone_mode tone)
 		return 0;
 	}
 
+	mutex_lock(&state->base->status_lock);
 	err = fe_stid135_set_22khz_cont(state->base->handle,state->rf_in + 1, tone == SEC_TONE_ON);
+	mutex_unlock(&state->base->status_lock);
 
 	if (err != FE_LLA_NO_ERROR)
 		dev_err(&state->base->i2c->dev, "%s: fe_stid135_set_22khz_cont error %d !\n", __func__, err);
@@ -474,8 +661,10 @@ static int stid135_send_master_cmd(struct dvb_frontend *fe,
 	if (state->base->mode == 0)
 		return 0;
 
+	mutex_lock(&state->base->status_lock);
 	err |= fe_stid135_diseqc_init(state->base->handle, state->rf_in + 1, FE_SAT_DISEQC_2_3_PWM);
 	err |= fe_stid135_diseqc_send(state->base->handle, state->rf_in + 1, cmd->msg, cmd->msg_len);
+	mutex_unlock(&state->base->status_lock);
 
 	if (err != FE_LLA_NO_ERROR)
 		dev_err(&state->base->i2c->dev, "%s: fe_stid135_diseqc_send error %d !\n", __func__, err);
@@ -492,7 +681,9 @@ static int stid135_recv_slave_reply(struct dvb_frontend *fe,
 	if (state->base->mode == 0)
 		return 0;
 
+	mutex_lock(&state->base->status_lock);
 	err = fe_stid135_diseqc_receive(state->base->handle, reply->msg, &reply->msg_len);
+	mutex_unlock(&state->base->status_lock);
 
 	if (err != FE_LLA_NO_ERROR)
 		dev_err(&state->base->i2c->dev, "%s: fe_stid135_diseqc_receive error %d !\n", __func__, err);
@@ -673,6 +864,7 @@ struct dvb_frontend *stid135_attach(struct i2c_adapter *i2c,
 		base->read_properties = cfg->read_properties;
 
 		mutex_init(&base->i2c_lock);
+		mutex_init(&base->status_lock);
 
 		state->base = base;
 		if (stid135_probe(state) < 0) {
@@ -686,6 +878,9 @@ struct dvb_frontend *stid135_attach(struct i2c_adapter *i2c,
 	state->fe.ops               = stid135_ops;
 	state->fe.demodulator_priv  = state;
 	state->nr = nr;
+
+	if (rfsource > 0 && rfsource < 5)
+		rf_in = rfsource - 1;
 	state->rf_in = base->mode ? rf_in : 0;
 
 	dev_info(&i2c->dev, "%s demod found at adr %02X on %s\n",

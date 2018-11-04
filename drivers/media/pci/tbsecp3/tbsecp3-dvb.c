@@ -1375,16 +1375,16 @@ static int tbsecp3_frontend_attach(struct tbsecp3_adapter *adapter)
 	case TBSECP3_BOARD_TBS6909:
 		/*
 	       tmp = tbs_read(TBS_GPIO_BASE, 0x20);
-	       printk("RD 0x20 = %x", tmp);
+	       fprintk("RD 0x20 = %x", tmp);
 	       tbs_write(TBS_GPIO_BASE, 0x20, tmp & 0xfffe);
 	       tmp = tbs_read(TBS_GPIO_BASE, 0x20);
-	       printk("RD 0x20 = %x", tmp);
+	       fprintk("RD 0x20 = %x", tmp);
 
 	       tmp = tbs_read(TBS_GPIO_BASE, 0x24);
-	       printk("RD 0x24 = %x", tmp);
+	       fprintk("RD 0x24 = %x", tmp);
 	       tbs_write(TBS_GPIO_BASE, 0x24, tmp & 0xfffc);
 	       tmp = tbs_read(TBS_GPIO_BASE, 0x24);
-	       printk("RD 0x24 = %x", tmp);
+	       fprintk("RD 0x24 = %x", tmp);
 	       */
 
 		adapter->fe = dvb_attach(mxl58x_attach, i2c, &tbs6909_mxl58x_cfg, adapter->nr);

@@ -880,7 +880,12 @@ static int si2183_init(struct dvb_frontend *fe)
 		goto err;
 
 	if (dev->fw_loaded) {
-		cmd = si2183_CMD(client, SI2183_RESUME);
+		cmd = SI2183_RESUME;
+
+		if (dev->start_clk_mode == 1)
+				cmd.args[6] = 0x31;	
+
+		cmd = si2183_CMD(client, cmd);
 		if (cmd.ret)
 			goto err;
 
