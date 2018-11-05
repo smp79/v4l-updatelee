@@ -43,11 +43,6 @@ Description : Contains a number of generic type declarations and defines.
 #ifndef __STDDEFS_H
 #define __STDDEFS_H
 
-#include <linux/kernel.h>
-#include <linux/kernel.h>
-#include <media/dvb_math.h>
-#include <asm/div64.h>
-#include <media/dvb_frontend.h>
 
 /* Includes ---------------------------------------------------------------- */
 #ifdef __cplusplus
