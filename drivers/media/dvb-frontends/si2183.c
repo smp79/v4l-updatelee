@@ -1110,6 +1110,10 @@ static int si2183_search(struct dvb_frontend *fe)
 	struct si2183_dev *dev = i2c_get_clientdata(client);
 	struct si2183_command cmd;
 	int ret, i;
+	int max_sr = 65000000;
+	int min_sr = 100000;
+	int try_sr;
+	int locked = 0;
 	u8 tmp[20];
 	enum fe_status status = 0;
 
@@ -1138,8 +1142,18 @@ static int si2183_search(struct dvb_frontend *fe)
 
 		}
 	}
+    /* initialize symbol rate in demod to 18123 */
+	cmd = SI2183_SET_DVBS2_SYMBOLRATE;
+	cmd.args[4] = 0x46;
+	cmd.args[5] = 0xCB;
+	si2183_CMD(client, cmd);
 
-	c->symbol_rate = 45000000;
+	try_sr = max_sr;
+
+	do {
+	fprintk("si2183_search(): try_sr = %d, max_sr = %d", try_sr, max_sr);
+	c->symbol_rate = try_sr;
+
 	if (fe->ops.tuner_ops.set_params) {
 		ret = fe->ops.tuner_ops.set_params(fe);
 	}
@@ -1204,7 +1218,7 @@ static int si2183_search(struct dvb_frontend *fe)
 
 	msleep(200);
 
-	for (i = 0; i < 20; i++) {
+	for (i = 0; i < 10; i++) {
 		fprintk("1: loop=%d", i);
 
 		cmd = si2183_cmd(client, "\x30\x01", 2, 11);
@@ -1213,10 +1227,10 @@ static int si2183_search(struct dvb_frontend *fe)
 
 		msleep(200);
 	}
-	if (i == 20) {
+	if (i == 10) {
 		fprintk("DVBFE_ALGO_SEARCH_FAILED");
 		config->algo = SI2183_FAILED;
-		return DVBFE_ALGO_SEARCH_FAILED;
+	//	return DVBFE_ALGO_SEARCH_FAILED;
 	}
 
 	msleep(50);
@@ -1233,7 +1247,7 @@ static int si2183_search(struct dvb_frontend *fe)
 
 	msleep(100);
 
-	for (i = 0; i < 20; i++) {
+	for (i = 0; i < 10; i++) {
 		fprintk("2: loop=%d", i);
 
 		cmd = si2183_cmd(client, "\x30\x01", 2, 11);
@@ -1242,10 +1256,10 @@ static int si2183_search(struct dvb_frontend *fe)
 
 		msleep(200);
 	}
-	if (i == 20) {
+	if (i == 10) {
 		fprintk("DVBFE_ALGO_SEARCH_FAILED");
 		config->algo = SI2183_FAILED;
-		return DVBFE_ALGO_SEARCH_FAILED;
+	//	return DVBFE_ALGO_SEARCH_FAILED;
 	}
 
 	fprintk("Fine Tune");
@@ -1275,7 +1289,7 @@ static int si2183_search(struct dvb_frontend *fe)
 	/* dsp restart */
 	si2183_CMD(client, SI2183_DSP_RESET);
 
-	for (i = 0; i < 20; i++) {
+	for (i = 0; i < 10; i++) {
 		fprintk("3: loop=%d", i);
 
 		cmd = si2183_cmd(client, "\x87\x01", 2, 8);
@@ -1284,21 +1298,30 @@ static int si2183_search(struct dvb_frontend *fe)
 
 		msleep(100);
 	}
-	if (i == 20) {
+	if (i == 10) {
 		fprintk("DVBFE_ALGO_SEARCH_FAILED");
 		config->algo = SI2183_FAILED;
-		return DVBFE_ALGO_SEARCH_FAILED;
+	//	return DVBFE_ALGO_SEARCH_FAILED;
 	}
 
-	for (i = 0; i < 20; i++) {
+	for (i = 0; i < 10; i++) {
 		fprintk("4: loop=%d", i);
 
 		ret = si2183_read_status(fe, &status);
-		if (status & FE_HAS_LOCK)
+		if (status & FE_HAS_LOCK) {
+			locked = 1;
 			break;
 
 		msleep(300);
+		}
 	}
+	fprintk("locked = %d", locked);
+	if (try_sr > 5000000) {
+		try_sr -= 20000000;
+	} else {
+		try_sr -= 2000000;
+	}
+	} while ((try_sr > min_sr) && (!locked));
 
 	/* check if we have a valid signal */
 	if (status & FE_HAS_LOCK) {
