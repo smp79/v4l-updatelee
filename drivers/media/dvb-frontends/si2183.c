@@ -1187,7 +1187,7 @@ static int si2183_search(struct dvb_frontend *fe)
 
 	si2183_cmd(client, "\x14\x00\x08\x03\x03\x00", 6, 4);
 
-	si2183_cmd(client, "\x14\x00\x0a\x10\xf8\x06", 6, 4);
+	si2183_CMD(client, SI2183_SET_L2_CH_SEEK);
 
 	if (!config->warm) {
 		si2183_cmd(client, "\x14\x00\x02\x03\x01\x03", 6, 4);
@@ -1269,7 +1269,8 @@ static int si2183_search(struct dvb_frontend *fe)
 	cmd.args[5] = tmp[9];
 	si2183_CMD(client, cmd);
 
-	si2183_cmd(client, "\x14\x00\x0a\x10\xf8\x04", 6, 4);
+	/* Si2183_L1_SetProperty: Setting Property 0x100a to 0x04f8(1272) */
+	si2183_CMD(client, SI2183_SET_AUTO_SYSTEM);
 
 	/* dsp restart */
 	si2183_CMD(client, SI2183_DSP_RESET);
