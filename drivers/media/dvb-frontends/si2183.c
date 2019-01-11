@@ -1374,8 +1374,8 @@ static int si2183_get_spectrum_scan(struct dvb_frontend *fe, struct dvb_fe_spect
 		}
 	} else { // Satellite
 		p->frequency		= 0;
-		p->bandwidth_hz		= 1000;
-		p->symbol_rate		= 1000;
+		p->bandwidth_hz		= 4000;
+		p->symbol_rate		= 4000;
 		p->delivery_system	= SYS_DVBS;
 		p->modulation		= QPSK;
 
