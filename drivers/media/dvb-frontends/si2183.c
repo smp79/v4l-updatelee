@@ -1578,7 +1578,8 @@ static const struct dvb_frontend_ops si2183_ops = {
 	},
 	.extended_info = {
 		.extended_caps	= FE_CAN_SPECTRUMSCAN |
-				  FE_CAN_IQ
+				  FE_CAN_IQ|
+				  FE_CAN_BLINDSEARCH
 	},
 
 	.get_tune_settings	= si2183_get_tune_settings,
