@@ -68,8 +68,8 @@ struct tbsecp3_board tbsecp3_boards[] = {
 
 	[TBSECP3_BOARD_TBS6308] = {
 		.board_id	= TBSECP3_BOARD_TBS6308,
-		.name		= "TurboSight TBS 6308 HDMI Capture",
-		.adapters	= 8,
+		.name		= "TurboSight TBS 6304 HDMI Capture",
+		.adapters	= 4,
 		.i2c_speed	= 39,
 		.eeprom_i2c	= 0,
 		.adap_config	= {
