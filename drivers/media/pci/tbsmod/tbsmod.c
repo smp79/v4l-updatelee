@@ -311,19 +311,19 @@ void AD9789_Init_Configration(struct tbs_pcie_dev *dev)
 	ad9789_wt_nBytes(dev, 1, AD9789_INTERNAL_COLCK_ADJUST, buff); 
 	ad9789_rd_nBytes(dev, 1, AD9789_INTERNAL_COLCK_ADJUST, buff);
 
-	buff[0] = 120;
+	buff[0] = 60;
 	ad9789_wt_nBytes(dev, 1, AD9789_CHANNEL_0_GAIN, buff);
 	ad9789_rd_nBytes(dev, 1, AD9789_CHANNEL_0_GAIN, buff);
 
-	buff[0] = 120;
+	buff[0] = 60;
 	ad9789_wt_nBytes(dev, 1, AD9789_CHANNEL_1_GAIN, buff);
 	ad9789_rd_nBytes(dev, 1, AD9789_CHANNEL_1_GAIN, buff);
 
-	buff[0] = 120;
+	buff[0] = 60;
 	ad9789_wt_nBytes(dev, 1, AD9789_CHANNEL_2_GAIN, buff);
 	ad9789_rd_nBytes(dev, 1, AD9789_CHANNEL_2_GAIN, buff);
 
-	buff[0] = 120;
+	buff[0] = 60;
 	ad9789_wt_nBytes(dev, 1, AD9789_CHANNEL_3_GAIN, buff);
 	ad9789_rd_nBytes(dev, 1, AD9789_CHANNEL_3_GAIN, buff);
 
@@ -415,6 +415,15 @@ BOOL ad9789_setFre(struct tbs_pcie_dev *dev, unsigned long freq)
 	buff[0] = (fcenter >> 8) & 0xff; 
 	ad9789_wt_nBytes(dev, 2, AD9789_CENTER_FRE_BPF, buff); 
 
+	//update
+	buff[0] = 0x80;
+	ad9789_wt_nBytes(dev, 1, AD9789_FRE_UPDATE, buff);
+	buff[0] = 0x00;
+	ad9789_wt_nBytes(dev, 1, AD9789_PARAMETER_UPDATE, buff); 
+	msleep(5);
+	buff[0] = 0x80;
+	ad9789_wt_nBytes(dev, 1, AD9789_PARAMETER_UPDATE, buff); 
+
 	return TRUE;
 }
 
@@ -432,6 +441,16 @@ void config_srate(struct tbs_pcie_dev *dev, unsigned long srate)
 	buff[0] = (srate >> 16) & 0xff;
 
 	ad9789_wt_nBytes(dev, 3, AD9789_RATE_CONVERT_P, buff);
+
+	//update
+	buff[0] = 0x80;
+	ad9789_wt_nBytes(dev, 1, AD9789_FRE_UPDATE, buff);
+	buff[0] = 0x00;
+	ad9789_wt_nBytes(dev, 1, AD9789_PARAMETER_UPDATE, buff); 
+	msleep(5);
+	buff[0] = 0x80;
+	ad9789_wt_nBytes(dev, 1, AD9789_PARAMETER_UPDATE, buff); 
+
 }
 
 //qam 0~4  to qam16~256
@@ -450,6 +469,16 @@ void config_QAM(struct tbs_pcie_dev *dev, int qam)
 	//3:DVB-C 128
 	//4:DVB-C 256
 	AD9789_SETMODE(dev, qam);
+
+	//update
+	buff[0] = 0x80;
+	ad9789_wt_nBytes(dev, 1, AD9789_FRE_UPDATE, buff);
+	buff[0] = 0x00;
+	ad9789_wt_nBytes(dev, 1, AD9789_PARAMETER_UPDATE, buff); 
+	msleep(5);
+	buff[0] = 0x80;
+	ad9789_wt_nBytes(dev, 1, AD9789_PARAMETER_UPDATE, buff); 
+
 }
 BOOL AD4351_Init_Configration(struct tbs_pcie_dev *dev)
 {
@@ -566,7 +595,7 @@ static void start_dma_transfer(struct mod_channel *pchannel)
 	struct tbs_pcie_dev *dev=pchannel->dev;
 	u32 delay;
 	u32 bitrate;
-
+	
 	bitrate = getbitrate(dev,pchannel->channel_index);
 	delay = div_u64(1000000000ULL * BLOCKSIZE, bitrate);
 //	printk("ioctl 0x14 delay: %d \n", delay);
@@ -600,7 +629,6 @@ static int tbsmod_open(struct inode *inode, struct file *filp)
 	*/
 	pchannel->dma_start_flag = 0;
 	kfifo_reset(&pchannel->fifo);
-
 
 
 	//printk("%s fifo size:%d \n", __func__, kfifo_size(&pchannel->fifo));
@@ -662,8 +690,11 @@ static long tbsmod_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 {
 	struct mod_channel *pchannel = (struct mod_channel *)file->private_data;
 	struct tbs_pcie_dev *dev = pchannel->dev;
-	struct dtv_properties *props = NULL;
-	struct dtv_property *prop = NULL;
+	//struct dtv_properties *props = NULL;
+	struct dtv_properties props ;
+	//struct dtv_property *prop = NULL;
+	struct dtv_property prop;
+	
 	int ret = 0;
 
 	switch (cmd)
@@ -675,40 +706,42 @@ static long tbsmod_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 			ret = -EINVAL;
 			break;
 		}
-		props = (struct dtv_properties *)arg;
-		if (props->num == 1)
+		//props = (struct dtv_properties *)arg;
+		copy_from_user(&props , (const char*)arg, sizeof(struct dtv_properties ));
+		if (props.num == 1)
 		{
-			prop = props->props;
-			switch (prop->cmd)
+			//prop = props.props;
+			copy_from_user(&prop , (const char*)props.props, sizeof(struct dtv_property ));
+			switch (prop.cmd)
 			{
 			case MODULATOR_MODULATION:
-				printk("MODULATOR_MODULATION:%d\n", prop->u.data);
-				if (prop->u.data < QAM_16 || prop->u.data > QAM_256)
+				printk("MODULATOR_MODULATION:%d\n", prop.u.data);
+				if (prop.u.data < QAM_16 || prop.u.data > QAM_256)
 				{
 					ret = -1;
 					break;
 				}
-				dev->modulation = prop->u.data;
+				dev->modulation = prop.u.data;
 				config_QAM(dev,dev->modulation-1);
 				break;
 
 			case MODULATOR_SYMBOL_RATE:
-				printk("MODULATOR_SYMBOL_RATE:%d\n", prop->u.data);
+				printk("MODULATOR_SYMBOL_RATE:%d\n", prop.u.data);
 	
-				if (prop->u.data < 1000000)
+				if (prop.u.data < 1000000)
 				{
 					ret = EINVAL;
 					break;
 				}
-				dev->srate = prop->u.data;
+				dev->srate = prop.u.data;
 				config_srate(dev, dev->srate);
 
 				break;
 
 			case MODULATOR_FREQUENCY:
-				printk("MODULATOR_FREQUENCY:%d\n", prop->u.data);
+				printk("MODULATOR_FREQUENCY:%d\n", prop.u.data);
 				{
-					u32 frequency = prop->u.data;
+					u32 frequency = prop.u.data;
 					u32 freq = frequency / 1000000;
 
 					if (frequency % 1000000)
@@ -720,7 +753,7 @@ static long tbsmod_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 				}
 				if (ret < 0)
 					break;
-				dev->frequency = prop->u.data;
+				dev->frequency = prop.u.data;
 				ad9789_setFre(dev,dev->frequency);
 
 				break;
@@ -738,25 +771,27 @@ static long tbsmod_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 
 	case FE_GET_PROPERTY:
 		printk("%s FE_GET_PROPERTY\n", __func__);
-		props = (struct dtv_properties *)arg;
-		if (props->num == 1)
-		{
-			prop = props->props;
-			switch (prop->cmd)
+		//props = (struct dtv_properties *)arg;
+		copy_from_user(&props , (const char*)arg, sizeof(struct dtv_properties ));
+		if (props.num == 1)
+		{		
+			//prop = props.props;
+			copy_from_user(&prop , (const char*)props.props, sizeof(struct dtv_property ));
+			switch (prop.cmd)
 			{
 			case MODULATOR_MODULATION:
-				prop->u.data = dev->modulation ;
-				printk("MODULATOR_MODULATION:%d\n", prop->u.data);
+				prop.u.data = dev->modulation ;
+				printk("MODULATOR_MODULATION:%d\n", prop.u.data);
 				break;
 
 			case MODULATOR_SYMBOL_RATE:
-				prop->u.data =dev->srate ;
-				printk("MODULATOR_SYMBOL_RATE:%d\n", prop->u.data);
+				prop.u.data =dev->srate ;
+				printk("MODULATOR_SYMBOL_RATE:%d\n", prop.u.data);
 				break;
 
 			case MODULATOR_FREQUENCY:
-				prop->u.data = dev->frequency;
-				printk("MODULATOR_FREQUENCY:%d\n", prop->u.data);
+				prop.u.data = dev->frequency;
+				printk("MODULATOR_FREQUENCY:%d\n", prop.u.data);
 				break;
 			}
 		}
@@ -785,7 +820,7 @@ static int tbsmod_mmap(struct file *file, struct vm_area_struct *vm)
 static int tbsmod_release(struct inode *inode, struct file *file)
 {
 	struct mod_channel *pchannel = (struct mod_channel *)file->private_data;
-	printk("%s\n", __func__);
+	//printk("%s\n", __func__);
 	pchannel->dma_start_flag = 0;
 	return 0;
 }
@@ -850,6 +885,7 @@ void channelprocess(struct tbs_pcie_dev *dev,u8 index){
 		struct mod_channel *pchannel = (struct mod_channel *)&dev->channnel[index];
 		int count = 0;
 		int ret;
+
 		TBS_PCIE_READ(Dmaout_adapter0+pchannel->channel_index*0x1000, 0x00);
 		TBS_PCIE_WRITE(Int_adapter, 0x00, (0x10<<index) );
 		count = kfifo_len(&pchannel->fifo);
@@ -868,7 +904,7 @@ void channelprocess(struct tbs_pcie_dev *dev,u8 index){
 				u32 bitrate;
 				bitrate = getbitrate(dev,pchannel->channel_index);
 				delay = div_u64(1000000000ULL * BLOCKSIZE, bitrate*3);
-				printk("%s 0x14 delayshort: %d \n", __func__,delay);
+				//printk("%s 0x14 delayshort: %d \n", __func__,delay);
 				TBS_PCIE_WRITE(Dmaout_adapter0+pchannel->channel_index*0x1000, DMA_DELAYSHORT, (delay));
 				TBS_PCIE_WRITE(Int_adapter, 0x04, 0x00000001);
 			}
