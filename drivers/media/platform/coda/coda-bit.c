@@ -102,6 +102,8 @@ static int coda_command_sync(struct coda_ctx *ctx, int cmd)
 	struct coda_dev *dev = ctx->dev;
 	int ret;
 
+	lockdep_assert_held(&dev->coda_mutex);
+
 	coda_command_async(ctx, cmd);
 	ret = coda_wait_timeout(dev);
 	trace_coda_bit_done(ctx);
@@ -115,6 +117,8 @@ int coda_hw_reset(struct coda_ctx *ctx)
 	unsigned long timeout;
 	unsigned int idx;
 	int ret;
+
+	lockdep_assert_held(&dev->coda_mutex);
 
 	if (!dev->rstc)
 		return -ENOENT;
@@ -1502,12 +1506,7 @@ static void coda_finish_encode(struct coda_ctx *ctx)
 		dst_buf->flags &= ~V4L2_BUF_FLAG_KEYFRAME;
 	}
 
-	dst_buf->vb2_buf.timestamp = src_buf->vb2_buf.timestamp;
-	dst_buf->field = src_buf->field;
-	dst_buf->flags &= ~V4L2_BUF_FLAG_TSTAMP_SRC_MASK;
-	dst_buf->flags |=
-		src_buf->flags & V4L2_BUF_FLAG_TSTAMP_SRC_MASK;
-	dst_buf->timecode = src_buf->timecode;
+	v4l2_m2m_buf_copy_metadata(src_buf, dst_buf, false);
 
 	v4l2_m2m_buf_done(src_buf, VB2_BUF_STATE_DONE);
 
@@ -1675,6 +1674,8 @@ static int __coda_start_decoding(struct coda_ctx *ctx)
 	u32 src_fourcc, dst_fourcc;
 	u32 val;
 	int ret;
+
+	lockdep_assert_held(&dev->coda_mutex);
 
 	coda_dbg(1, ctx, "Video Data Order Adapter: %s\n",
 		 ctx->use_vdoa ? "Enabled" : "Disabled");
