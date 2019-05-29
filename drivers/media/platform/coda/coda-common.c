@@ -2061,7 +2061,7 @@ static void coda_encode_ctrls(struct coda_ctx *ctx)
 	}
 	v4l2_ctrl_new_std_menu(&ctx->ctrls, &coda_ctrl_ops,
 		V4L2_CID_MPEG_VIDEO_MULTI_SLICE_MODE,
-		V4L2_MPEG_VIDEO_MULTI_SICE_MODE_MAX_BYTES, 0x0,
+		V4L2_MPEG_VIDEO_MULTI_SLICE_MODE_MAX_BYTES, 0x0,
 		V4L2_MPEG_VIDEO_MULTI_SLICE_MODE_SINGLE);
 	v4l2_ctrl_new_std(&ctx->ctrls, &coda_ctrl_ops,
 		V4L2_CID_MPEG_VIDEO_MULTI_SLICE_MAX_MB, 1, 0x3fffffff, 1, 1);
@@ -2507,9 +2507,12 @@ err_clk_per:
 static int coda_register_device(struct coda_dev *dev, int i)
 {
 	struct video_device *vfd = &dev->vfd[i];
+	enum coda_inst_type type;
+	int ret;
 
 	if (i >= dev->devtype->num_vdevs)
 		return -EINVAL;
+	type = dev->devtype->vdevs[i]->type;
 
 	strscpy(vfd->name, dev->devtype->vdevs[i]->name, sizeof(vfd->name));
 	vfd->fops	= &coda_fops;
@@ -2525,7 +2528,12 @@ static int coda_register_device(struct coda_dev *dev, int i)
 	v4l2_disable_ioctl(vfd, VIDIOC_G_CROP);
 	v4l2_disable_ioctl(vfd, VIDIOC_S_CROP);
 
-	return video_register_device(vfd, VFL_TYPE_GRABBER, 0);
+	ret = video_register_device(vfd, VFL_TYPE_GRABBER, 0);
+	if (!ret)
+		v4l2_info(&dev->v4l2_dev, "%s registered as %s\n",
+			  type == CODA_INST_ENCODER ? "encoder" : "decoder",
+			  video_device_node_name(vfd));
+	return ret;
 }
 
 static void coda_copy_firmware(struct coda_dev *dev, const u8 * const buf,
@@ -2638,9 +2646,6 @@ static void coda_fw_callback(const struct firmware *fw, void *context)
 			goto rel_vfd;
 		}
 	}
-
-	v4l2_info(&dev->v4l2_dev, "codec registered as /dev/video[%d-%d]\n",
-		  dev->vfd[0].num, dev->vfd[i - 1].num);
 
 	pm_runtime_put_sync(&pdev->dev);
 	return;
@@ -2811,8 +2816,8 @@ static int coda_probe(struct platform_device *pdev)
 		return irq;
 	}
 
-	ret = devm_request_threaded_irq(&pdev->dev, irq, NULL, coda_irq_handler,
-			IRQF_ONESHOT, dev_name(&pdev->dev), dev);
+	ret = devm_request_irq(&pdev->dev, irq, coda_irq_handler, 0,
+			       dev_name(&pdev->dev), dev);
 	if (ret < 0) {
 		dev_err(&pdev->dev, "failed to request irq: %d\n", ret);
 		return ret;
