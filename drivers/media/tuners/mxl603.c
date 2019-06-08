@@ -582,6 +582,6 @@ static struct i2c_driver mxl603_driver = {
 module_i2c_driver(mxl603_driver);
 
 MODULE_AUTHOR("Davin <smiledavin@gmail.com>");
-MODULE_DESCRIPTION("Panasonic MN88436 ATSC/QAMB demodulator driver");
+MODULE_DESCRIPTION("MaxLinear MXL603 silicon tuner driver");
 MODULE_LICENSE("GPL");
 

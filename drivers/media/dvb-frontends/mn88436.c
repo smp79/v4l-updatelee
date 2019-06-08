@@ -1,4 +1,17 @@
+#include <linux/kernel.h>
+#include <linux/init.h>
+#include <linux/module.h>
+#include <linux/string.h>
+#include <linux/slab.h>
+#include <linux/delay.h>
 #include "mn88436_priv.h"
+
+static int debug;
+module_param(debug, int, 0644);
+MODULE_PARM_DESC(debug, "Enable verbose debug messages");
+
+//#define dprintk	if (debug) printk
+#define dprintk	printk
 
 static u8 DMD_REG_ATSC[]={
 0		,0x0		,0x50		,
@@ -1137,10 +1150,22 @@ static int mn88436_read_signal_strength(struct dvb_frontend *fe, u16 *strength)
 	else
 	{
 	    *strength = (ifagc-AGC_MIN)*100/AGC_RANGE;
+	    printk("read_signal_strength(): strength = %d, ifagc = %d", *strength, ifagc);
 	}
 	
 	
 	return 0;
+}
+
+static int mn88436_read_ucblocks(struct dvb_frontend *fe, u32 *ucblocks)
+{
+		*ucblocks = 0;
+			return 0;
+}
+
+static int mn88436_read_ber(struct dvb_frontend *fe, u32 *ber)
+{
+		return mn88436_read_ucblocks(fe, ber);
 }
 
 static int mn88436_read_status(struct dvb_frontend *fe,enum fe_status *status)
@@ -1304,13 +1329,13 @@ static int mn88436_read_snr(struct dvb_frontend* fe, u16* snr)
 	if( dev->mode == DMD_E_ATSC )
 	{
 		//after EQ
-		*snr = 4634 - log10_easy( y );
+		*snr = (4634 - log10_easy( y ))/10;
 		
 	}
 	else
 	{
 		if( y != 0	)
-			*snr = log10_easy( (8*x) / y );
+			*snr = (log10_easy( (8*x) / y ))/10;
 		else
 			*snr = 0;
 	
@@ -1334,6 +1359,8 @@ static const struct dvb_frontend_ops mn88436_ops = {
 	.read_status = mn88436_read_status,
 	.read_signal_strength = mn88436_read_signal_strength,
 	.read_snr 		= mn88436_read_snr,
+	.read_ber 		= mn88436_read_ber,
+	.read_ucblocks 		= mn88436_read_ucblocks,
 };
 static int mn88436_probe(struct i2c_client *client ,
 			const struct i2c_device_id *id)

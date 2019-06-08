@@ -423,4 +423,6 @@
 #define USB_PID_EVOLVEO_XTRATV_STICK			0xa115
 #define USB_PID_HAMA_DVBT_HYBRID			0x2758
 #define USB_PID_XBOX_ONE_TUNER                          0x02d5
+#define USB_PID_MYGICA_A681				0xa681
+#define USB_PID_GENIATECH_RD612_DVBT2			0xd220
 #endif

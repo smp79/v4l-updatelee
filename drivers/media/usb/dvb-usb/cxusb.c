@@ -48,6 +48,8 @@
 #include "atbm8830.h"
 #include "si2168.h"
 #include "si2157.h"
+#include "mxl603.h"
+#include "mn88436.h"
 
 /* debug */
 int dvb_usb_cxusb_debug;
@@ -82,6 +84,7 @@ enum cxusb_table_index {
 	CONEXANT_D680_DMB,
 	MYGICA_D689,
 	MYGICA_T230,
+	MYGICA_A681,
 	NR__cxusb_table_index
 };
 
@@ -1464,6 +1467,84 @@ static int cxusb_mygica_t230_frontend_attach(struct dvb_usb_adapter *adap)
 	return 0;
 }
 
+static int cxusb_mygica_a681_frontend_attach(struct dvb_usb_adapter *adap)
+{
+	struct dvb_usb_device *d = adap->dev;
+	struct cxusb_state *st = d->priv;
+	struct i2c_board_info info;
+	struct i2c_client *client_demod, *client_tuner;
+	struct mn88436_config mn88436_config;
+	struct mxl603_config mxl603_config;
+
+	/* Select required USB configuration */
+	if (usb_set_interface(d->udev, 0, 0) < 0)
+		err("set interface failed");
+
+	/* Unblock all USB pipes */
+	usb_clear_halt(d->udev,
+		usb_sndbulkpipe(d->udev, d->props.generic_bulk_ctrl_endpoint));
+	usb_clear_halt(d->udev,
+		usb_rcvbulkpipe(d->udev, d->props.generic_bulk_ctrl_endpoint));
+	usb_clear_halt(d->udev,
+		usb_rcvbulkpipe(d->udev, d->props.adapter[0].fe[0].stream.endpoint));
+
+	/* attach demod */
+	memset(&mn88436_config, 0, sizeof(mn88436_config));
+	mn88436_config.fe = &adap->fe_adap[0].fe;
+	mn88436_config.ts_mode = 0;
+	mn88436_config.i2c_wr_max = 32;
+
+	memset(&info, 0, sizeof(struct i2c_board_info));
+	strscpy(info.type, "mn88436", I2C_NAME_SIZE);
+	info.addr = 0x18;
+	info.platform_data = &mn88436_config;
+	request_module(info.type);
+	client_demod = i2c_new_device(&d->i2c_adap, &info);
+
+	if (client_demod == NULL || client_demod->dev.driver == NULL)
+		return -ENODEV;
+
+	if (!try_module_get(client_demod->dev.driver->owner)) {
+		i2c_unregister_device(client_demod);
+		return -ENODEV;
+	}
+
+	st->i2c_client_demod = client_demod;
+
+	/* attach tuner */
+	memset(&mxl603_config, 0, sizeof(mxl603_config));
+	mxl603_config.fe = adap->fe_adap[0].fe;
+	mxl603_config.xtalFreqSel= 1; //0:16M ,1:24M
+	mxl603_config.agcType = 0 ; //0:self 1:external
+	mxl603_config.ifOutFreq = MXL603_IF_5MHz;
+	mxl603_config.manualIFFreqSet = false;
+	mxl603_config.manualIFOutFreqInKHz = 0 ; //if manual set ,input the freq
+
+	memset(&info, 0, sizeof(struct i2c_board_info));
+	strscpy(info.type, "mxl603", I2C_NAME_SIZE);
+	info.addr = 0x60;
+	info.platform_data = &mxl603_config;
+	request_module(info.type);
+	client_tuner = i2c_new_device(&d->i2c_adap, &info);
+	if (client_tuner == NULL || client_tuner->dev.driver == NULL) {
+		return -ENODEV;
+	}
+	if (!try_module_get(client_tuner->dev.driver->owner)) {
+		i2c_unregister_device(client_tuner);
+		return -ENODEV;
+	}
+
+	st->i2c_client_tuner = client_tuner;
+
+	/* hook fe: need to resync the slave fifo when signal locks. */
+	mutex_init(&st->stream_mutex);
+	st->last_lock = 0;
+	st->fe_read_status = adap->fe_adap[0].fe->ops.read_status;
+	adap->fe_adap[0].fe->ops.read_status = cxusb_read_status;
+
+	return 0;
+}
+
 /*
  * DViCO has shipped two devices with the same USB ID, but only one of them
  * needs a firmware download.  Check the device class details to see if they
@@ -1644,6 +1725,7 @@ static struct dvb_usb_device_properties cxusb_aver_a868r_properties;
 static struct dvb_usb_device_properties cxusb_d680_dmb_properties;
 static struct dvb_usb_device_properties cxusb_mygica_d689_properties;
 static struct dvb_usb_device_properties cxusb_mygica_t230_properties;
+static struct dvb_usb_device_properties cxusb_mygica_a681_properties;
 
 static int cxusb_medion_priv_init(struct dvb_usb_device *dvbdev)
 {
@@ -1771,6 +1853,8 @@ static int cxusb_probe(struct usb_interface *intf,
 					THIS_MODULE, NULL, adapter_nr) ||
 		   !dvb_usb_device_init(intf, &cxusb_mygica_t230_properties,
 					THIS_MODULE, NULL, adapter_nr) ||
+		   !dvb_usb_device_init(intf, &cxusb_mygica_a681_properties,
+					THIS_MODULE, NULL, adapter_nr) ||
 		   0)
 		return 0;
 
@@ -1874,6 +1958,9 @@ static struct usb_device_id cxusb_table[NR__cxusb_table_index + 1] = {
 	},
 	[MYGICA_T230] = {
 		USB_DEVICE(USB_VID_CONEXANT, USB_PID_MYGICA_T230)
+	},
+	[MYGICA_A681] = {
+		USB_DEVICE(USB_VID_GTEK, USB_PID_MYGICA_A681)
 	},
 	{}		/* Terminating entry */
 };
@@ -2595,6 +2682,50 @@ static struct dvb_usb_device_properties cxusb_mygica_t230_properties = {
 			"Mygica T230 DVB-T/T2/C",
 			{ NULL },
 			{ &cxusb_table[MYGICA_T230], NULL },
+		},
+	}
+};
+
+static struct dvb_usb_device_properties cxusb_mygica_a681_properties = {
+	.caps = DVB_USB_IS_AN_I2C_ADAPTER,
+
+	.usb_ctrl         = CYPRESS_FX2,
+
+	.size_of_priv     = sizeof(struct cxusb_state),
+
+	.num_adapters = 1,
+	.adapter = {
+		{
+		.num_frontends = 1,
+		.fe = {{
+			.streaming_ctrl   = cxusb_streaming_ctrl,
+			.frontend_attach  = cxusb_mygica_a681_frontend_attach,
+
+			/* parameter for the MPEG2-data transfer */
+			.stream = {
+				.type = USB_BULK,
+				.count = 5,
+				.endpoint = 0x02,
+				.u = {
+					.bulk = {
+						.buffersize = 8192,
+					}
+				}
+			},
+		}},
+		},
+	},
+
+	.i2c_algo         = &cxusb_i2c_algo,
+
+	.generic_bulk_ctrl_endpoint = 0x01,
+
+	.num_device_descs = 1,
+	.devices = {
+		{
+			"Mygica A681 ATSC",
+			{ NULL },
+			{ &cxusb_table[MYGICA_A681], NULL },
 		},
 	}
 };
