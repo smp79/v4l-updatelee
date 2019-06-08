@@ -468,9 +468,9 @@ struct platform_device *vpu_get_plat_device(struct platform_device *pdev)
 	}
 
 	vpu_pdev = of_find_device_by_node(vpu_node);
+	of_node_put(vpu_node);
 	if (WARN_ON(!vpu_pdev)) {
 		dev_err(dev, "vpu pdev failed\n");
-		of_node_put(vpu_node);
 		return NULL;
 	}
 
@@ -614,7 +614,7 @@ static void vpu_init_ipi_handler(void *data, unsigned int len, void *priv)
 	struct vpu_run *run = (struct vpu_run *)data;
 
 	vpu->run.signaled = run->signaled;
-	strncpy(vpu->run.fw_ver, run->fw_ver, VPU_FW_VER_LEN);
+	strscpy(vpu->run.fw_ver, run->fw_ver, sizeof(vpu->run.fw_ver));
 	vpu->run.dec_capability = run->dec_capability;
 	vpu->run.enc_capability = run->enc_capability;
 	wake_up_interruptible(&vpu->run.wq);

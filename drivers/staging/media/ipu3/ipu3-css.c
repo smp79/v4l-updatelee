@@ -24,9 +24,8 @@
 #define IPU3_CSS_MAX_H		3136
 #define IPU3_CSS_MAX_W		4224
 
-/* filter size from graph settings is fixed as 4 */
-#define FILTER_SIZE             4
-#define MIN_ENVELOPE            8
+/* minimal envelope size(GDC in - out) should be 4 */
+#define MIN_ENVELOPE            4
 
 /*
  * pre-allocated buffer size for CSS ABI, auxiliary frames
@@ -1827,9 +1826,9 @@ int imgu_css_fmt_try(struct imgu_css *css,
 	vf->width   = imgu_css_adjust(vf->width, VF_ALIGN_W);
 	vf->height  = imgu_css_adjust(vf->height, 1);
 
-	s = (bds->width - gdc->width) / 2 - FILTER_SIZE;
+	s = (bds->width - gdc->width) / 2;
 	env->width = s < MIN_ENVELOPE ? MIN_ENVELOPE : s;
-	s = (bds->height - gdc->height) / 2 - FILTER_SIZE;
+	s = (bds->height - gdc->height) / 2;
 	env->height = s < MIN_ENVELOPE ? MIN_ENVELOPE : s;
 
 	ret = imgu_css_find_binary(css, pipe, q, r);
@@ -2171,11 +2170,6 @@ int imgu_css_set_parameters(struct imgu_css *css, unsigned int pipe,
 	obgrid_size = imgu_css_fw_obgrid_size(bi);
 	stripes = bi->info.isp.sp.iterator.num_stripes ? : 1;
 
-	/*
-	 * TODO(b/118782861): If userspace queues more than 4 buffers, the
-	 * parameters from previous buffers will be overwritten. Fix the driver
-	 * not to allow this.
-	 */
 	imgu_css_pool_get(&css_pipe->pool.parameter_set_info);
 	param_set = imgu_css_pool_last(&css_pipe->pool.parameter_set_info,
 				       0)->vaddr;
@@ -2256,9 +2250,8 @@ int imgu_css_set_parameters(struct imgu_css *css, unsigned int pipe,
 				css_pipe->aux_frames[a].height,
 				css_pipe->rect[g].width,
 				css_pipe->rect[g].height,
-				css_pipe->rect[e].width + FILTER_SIZE,
-				css_pipe->rect[e].height +
-				FILTER_SIZE);
+				css_pipe->rect[e].width,
+				css_pipe->rect[e].height);
 		}
 	}
 

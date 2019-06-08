@@ -1264,8 +1264,7 @@ static int ipipe_s_config(struct v4l2_subdev *sd, struct vpfe_ipipe_config *cfg)
 		module_if = &ipipe_modules[i];
 		from = *(void **)((void *)cfg + module_if->config_offset);
 
-		params = kmalloc(sizeof(struct ipipe_module_params),
-				 GFP_KERNEL);
+		params = kmalloc(sizeof(*params), GFP_KERNEL);
 		to = (void *)params + module_if->param_offset;
 		size = module_if->param_size;
 
@@ -1306,8 +1305,7 @@ static int ipipe_g_config(struct v4l2_subdev *sd, struct vpfe_ipipe_config *cfg)
 		module_if = &ipipe_modules[i];
 		to = *(void **)((void *)cfg + module_if->config_offset);
 
-		params = kmalloc(sizeof(struct ipipe_module_params),
-				 GFP_KERNEL);
+		params = kmalloc(sizeof(*params), GFP_KERNEL);
 		from = (void *)params + module_if->param_offset;
 		size = module_if->param_size;
 
@@ -1774,7 +1772,7 @@ vpfe_ipipe_init(struct vpfe_ipipe_device *ipipe, struct platform_device *pdev)
 	struct media_pad *pads = &ipipe->pads[0];
 	struct v4l2_subdev *sd = &ipipe->subdev;
 	struct media_entity *me = &sd->entity;
-	struct resource *res, *memres;
+	struct resource *res, *res2, *memres;
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 4);
 	if (!res)
@@ -1788,11 +1786,11 @@ vpfe_ipipe_init(struct vpfe_ipipe_device *ipipe, struct platform_device *pdev)
 	if (!ipipe->base_addr)
 		goto error_release;
 
-	res = platform_get_resource(pdev, IORESOURCE_MEM, 6);
-	if (!res)
+	res2 = platform_get_resource(pdev, IORESOURCE_MEM, 6);
+	if (!res2)
 		goto error_unmap;
-	ipipe->isp5_base_addr = ioremap_nocache(res->start,
-						resource_size(res));
+	ipipe->isp5_base_addr = ioremap_nocache(res2->start,
+						resource_size(res2));
 	if (!ipipe->isp5_base_addr)
 		goto error_unmap;
 
