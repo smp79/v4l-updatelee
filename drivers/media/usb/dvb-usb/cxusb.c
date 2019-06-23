@@ -433,6 +433,24 @@ static int cxusb_d680_dmb_power_ctrl(struct dvb_usb_device *d, int onoff)
 //	return ret;
 }
 
+static int cxusb_a681_power_ctrl(struct dvb_usb_device *d, int onoff)
+{
+         u8 msg1[2] = { 0x80, 0x00 };
+         u8 msg2[2] = { 0x80, 0x01 };
+         u8 i = 0;
+
+	 /* The same command sequence is sent for on or off */
+         cxusb_ctrl_msg(d, CMD_GPIO_WRITE, msg1, 2, &i, 1);
+         msleep(100);
+         cxusb_ctrl_msg(d, CMD_GPIO_WRITE, msg2, 2, &i, 1);
+         msleep(100);
+
+	 if (i != 0x01)
+                 deb_info("gpio_write failed.\n");
+
+	 return 0;
+}
+
 static int cxusb_streaming_ctrl(struct dvb_usb_adapter *adap, int onoff)
 {
 	struct dvb_usb_device *dvbdev = adap->dev;
@@ -2715,6 +2733,8 @@ static struct dvb_usb_device_properties cxusb_mygica_a681_properties = {
 		}},
 		},
 	},
+
+	.power_ctrl       = cxusb_a681_power_ctrl,
 
 	.i2c_algo         = &cxusb_i2c_algo,
 
