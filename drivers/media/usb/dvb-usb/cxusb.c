@@ -442,9 +442,10 @@ static int cxusb_a681_power_ctrl(struct dvb_usb_device *d, int onoff)
 	 /* The same command sequence is sent for on or off */
          cxusb_ctrl_msg(d, CMD_GPIO_WRITE, msg1, 2, &i, 1);
          msleep(100);
-         cxusb_ctrl_msg(d, CMD_GPIO_WRITE, msg2, 2, &i, 1);
+	 if (i != 0x01)
+                 deb_info("gpio_write failed.\n");
+	 cxusb_ctrl_msg(d, CMD_GPIO_WRITE, msg2, 2, &i, 1);
          msleep(100);
-
 	 if (i != 0x01)
                  deb_info("gpio_write failed.\n");
 
