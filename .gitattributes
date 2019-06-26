@@ -1,2 +1,5 @@
 *.c   diff=cpp
 *.h   diff=cpp
+drivers/hid/hid-logitech-dj.c
+drivers/media/dvb-frontends/stv090x.c
+drivers/media/dvb-frontends/stv090x.h
