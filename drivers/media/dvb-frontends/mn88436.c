@@ -1267,6 +1267,7 @@ err:
 	return ret;
 
 }
+
 static int mn88436_set_frontend(struct dvb_frontend *fe)
 {
 	struct i2c_client *client = fe->demodulator_priv;
@@ -1327,6 +1328,7 @@ err:
 	dev_err(&client->dev,"failed = %d" ,ret);
 	return ret;
 }
+
 static int mn88436_read_snr(struct dvb_frontend* fe, u16* snr)
 {
 	struct i2c_client *client = fe->demodulator_priv;
@@ -1361,6 +1363,60 @@ static int mn88436_read_snr(struct dvb_frontend* fe, u16* snr)
 	return 0;
 }
 
+static enum dvbfe_search mn88436_search(struct dvb_frontend *fe)
+{
+	enum fe_status status = 0;
+	int ret;
+
+	/* set frontend */
+	ret = mn88436_set_frontend(fe);
+	if (ret)
+		goto error;
+
+	ret = mn88436_read_status(fe, &status);
+	if (ret)
+		goto error;
+
+	/* check if we have a valid signal */
+	if (status & FE_HAS_LOCK)
+		return DVBFE_ALGO_SEARCH_SUCCESS;
+	else
+		return DVBFE_ALGO_SEARCH_AGAIN;
+
+error:
+	return DVBFE_ALGO_SEARCH_ERROR;
+}
+
+static int mn88436_get_spectrum_scan(struct dvb_frontend *fe, struct dvb_fe_spectrum_scan *s)
+{
+	struct dtv_frontend_properties *c = &fe->dtv_property_cache;
+	int x, ret;
+	u16 lvl;
+
+	fprintk("");
+
+	c->frequency            = 0;
+	c->bandwidth_hz         = 0;
+	c->delivery_system      = SYS_ATSC;
+	c->modulation           = VSB_8;
+
+	*s->type = SC_DBM;
+
+	if (fe->ops.tuner_ops.set_params) {
+		for (x = 0; x < s->num_freq; x++)
+		{
+			c->frequency = *(s->freq + x);
+			ret = fe->ops.tuner_ops.set_params(fe);
+
+			msleep(25);
+
+			ret = fe->ops.tuner_ops.get_rf_strength(fe, &lvl);
+			*(s->rf_level + x) = (s16)lvl * 10;
+		}
+	}
+	return 0;
+}
+
 static const struct dvb_frontend_ops mn88436_ops = {
 	.delsys = {SYS_ATSC,SYS_DVBC_ANNEX_B},
 	.info = {
@@ -1368,8 +1424,10 @@ static const struct dvb_frontend_ops mn88436_ops = {
 		.frequency_min_hz	= 44 * MHz,
 		.frequency_max_hz	= 1002 * MHz,
 		.frequency_stepsize_hz	= 62500,
-		.caps = FE_CAN_QAM_64 | FE_CAN_QAM_256 | FE_CAN_8VSB
-
+		.caps = FE_CAN_QAM_64 | FE_CAN_QAM_256 | FE_CAN_8VSB | FE_HAS_EXTENDED_CAPS
+        },
+		.extended_info = {
+		.extended_caps          = FE_CAN_SPECTRUMSCAN
 	},
 	.init = mn88436_init,
 	.set_frontend = mn88436_set_frontend,
@@ -1378,7 +1436,10 @@ static const struct dvb_frontend_ops mn88436_ops = {
 	.read_snr 		= mn88436_read_snr,
 	.read_ber 		= mn88436_read_ber,
 	.read_ucblocks 		= mn88436_read_ucblocks,
+	.search			= mn88436_search,
+	.get_spectrum_scan	= mn88436_get_spectrum_scan,
 };
+
 static int mn88436_probe(struct i2c_client *client ,
 			const struct i2c_device_id *id)
 {
@@ -1469,6 +1530,7 @@ err :
 	dev_err(&client->dev,"__failed = %d___\n",ret);
 	return ret;
 }
+
 static int mn88436_remove(struct i2c_client *client)
 {
 	struct mn88436_dev *dev = i2c_get_clientdata(client);
@@ -1483,6 +1545,7 @@ static int mn88436_remove(struct i2c_client *client)
 	return 0;
 
 }
+
 static const struct i2c_device_id mn88436_id_table[] = {
 		{"mn88436",0},
 			{}
