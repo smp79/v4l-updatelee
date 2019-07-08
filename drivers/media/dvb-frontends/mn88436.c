@@ -1127,7 +1127,7 @@ static int DMD_send_registers(struct i2c_client *client,u8*regset)
 	}
 	return ret;
 }
-
+/*
 static int mn88436_read_signal_strength(struct dvb_frontend *fe, u16 *strength)
 {
  	struct i2c_client *client = fe->demodulator_priv;
@@ -1155,6 +1155,17 @@ static int mn88436_read_signal_strength(struct dvb_frontend *fe, u16 *strength)
 	
 	
 	return 0;
+}*/
+
+static int mn88436_read_signal_strength(struct dvb_frontend *fe, u16 *strength)
+{
+        struct dtv_frontend_properties *c = &fe->dtv_property_cache;
+
+        if (fe->ops.tuner_ops.get_rf_strength) {
+		fe->ops.tuner_ops.get_rf_strength(fe, strength);
+		*strength = c->strength.stat[0].scale == FE_SCALE_DECIBEL ? (((s32)c->strength.stat[0].svalue) / 1000) : 0;
+	}
+        return 0;
 }
 
 static int mn88436_read_ucblocks(struct dvb_frontend *fe, u32 *ucblocks)
@@ -1172,8 +1183,10 @@ static int mn88436_read_status(struct dvb_frontend *fe,enum fe_status *status)
 {
 	struct i2c_client *client = fe->demodulator_priv;
 	struct mn88436_dev *dev = i2c_get_clientdata(client);
+        //struct dtv_frontend_properties *c = &fe->dtv_property_cache;
 
 	int ret;
+	u16 strength = 0;
 	int utemp;
 	int i =0;
 	for (i=0;i<50;i++) {
@@ -1186,10 +1199,14 @@ static int mn88436_read_status(struct dvb_frontend *fe,enum fe_status *status)
 		}
 		msleep(1);
 	}
+	if (fe->ops.tuner_ops.get_rf_strength) {
+		ret= fe->ops.tuner_ops.get_rf_strength(fe,&strength);
+}
 	
 	return ret; 
 	
 }
+
 static int mn88436_init(struct dvb_frontend *fe)
 {
 	struct i2c_client *client = fe->demodulator_priv;
