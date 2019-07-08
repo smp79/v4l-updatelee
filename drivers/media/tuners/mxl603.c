@@ -1,4 +1,9 @@
-
+// SPDX-License-Identifier: GPL-2.0
+// mxl603
+//
+// Copyright (C) 2008 MaxLinear
+// Copyright (C) 2006 Steven Toth <stoth@linuxtv.org>
+//
 
 #include "mxl603_priv.h"
 
