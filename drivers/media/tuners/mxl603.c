@@ -507,12 +507,12 @@ static int mxl603_get_rf_strength(struct dvb_frontend *fe, u16 *strength)
 	}
 	tmpData = regData;
 
-	printk(" RFPIN_RB_LOW_REG = %d \n", regData);
+	//printk(" RFPIN_RB_LOW_REG = %d \n", regData);
 	// RF input power high <1:0>
 	if (reg_read(dev->client, RFPIN_RB_HIGH_REG, &regData) != 0) {
 		return -1;
 	}
-	printk(" RFPIN_RB_HIGH_REG = %d \n", regData);
+	//printk(" RFPIN_RB_HIGH_REG = %d \n", regData);
 	tmpData |= (regData & 0x03) << 8;
 
 	// Fractional last 2 bits
@@ -527,7 +527,7 @@ static int mxl603_get_rf_strength(struct dvb_frontend *fe, u16 *strength)
 	if (tmpData & 0x0200) {
 		*strength -= 128*100;
 	}
-	printk(" Rx power = %d dBm \n",(s16)*strength / 100);
+	//printk(" Rx power = %d dBm \n",(s16)*strength / 100);
 	c->strength.stat[0].scale = FE_SCALE_DECIBEL;
 	c->strength.stat[0].svalue = (s16)*strength * 10;
 
