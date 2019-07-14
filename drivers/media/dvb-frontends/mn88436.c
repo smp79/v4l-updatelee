@@ -1183,11 +1183,12 @@ static int mn88436_read_status(struct dvb_frontend *fe,enum fe_status *status)
 {
 	struct i2c_client *client = fe->demodulator_priv;
 	struct mn88436_dev *dev = i2c_get_clientdata(client);
-        //struct dtv_frontend_properties *c = &fe->dtv_property_cache;
+        struct dtv_frontend_properties *c = &fe->dtv_property_cache;
 
-	int ret;
+	int ret,rd,utemp;
 	u16 strength = 0;
-	int utemp;
+	u32	x,y;
+	s32	cnr;
 	int i =0;
 	for (i=0;i<50;i++) {
 		ret = regmap_read(dev->regmap[0],DMD_MAIN_STSMON1,&utemp);
@@ -1201,16 +1202,37 @@ static int mn88436_read_status(struct dvb_frontend *fe,enum fe_status *status)
 	}
 	if (fe->ops.tuner_ops.get_rf_strength) {
 		ret= fe->ops.tuner_ops.get_rf_strength(fe,&strength);
-}
-	
-	return ret; 
-	
+	}
+	if (*status & FE_HAS_VITERBI) {
+		regmap_read(dev->regmap[1], DMD_USR_CNMON1 , &rd );
+		x = 0x100 * rd;
+		regmap_read(dev->regmap[1], DMD_USR_CNMON2 , &rd );
+		x += rd;
+		regmap_read(dev->regmap[1], DMD_USR_CNMON3 , &rd );
+		y = 0x100 * rd;
+		regmap_read(dev->regmap[1], DMD_USR_CNMON4 , &rd );
+		y += rd;
+		if( dev->mode == DMD_E_ATSC ) {
+			//after EQ
+			cnr = (4634 - log10_easy( y ))/10;
+		} else 	{
+			if( y != 0	) {
+				cnr = (log10_easy( (8*x) / y ))/10;
+			} else {
+				cnr = 0;
+			}
+		}
+	c->cnr.stat[0].svalue = cnr * 100;
+	c->cnr.stat[0].scale = FE_SCALE_DECIBEL;
+	}
+	return ret;
 }
 
 static int mn88436_init(struct dvb_frontend *fe)
 {
 	struct i2c_client *client = fe->demodulator_priv;
 	struct mn88436_dev *dev = i2c_get_clientdata(client);
+        struct dtv_frontend_properties *c = &fe->dtv_property_cache;
 	int ret;
 	int utemp;
 	u32 i;
@@ -1258,6 +1280,9 @@ static int mn88436_init(struct dvb_frontend *fe)
 
 	if(ret)
 		goto err;
+	/* init stats here in order to signal app which stats are supported */
+	c->cnr.len = 1;
+	c->cnr.stat[0].scale = FE_SCALE_NOT_AVAILABLE;
 
 	dev_dbg(&client->dev,"mn88436 init successfully.");
 	
@@ -1329,36 +1354,14 @@ err:
 	return ret;
 }
 
-static int mn88436_read_snr(struct dvb_frontend* fe, u16* snr)
+static int mn88436_read_snr(struct dvb_frontend *fe, u16 *snr)
 {
-	struct i2c_client *client = fe->demodulator_priv;
-	struct mn88436_dev *dev = i2c_get_clientdata(client);
-	int	rd;
-//	u32	cni,cnd;
-	u32	x,y;
+	struct dtv_frontend_properties *c = &fe->dtv_property_cache;
 
-	regmap_read(dev->regmap[1], DMD_USR_CNMON1 , &rd );
-	x = 0x100 * rd;
-	regmap_read(dev->regmap[1], DMD_USR_CNMON2 , &rd );
-	x += rd;
-	regmap_read(dev->regmap[1], DMD_USR_CNMON3 , &rd );
-	y = 0x100 * rd;
-	regmap_read(dev->regmap[1], DMD_USR_CNMON4 , &rd );
-	y += rd;
-	if( dev->mode == DMD_E_ATSC )
-	{
-		//after EQ
-		*snr = (4634 - log10_easy( y ))/10;
-		
-	}
+	if (c->cnr.stat[0].scale == FE_SCALE_DECIBEL)
+		*snr = div_s64(c->cnr.stat[0].svalue, 100);
 	else
-	{
-		if( y != 0	)
-			*snr = (log10_easy( (8*x) / y ))/10;
-		else
-			*snr = 0;
-	
-	}
+		*snr = 0;
 
 	return 0;
 }

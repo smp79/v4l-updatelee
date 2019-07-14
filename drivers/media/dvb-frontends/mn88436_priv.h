@@ -2,6 +2,7 @@
 #define MN88436_PRIV_H
 
 #include "media/dvb_frontend.h"
+#include "media/dvb_math.h"
 #include "mn88436.h"
 #include <linux/regmap.h>
 
