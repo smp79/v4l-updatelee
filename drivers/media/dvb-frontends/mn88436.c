@@ -1224,6 +1224,9 @@ static int mn88436_read_status(struct dvb_frontend *fe,enum fe_status *status)
 		}
 	c->cnr.stat[0].svalue = cnr * 100;
 	c->cnr.stat[0].scale = FE_SCALE_DECIBEL;
+	} else {
+		c->cnr.len = 1;
+		c->cnr.stat[0].scale = FE_SCALE_NOT_AVAILABLE;
 	}
 	return ret;
 }
