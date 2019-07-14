@@ -20,7 +20,7 @@ struct mn88436_dev {
 	u16 i2c_write_max;
 
 	unsigned int ts_mode;
-	
+
 	DMD_SYSTEM_t mode;
 
 };
