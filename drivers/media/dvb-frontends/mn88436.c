@@ -1,3 +1,9 @@
+// SPDX-License-Identifier: GPL-2.0
+// mn88436
+//
+// Copyright (C) 2008 MaxLinear
+// Copyright (C) 2006 Steven Toth <stoth@linuxtv.org>
+//
 #include <linux/kernel.h>
 #include <linux/init.h>
 #include <linux/module.h>
@@ -1424,7 +1430,7 @@ static int mn88436_get_spectrum_scan(struct dvb_frontend *fe, struct dvb_fe_spec
 }
 
 static const struct dvb_frontend_ops mn88436_ops = {
-	.delsys = {SYS_ATSC,SYS_DVBC_ANNEX_B},
+	.delsys = {SYS_DVBC_ANNEX_B,SYS_ATSC},
 	.info = {
 		.name = "MN88436 ATSC/QAMB frontend",
 		.frequency_min_hz	= 44 * MHz,
