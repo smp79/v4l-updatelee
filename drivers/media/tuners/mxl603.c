@@ -1,4 +1,9 @@
-
+// SPDX-License-Identifier: GPL-2.0
+// mxl603
+//
+// Copyright (C) 2008 MaxLinear
+// Copyright (C) 2006 Steven Toth <stoth@linuxtv.org>
+//
 
 #include "mxl603_priv.h"
 
@@ -76,6 +81,7 @@ static int mxl603_init(struct dvb_frontend *fe)
 {
 	struct i2c_client*client = fe->tuner_priv;
 	struct mxl603_dev*dev = i2c_get_clientdata(client);
+	struct dtv_frontend_properties *c = &fe->dtv_property_cache;
 
 	int ret;
 	u8 readData;
@@ -197,7 +203,9 @@ static int mxl603_init(struct dvb_frontend *fe)
 	readData &= 0xEF; // Clear bit <4>
 	readData |= (0 << 4);
 	ret |= reg_write(dev->client, AGC_FLIP_REG, readData);
-
+	// init dvbv5 statistics
+	c->strength.len = 1;
+	c->strength.stat[0].scale = FE_SCALE_DECIBEL;
 	if(ret)
 		goto err;
  
@@ -484,6 +492,48 @@ static int mxl603_get_status(struct dvb_frontend *fe,u32*status)
 
 }
 
+static int mxl603_get_rf_strength(struct dvb_frontend *fe, u16 *strength)
+{
+	struct i2c_client *client = fe->tuner_priv;
+	struct mxl603_dev *dev = i2c_get_clientdata(client);
+	struct dtv_frontend_properties *c = &fe->dtv_property_cache;
+
+	u8 regData = 0;
+	u16 tmpData = 0;
+
+	// RF input power low <7:0>
+	if (reg_read(dev->client, RFPIN_RB_LOW_REG, &regData) != 0) {
+		return -1;
+	}
+	tmpData = regData;
+
+	//printk(" RFPIN_RB_LOW_REG = %d \n", regData);
+	// RF input power high <1:0>
+	if (reg_read(dev->client, RFPIN_RB_HIGH_REG, &regData) != 0) {
+		return -1;
+	}
+	//printk(" RFPIN_RB_HIGH_REG = %d \n", regData);
+	tmpData |= (regData & 0x03) << 8;
+
+	// Fractional last 2 bits
+	*strength = (tmpData & 0x01FF) * 25;  //100 times dBm
+
+	if (tmpData & 0x02) {
+		*strength += 5;
+	}
+	if (tmpData & 0x01) {
+		*strength += 25;
+	}
+	if (tmpData & 0x0200) {
+		*strength -= 128*100;
+	}
+	//printk(" Rx power = %d dBm \n",(s16)*strength / 100);
+	c->strength.stat[0].scale = FE_SCALE_DECIBEL;
+	c->strength.stat[0].svalue = (s16)*strength * 10;
+
+	return 0;
+
+}
 
 static const struct dvb_tuner_ops mxl603_ops ={
 	.info = {
@@ -494,8 +544,10 @@ static const struct dvb_tuner_ops mxl603_ops ={
 	.init = mxl603_init,
 	.set_params = mxl603_set_params,
 	.get_status = mxl603_get_status,
+	.get_rf_strength = mxl603_get_rf_strength,
 
 };
+
 static int mxl603_probe(struct i2c_client *client,
 		const struct i2c_device_id *id)
 {
@@ -582,6 +634,6 @@ static struct i2c_driver mxl603_driver = {
 module_i2c_driver(mxl603_driver);
 
 MODULE_AUTHOR("Davin <smiledavin@gmail.com>");
-MODULE_DESCRIPTION("Panasonic MN88436 ATSC/QAMB demodulator driver");
+MODULE_DESCRIPTION("MaxLinear MXL603 silicon tuner driver");
 MODULE_LICENSE("GPL");
 

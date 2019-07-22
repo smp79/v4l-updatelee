@@ -2,6 +2,7 @@
 #define MN88436_PRIV_H
 
 #include "media/dvb_frontend.h"
+#include "media/dvb_math.h"
 #include "mn88436.h"
 #include <linux/regmap.h>
 
@@ -19,7 +20,7 @@ struct mn88436_dev {
 	u16 i2c_write_max;
 
 	unsigned int ts_mode;
-	
+
 	DMD_SYSTEM_t mode;
 
 };

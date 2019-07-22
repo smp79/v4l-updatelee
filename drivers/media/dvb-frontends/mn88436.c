@@ -1,4 +1,23 @@
+// SPDX-License-Identifier: GPL-2.0
+// mn88436
+//
+// Copyright (C) 2008 MaxLinear
+// Copyright (C) 2006 Steven Toth <stoth@linuxtv.org>
+//
+#include <linux/kernel.h>
+#include <linux/init.h>
+#include <linux/module.h>
+#include <linux/string.h>
+#include <linux/slab.h>
+#include <linux/delay.h>
 #include "mn88436_priv.h"
+
+static int debug;
+module_param(debug, int, 0644);
+MODULE_PARM_DESC(debug, "Enable verbose debug messages");
+
+//#define dprintk	if (debug) printk
+#define dprintk	printk
 
 static u8 DMD_REG_ATSC[]={
 0		,0x0		,0x50		,
@@ -1114,7 +1133,7 @@ static int DMD_send_registers(struct i2c_client *client,u8*regset)
 	}
 	return ret;
 }
-
+/*
 static int mn88436_read_signal_strength(struct dvb_frontend *fe, u16 *strength)
 {
  	struct i2c_client *client = fe->demodulator_priv;
@@ -1137,19 +1156,45 @@ static int mn88436_read_signal_strength(struct dvb_frontend *fe, u16 *strength)
 	else
 	{
 	    *strength = (ifagc-AGC_MIN)*100/AGC_RANGE;
+	    printk("read_signal_strength(): strength = %d, ifagc = %d", *strength, ifagc);
 	}
 	
 	
 	return 0;
+}*/
+
+static int mn88436_read_signal_strength(struct dvb_frontend *fe, u16 *strength)
+{
+        struct dtv_frontend_properties *c = &fe->dtv_property_cache;
+
+        if (fe->ops.tuner_ops.get_rf_strength) {
+		fe->ops.tuner_ops.get_rf_strength(fe, strength);
+		*strength = c->strength.stat[0].scale == FE_SCALE_DECIBEL ? (((s32)c->strength.stat[0].svalue) / 1000) : 0;
+	}
+        return 0;
+}
+
+static int mn88436_read_ucblocks(struct dvb_frontend *fe, u32 *ucblocks)
+{
+		*ucblocks = 0;
+			return 0;
+}
+
+static int mn88436_read_ber(struct dvb_frontend *fe, u32 *ber)
+{
+		return mn88436_read_ucblocks(fe, ber);
 }
 
 static int mn88436_read_status(struct dvb_frontend *fe,enum fe_status *status)
 {
 	struct i2c_client *client = fe->demodulator_priv;
 	struct mn88436_dev *dev = i2c_get_clientdata(client);
+        struct dtv_frontend_properties *c = &fe->dtv_property_cache;
 
-	int ret;
-	int utemp;
+	int ret,rd,utemp;
+	u16 strength = 0;
+	u32	x,y;
+	s32	cnr;
 	int i =0;
 	for (i=0;i<50;i++) {
 		ret = regmap_read(dev->regmap[0],DMD_MAIN_STSMON1,&utemp);
@@ -1161,14 +1206,42 @@ static int mn88436_read_status(struct dvb_frontend *fe,enum fe_status *status)
 		}
 		msleep(1);
 	}
-	
-	return ret; 
-	
+	if (fe->ops.tuner_ops.get_rf_strength) {
+		ret= fe->ops.tuner_ops.get_rf_strength(fe,&strength);
+	}
+	if (*status & FE_HAS_VITERBI) {
+		regmap_read(dev->regmap[1], DMD_USR_CNMON1 , &rd );
+		x = 0x100 * rd;
+		regmap_read(dev->regmap[1], DMD_USR_CNMON2 , &rd );
+		x += rd;
+		regmap_read(dev->regmap[1], DMD_USR_CNMON3 , &rd );
+		y = 0x100 * rd;
+		regmap_read(dev->regmap[1], DMD_USR_CNMON4 , &rd );
+		y += rd;
+		if( dev->mode == DMD_E_ATSC ) {
+			//after EQ
+			cnr = (4634 - log10_easy( y ))/10;
+		} else 	{
+			if( y != 0	) {
+				cnr = (log10_easy( (8*x) / y ))/10;
+			} else {
+				cnr = 0;
+			}
+		}
+	c->cnr.stat[0].svalue = cnr * 100;
+	c->cnr.stat[0].scale = FE_SCALE_DECIBEL;
+	} else {
+		c->cnr.len = 1;
+		c->cnr.stat[0].scale = FE_SCALE_NOT_AVAILABLE;
+	}
+	return ret;
 }
+
 static int mn88436_init(struct dvb_frontend *fe)
 {
 	struct i2c_client *client = fe->demodulator_priv;
 	struct mn88436_dev *dev = i2c_get_clientdata(client);
+        struct dtv_frontend_properties *c = &fe->dtv_property_cache;
 	int ret;
 	int utemp;
 	u32 i;
@@ -1216,6 +1289,9 @@ static int mn88436_init(struct dvb_frontend *fe)
 
 	if(ret)
 		goto err;
+	/* init stats here in order to signal app which stats are supported */
+	c->cnr.len = 1;
+	c->cnr.stat[0].scale = FE_SCALE_NOT_AVAILABLE;
 
 	dev_dbg(&client->dev,"mn88436 init successfully.");
 	
@@ -1225,6 +1301,7 @@ err:
 	return ret;
 
 }
+
 static int mn88436_set_frontend(struct dvb_frontend *fe)
 {
 	struct i2c_client *client = fe->demodulator_priv;
@@ -1285,56 +1362,96 @@ err:
 	dev_err(&client->dev,"failed = %d" ,ret);
 	return ret;
 }
-static int mn88436_read_snr(struct dvb_frontend* fe, u16* snr)
-{
-	struct i2c_client *client = fe->demodulator_priv;
-	struct mn88436_dev *dev = i2c_get_clientdata(client);
-	int	rd;
-//	u32	cni,cnd;
-	u32	x,y;
 
-	regmap_read(dev->regmap[1], DMD_USR_CNMON1 , &rd );
-	x = 0x100 * rd;
-	regmap_read(dev->regmap[1], DMD_USR_CNMON2 , &rd );
-	x += rd;
-	regmap_read(dev->regmap[1], DMD_USR_CNMON3 , &rd );
-	y = 0x100 * rd;
-	regmap_read(dev->regmap[1], DMD_USR_CNMON4 , &rd );
-	y += rd;
-	if( dev->mode == DMD_E_ATSC )
-	{
-		//after EQ
-		*snr = 4634 - log10_easy( y );
-		
-	}
+static int mn88436_read_snr(struct dvb_frontend *fe, u16 *snr)
+{
+	struct dtv_frontend_properties *c = &fe->dtv_property_cache;
+
+	if (c->cnr.stat[0].scale == FE_SCALE_DECIBEL)
+		*snr = div_s64(c->cnr.stat[0].svalue, 100);
 	else
-	{
-		if( y != 0	)
-			*snr = log10_easy( (8*x) / y );
-		else
-			*snr = 0;
-	
-	}
+		*snr = 0;
 
 	return 0;
 }
 
+static enum dvbfe_search mn88436_search(struct dvb_frontend *fe)
+{
+	enum fe_status status = 0;
+	int ret;
+
+	/* set frontend */
+	ret = mn88436_set_frontend(fe);
+	if (ret)
+		goto error;
+
+	ret = mn88436_read_status(fe, &status);
+	if (ret)
+		goto error;
+
+	/* check if we have a valid signal */
+	if (status & FE_HAS_LOCK)
+		return DVBFE_ALGO_SEARCH_SUCCESS;
+	else
+		return DVBFE_ALGO_SEARCH_AGAIN;
+
+error:
+	return DVBFE_ALGO_SEARCH_ERROR;
+}
+
+static int mn88436_get_spectrum_scan(struct dvb_frontend *fe, struct dvb_fe_spectrum_scan *s)
+{
+	struct dtv_frontend_properties *c = &fe->dtv_property_cache;
+	int x, ret;
+	u16 lvl;
+
+	fprintk("");
+
+	c->frequency            = 0;
+	c->bandwidth_hz         = 0;
+	c->delivery_system      = SYS_ATSC;
+	c->modulation           = VSB_8;
+
+	*s->type = SC_DBM;
+
+	if (fe->ops.tuner_ops.set_params) {
+		for (x = 0; x < s->num_freq; x++)
+		{
+			c->frequency = *(s->freq + x);
+			ret = fe->ops.tuner_ops.set_params(fe);
+
+			msleep(25);
+
+			ret = fe->ops.tuner_ops.get_rf_strength(fe, &lvl);
+			*(s->rf_level + x) = (s16)lvl * 10;
+		}
+	}
+	return 0;
+}
+
 static const struct dvb_frontend_ops mn88436_ops = {
-	.delsys = {SYS_ATSC,SYS_DVBC_ANNEX_B},
+	.delsys = {SYS_DVBC_ANNEX_B,SYS_ATSC},
 	.info = {
 		.name = "MN88436 ATSC/QAMB frontend",
 		.frequency_min_hz	= 44 * MHz,
 		.frequency_max_hz	= 1002 * MHz,
 		.frequency_stepsize_hz	= 62500,
-		.caps = FE_CAN_QAM_64 | FE_CAN_QAM_256 | FE_CAN_8VSB
-
+		.caps = FE_CAN_QAM_64 | FE_CAN_QAM_256 | FE_CAN_8VSB | FE_HAS_EXTENDED_CAPS
+        },
+		.extended_info = {
+		.extended_caps          = FE_CAN_SPECTRUMSCAN
 	},
 	.init = mn88436_init,
 	.set_frontend = mn88436_set_frontend,
 	.read_status = mn88436_read_status,
 	.read_signal_strength = mn88436_read_signal_strength,
 	.read_snr 		= mn88436_read_snr,
+	.read_ber 		= mn88436_read_ber,
+	.read_ucblocks 		= mn88436_read_ucblocks,
+	.search			= mn88436_search,
+	.get_spectrum_scan	= mn88436_get_spectrum_scan,
 };
+
 static int mn88436_probe(struct i2c_client *client ,
 			const struct i2c_device_id *id)
 {
@@ -1425,6 +1542,7 @@ err :
 	dev_err(&client->dev,"__failed = %d___\n",ret);
 	return ret;
 }
+
 static int mn88436_remove(struct i2c_client *client)
 {
 	struct mn88436_dev *dev = i2c_get_clientdata(client);
@@ -1439,6 +1557,7 @@ static int mn88436_remove(struct i2c_client *client)
 	return 0;
 
 }
+
 static const struct i2c_device_id mn88436_id_table[] = {
 		{"mn88436",0},
 			{}

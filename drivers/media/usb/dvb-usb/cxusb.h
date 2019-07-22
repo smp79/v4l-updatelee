@@ -77,12 +77,14 @@ struct cxusb_state {
 	struct mutex stream_mutex;
 	u8 last_lock;
 	int (*fe_read_status)(struct dvb_frontend *fe,
-		enum fe_status *status);
+			      enum fe_status *status);
 };
 
 enum cxusb_open_type {
-	CXUSB_OPEN_INIT, CXUSB_OPEN_NONE,
-	CXUSB_OPEN_ANALOG, CXUSB_OPEN_DIGITAL
+	CXUSB_OPEN_INIT,
+	CXUSB_OPEN_NONE,
+	CXUSB_OPEN_ANALOG,
+	CXUSB_OPEN_DIGITAL
 };
 
 struct cxusb_medion_auxbuf {
@@ -131,7 +133,6 @@ struct cxusb_medion_dev {
 	bool stop_streaming;
 	u32 width, height;
 	u32 field_order;
-	bool raw_mode;
 	struct cxusb_medion_auxbuf auxbuf;
 	v4l2_std_id norm;
 
@@ -154,9 +155,6 @@ struct cxusb_medion_vbuffer {
 	struct vb2_v4l2_buffer vb2;
 	struct list_head list;
 };
-
-/* Capture streaming parameters extendedmode field flags */
-#define CXUSB_EXTENDEDMODE_CAPTURE_RAW 1
 
 /* defines for "debug" module parameter */
 #define CXUSB_DBG_RC BIT(0)

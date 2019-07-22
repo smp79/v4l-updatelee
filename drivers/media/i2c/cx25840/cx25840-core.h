@@ -1,21 +1,11 @@
+/* SPDX-License-Identifier: GPL-2.0-or-later */
 /* cx25840 internal API header
  *
  * Copyright (C) 2003-2004 Chris Kennedy
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
  */
 
 #ifndef _CX25840_CORE_H_
 #define _CX25840_CORE_H_
-
 
 #include <linux/videodev2.h>
 #include <media/v4l2-device.h>
@@ -100,7 +90,7 @@ struct cx25840_state {
 	enum cx25840_model id;
 	u32 rev;
 	int is_initialized;
-	unsigned vbi_regs_offset;
+	unsigned int vbi_regs_offset;
 	wait_queue_head_t fw_wait;
 	struct work_struct fw_work;
 	struct cx25840_ir_state *ir_state;
@@ -166,7 +156,8 @@ int cx25840_write(struct i2c_client *client, u16 addr, u8 value);
 int cx25840_write4(struct i2c_client *client, u16 addr, u32 value);
 u8 cx25840_read(struct i2c_client *client, u16 addr);
 u32 cx25840_read4(struct i2c_client *client, u16 addr);
-int cx25840_and_or(struct i2c_client *client, u16 addr, unsigned mask, u8 value);
+int cx25840_and_or(struct i2c_client *client, u16 addr, unsigned int mask,
+		   u8 value);
 int cx25840_and_or4(struct i2c_client *client, u16 addr, u32 and_mask,
 		    u32 or_value);
 void cx25840_std_setup(struct i2c_client *client);
@@ -185,9 +176,12 @@ extern const struct v4l2_ctrl_ops cx25840_audio_ctrl_ops;
 /* ----------------------------------------------------------------------- */
 /* cx25850-vbi.c                                                           */
 int cx25840_s_raw_fmt(struct v4l2_subdev *sd, struct v4l2_vbi_format *fmt);
-int cx25840_s_sliced_fmt(struct v4l2_subdev *sd, struct v4l2_sliced_vbi_format *fmt);
-int cx25840_g_sliced_fmt(struct v4l2_subdev *sd, struct v4l2_sliced_vbi_format *fmt);
-int cx25840_decode_vbi_line(struct v4l2_subdev *sd, struct v4l2_decode_vbi_line *vbi);
+int cx25840_s_sliced_fmt(struct v4l2_subdev *sd,
+			 struct v4l2_sliced_vbi_format *fmt);
+int cx25840_g_sliced_fmt(struct v4l2_subdev *sd,
+			 struct v4l2_sliced_vbi_format *fmt);
+int cx25840_decode_vbi_line(struct v4l2_subdev *sd,
+			    struct v4l2_decode_vbi_line *vbi);
 
 /* ----------------------------------------------------------------------- */
 /* cx25850-ir.c                                                            */
