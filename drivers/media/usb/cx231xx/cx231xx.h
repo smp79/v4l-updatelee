@@ -132,7 +132,6 @@
 #define CX23417_RESET    9
 
 struct cx23417_fmt {
-	char  *name;
 	u32   fourcc;          /* v4l2 format id */
 	int   depth;
 	int   flags;
