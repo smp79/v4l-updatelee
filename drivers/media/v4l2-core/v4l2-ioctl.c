@@ -1064,14 +1064,19 @@ static int v4l_querycap(const struct v4l2_ioctl_ops *ops,
 
 	ret = ops->vidioc_querycap(file, fh, cap);
 
-	cap->capabilities |= V4L2_CAP_EXT_PIX_FORMAT;
 	/*
-	 * Drivers MUST fill in device_caps, so check for this and
-	 * warn if it was forgotten.
+	 * Drivers must not change device_caps, so check for this and
+	 * warn if this happened.
 	 */
-	WARN(!(cap->capabilities & V4L2_CAP_DEVICE_CAPS) ||
-		!cap->device_caps, "Bad caps for driver %s, %x %x",
-		cap->driver, cap->capabilities, cap->device_caps);
+	WARN_ON(cap->device_caps != vfd->device_caps);
+	/*
+	 * Check that capabilities is a superset of
+	 * vfd->device_caps | V4L2_CAP_DEVICE_CAPS
+	 */
+	WARN_ON((cap->capabilities &
+		 (vfd->device_caps | V4L2_CAP_DEVICE_CAPS)) !=
+		(vfd->device_caps | V4L2_CAP_DEVICE_CAPS));
+	cap->capabilities |= V4L2_CAP_EXT_PIX_FORMAT;
 	cap->device_caps |= V4L2_CAP_EXT_PIX_FORMAT;
 
 	return ret;
@@ -1670,6 +1675,7 @@ static int v4l_try_fmt(const struct v4l2_ioctl_ops *ops,
 				struct file *file, void *fh, void *arg)
 {
 	struct v4l2_format *p = arg;
+	struct video_device *vfd = video_devdata(file);
 	int ret = check_fmt(file, p->type);
 	unsigned int i;
 
@@ -1686,6 +1692,8 @@ static int v4l_try_fmt(const struct v4l2_ioctl_ops *ops,
 		ret = ops->vidioc_try_fmt_vid_cap(file, fh, arg);
 		/* just in case the driver zeroed it again */
 		p->fmt.pix.priv = V4L2_PIX_FMT_PRIV_MAGIC;
+		if (vfd->vfl_type == VFL_TYPE_TOUCH)
+			v4l_pix_format_touch(&p->fmt.pix);
 		return ret;
 	case V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE:
 		if (unlikely(!ops->vidioc_try_fmt_vid_cap_mplane))
@@ -2207,9 +2215,11 @@ static int v4l_g_ext_ctrls(const struct v4l2_ioctl_ops *ops,
 
 	p->error_idx = p->count;
 	if (vfh && vfh->ctrl_handler)
-		return v4l2_g_ext_ctrls(vfh->ctrl_handler, vfd->v4l2_dev->mdev, p);
+		return v4l2_g_ext_ctrls(vfh->ctrl_handler,
+					vfd, vfd->v4l2_dev->mdev, p);
 	if (vfd->ctrl_handler)
-		return v4l2_g_ext_ctrls(vfd->ctrl_handler, vfd->v4l2_dev->mdev, p);
+		return v4l2_g_ext_ctrls(vfd->ctrl_handler,
+					vfd, vfd->v4l2_dev->mdev, p);
 	if (ops->vidioc_g_ext_ctrls == NULL)
 		return -ENOTTY;
 	return check_ext_ctrls(p, 0) ? ops->vidioc_g_ext_ctrls(file, fh, p) :
@@ -2226,9 +2236,11 @@ static int v4l_s_ext_ctrls(const struct v4l2_ioctl_ops *ops,
 
 	p->error_idx = p->count;
 	if (vfh && vfh->ctrl_handler)
-		return v4l2_s_ext_ctrls(vfh, vfh->ctrl_handler, vfd->v4l2_dev->mdev, p);
+		return v4l2_s_ext_ctrls(vfh, vfh->ctrl_handler,
+					vfd, vfd->v4l2_dev->mdev, p);
 	if (vfd->ctrl_handler)
-		return v4l2_s_ext_ctrls(NULL, vfd->ctrl_handler, vfd->v4l2_dev->mdev, p);
+		return v4l2_s_ext_ctrls(NULL, vfd->ctrl_handler,
+					vfd, vfd->v4l2_dev->mdev, p);
 	if (ops->vidioc_s_ext_ctrls == NULL)
 		return -ENOTTY;
 	return check_ext_ctrls(p, 0) ? ops->vidioc_s_ext_ctrls(file, fh, p) :
@@ -2245,9 +2257,11 @@ static int v4l_try_ext_ctrls(const struct v4l2_ioctl_ops *ops,
 
 	p->error_idx = p->count;
 	if (vfh && vfh->ctrl_handler)
-		return v4l2_try_ext_ctrls(vfh->ctrl_handler, vfd->v4l2_dev->mdev, p);
+		return v4l2_try_ext_ctrls(vfh->ctrl_handler,
+					  vfd, vfd->v4l2_dev->mdev, p);
 	if (vfd->ctrl_handler)
-		return v4l2_try_ext_ctrls(vfd->ctrl_handler, vfd->v4l2_dev->mdev, p);
+		return v4l2_try_ext_ctrls(vfd->ctrl_handler,
+					  vfd, vfd->v4l2_dev->mdev, p);
 	if (ops->vidioc_try_ext_ctrls == NULL)
 		return -ENOTTY;
 	return check_ext_ctrls(p, 0) ? ops->vidioc_try_ext_ctrls(file, fh, p) :
