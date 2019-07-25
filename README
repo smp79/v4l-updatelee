@@ -4,7 +4,7 @@
 #
 # 
 
-# This will set you up with Linux 5.2.0-rc5
+# This will set you up with Linux 5.3.0-rc1
 
 # Download any dependancies that you might need
 
@@ -18,12 +18,12 @@
 
 # Then download the repository, aprox 1.9Gb
 
-	git clone https://gitlab.com/updatelee/v4l-updatelee
+	git clone https://gitlab.com/updatelee/v4l-updatelee.git
 	cd v4l-updatelee
 
 # If you don't need the entire repo history, to conserve bandwidth downloading, please use
 
-	git clone --depth 1 https://gitlab.com/updatelee/v4l-updatelee
+	git clone --depth 1 https://gitlab.com/updatelee/v4l-updatelee.git
 	cd v4l-updatelee
 
 # To compile and install first select any additional media drivers you want compiled.
