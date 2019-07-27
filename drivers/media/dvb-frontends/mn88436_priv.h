@@ -22,6 +22,8 @@ struct mn88436_dev {
 	unsigned int ts_mode;
 
 	DMD_SYSTEM_t mode;
+	u32 dvbv3_ber;  // for dvbv3 api read_ber()
+	u32 dvbv3_ucb;  // for dvbv3 api read_ucblocks()
 
 };
 

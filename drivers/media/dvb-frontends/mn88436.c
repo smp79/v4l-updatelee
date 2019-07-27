@@ -1122,7 +1122,7 @@ static int  log10_easy( u32  cnr )
 
 static int DMD_send_registers(struct i2c_client *client,u8*regset)
 {
-	struct mn88436_dev*dev = i2c_get_clientdata(client);
+	struct mn88436_dev *dev = i2c_get_clientdata(client);
 	int ret = 0;
 	u32 i;
 	for(i=0;;)
@@ -1176,13 +1176,18 @@ static int mn88436_read_signal_strength(struct dvb_frontend *fe, u16 *strength)
 
 static int mn88436_read_ucblocks(struct dvb_frontend *fe, u32 *ucblocks)
 {
-		*ucblocks = 0;
-			return 0;
+	struct i2c_client *client = fe->demodulator_priv;
+	struct mn88436_dev *dev = i2c_get_clientdata(client);
+	*ucblocks = dev->dvbv3_ucb;
+	return 0;
 }
 
 static int mn88436_read_ber(struct dvb_frontend *fe, u32 *ber)
 {
-		return mn88436_read_ucblocks(fe, ber);
+	struct i2c_client *client = fe->demodulator_priv;
+	struct mn88436_dev *dev = i2c_get_clientdata(client);
+	*ber = dev->dvbv3_ber;
+	return 0;
 }
 
 static int mn88436_read_status(struct dvb_frontend *fe,enum fe_status *status)
@@ -1193,7 +1198,7 @@ static int mn88436_read_status(struct dvb_frontend *fe,enum fe_status *status)
 
 	int ret,rd,utemp;
 	u16 strength = 0;
-	u32	x,y;
+	u32	x,y,berr = 0,bit = 1,perr = 0, pkt = 1;
 	s32	cnr;
 	int i =0;
 	for (i=0;i<50;i++) {
@@ -1209,6 +1214,7 @@ static int mn88436_read_status(struct dvb_frontend *fe,enum fe_status *status)
 	if (fe->ops.tuner_ops.get_rf_strength) {
 		ret= fe->ops.tuner_ops.get_rf_strength(fe,&strength);
 	}
+	/* CNR */
 	if (*status & FE_HAS_VITERBI) {
 		regmap_read(dev->regmap[1], DMD_USR_CNMON1 , &rd );
 		x = 0x100 * rd;
@@ -1234,6 +1240,60 @@ static int mn88436_read_status(struct dvb_frontend *fe,enum fe_status *status)
 		c->cnr.len = 1;
 		c->cnr.stat[0].scale = FE_SCALE_NOT_AVAILABLE;
 	}
+	/* BER */
+	if (*status & FE_HAS_VITERBI) {
+		regmap_write(dev->regmap[1], DMD_USR_BERTSET1, 0x40 );
+		regmap_write(dev->regmap[1], DMD_USR_BERTSET2, 0x0c );
+		regmap_read(dev->regmap[1], DMD_USR_BERTSET1 , &rd );
+		rd &= 0xfe;		//bit error mode
+		regmap_write(dev->regmap[1], DMD_USR_BERTSET1, rd );
+		regmap_read(dev->regmap[1], DMD_USR_BERTSET2 , &rd );
+		bit = (rd >> 2) & 0x7;
+		if( c->delivery_system == SYS_ATSC ) {
+			bit = (1 << (5+bit*2))*208*8;
+		} else {
+			bit = (1 << (5+bit*2))*127*7;
+		}
+		regmap_read( dev->regmap[1], DMD_USR_BERMON1 , &rd );
+		berr = rd * 65536;
+		regmap_read( dev->regmap[1], DMD_USR_BERMON2 , &rd );
+		berr += rd * 256;
+		regmap_read( dev->regmap[1], DMD_USR_BERMON3 , &rd );
+		berr += rd ;
+		c->post_bit_error.stat[0].scale = FE_SCALE_COUNTER;
+                c->post_bit_error.stat[0].uvalue += berr;
+                c->post_bit_count.stat[0].scale = FE_SCALE_COUNTER;
+                c->post_bit_count.stat[0].uvalue += bit;
+		dev->dvbv3_ber = berr;
+        } else {
+                c->post_bit_error.stat[0].scale = FE_SCALE_NOT_AVAILABLE;
+                c->post_bit_count.stat[0].scale = FE_SCALE_NOT_AVAILABLE;
+        }
+	/* PER */
+	if (*status & FE_HAS_VITERBI) {
+		regmap_write(dev->regmap[0], DMD_MAIN_BERTSET1P, 0x41 );
+		regmap_write(dev->regmap[0], DMD_MAIN_BERTSET2P, 0x0c );
+		regmap_read(dev->regmap[0], DMD_MAIN_BERTSET1P , &rd );
+		rd &= 0xff;		//pkt error mode
+		regmap_write(dev->regmap[0], DMD_MAIN_BERTSET1P, rd );
+		regmap_read(dev->regmap[0], DMD_MAIN_BERTSET2P , &rd );
+		pkt = (rd >> 2) & 0x7;
+		pkt = (1 << (5+pkt*2));
+		regmap_read(dev->regmap[0], DMD_MAIN_BERMON1P , &rd );
+		perr = rd * 65536;
+		regmap_read(dev->regmap[0], DMD_MAIN_BERMON2P , &rd );
+		perr += rd * 256;
+		regmap_read(dev->regmap[0], DMD_MAIN_BERMON3P , &rd );
+		perr += rd ;
+		c->block_error.stat[0].scale = FE_SCALE_COUNTER;
+		c->block_error.stat[0].uvalue += perr;
+		c->block_count.stat[0].scale = FE_SCALE_COUNTER;
+		c->block_count.stat[0].uvalue += pkt;
+		dev->dvbv3_ucb = perr;
+        } else {
+		c->block_error.stat[0].scale = FE_SCALE_NOT_AVAILABLE;
+		c->block_count.stat[0].scale = FE_SCALE_NOT_AVAILABLE;
+        }
 	return ret;
 }
 
@@ -1292,6 +1352,14 @@ static int mn88436_init(struct dvb_frontend *fe)
 	/* init stats here in order to signal app which stats are supported */
 	c->cnr.len = 1;
 	c->cnr.stat[0].scale = FE_SCALE_NOT_AVAILABLE;
+        c->post_bit_error.len = 1;
+        c->post_bit_error.stat[0].scale = FE_SCALE_NOT_AVAILABLE;
+        c->post_bit_count.len = 1;
+        c->post_bit_count.stat[0].scale = FE_SCALE_NOT_AVAILABLE;
+        c->block_error.len = 1;
+        c->block_error.stat[0].scale = FE_SCALE_NOT_AVAILABLE;
+        c->block_count.len = 1;
+        c->block_count.stat[0].scale = FE_SCALE_NOT_AVAILABLE;
 
 	dev_dbg(&client->dev,"mn88436 init successfully.");
 	
