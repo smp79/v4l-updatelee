@@ -1201,13 +1201,16 @@ static int mn88436_read_status(struct dvb_frontend *fe,enum fe_status *status)
 	u32	x,y,berr = 0,bit = 1,perr = 0, pkt = 1;
 	s32	cnr;
 	int i =0;
-	for (i=0;i<50;i++) {
+	*status = 0;
+	for (i=0; i<5; i++) {
 		ret = regmap_read(dev->regmap[0],DMD_MAIN_STSMON1,&utemp);
-		if (utemp&0x1) {
-			*status = FE_HAS_VITERBI | FE_HAS_SYNC | FE_HAS_LOCK;
+		if (utemp & 0x1) {
+			*status = FE_HAS_SIGNAL | FE_HAS_CARRIER | FE_HAS_VITERBI | FE_HAS_SYNC | FE_HAS_LOCK;
 			break;
-		} else {
-			*status = FE_HAS_SIGNAL | FE_HAS_CARRIER;
+		} if (utemp & 0x04) {
+			*status |= FE_HAS_CARRIER;
+		} if (utemp & 0x10) {
+			*status |= FE_HAS_SIGNAL;
 		}
 		msleep(1);
 	}
