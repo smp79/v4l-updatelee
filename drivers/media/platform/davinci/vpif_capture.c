@@ -1502,6 +1502,7 @@ static struct vpif_capture_config *
 vpif_capture_get_pdata(struct platform_device *pdev)
 {
 	struct device_node *endpoint = NULL;
+	struct device_node *rem = NULL;
 	struct vpif_capture_config *pdata;
 	struct vpif_subdev_info *sdinfo;
 	struct vpif_capture_chan_config *chan;
@@ -1532,7 +1533,6 @@ vpif_capture_get_pdata(struct platform_device *pdev)
 
 	for (i = 0; i < VPIF_CAPTURE_NUM_CHANNELS; i++) {
 		struct v4l2_fwnode_endpoint bus_cfg = { .bus_type = 0 };
-		struct device_node *rem;
 		unsigned int flags;
 		int err;
 
@@ -1545,7 +1545,6 @@ vpif_capture_get_pdata(struct platform_device *pdev)
 		if (!rem) {
 			dev_dbg(&pdev->dev, "Remote device at %pOF not found\n",
 				endpoint);
-			of_node_put(endpoint);
 			goto done;
 		}
 
@@ -1555,11 +1554,8 @@ vpif_capture_get_pdata(struct platform_device *pdev)
 					    VPIF_CAPTURE_NUM_CHANNELS,
 					    sizeof(*chan->inputs),
 					    GFP_KERNEL);
-		if (!chan->inputs) {
-			of_node_put(rem);
-			of_node_put(endpoint);
+		if (!chan->inputs)
 			goto err_cleanup;
-		}
 
 		chan->input_count++;
 		chan->inputs[i].input.type = V4L2_INPUT_TYPE_CAMERA;
@@ -1568,7 +1564,6 @@ vpif_capture_get_pdata(struct platform_device *pdev)
 
 		err = v4l2_fwnode_endpoint_parse(of_fwnode_handle(endpoint),
 						 &bus_cfg);
-		of_node_put(endpoint);
 		if (err) {
 			dev_err(&pdev->dev, "Could not parse the endpoint\n");
 			of_node_put(rem);
@@ -1592,13 +1587,14 @@ vpif_capture_get_pdata(struct platform_device *pdev)
 		pdata->asd[i] = v4l2_async_notifier_add_fwnode_subdev(
 			&vpif_obj.notifier, of_fwnode_handle(rem),
 			sizeof(struct v4l2_async_subdev));
-		if (IS_ERR(pdata->asd[i])) {
-			of_node_put(rem);
+		if (IS_ERR(pdata->asd[i]))
 			goto err_cleanup;
-		}
+
+		of_node_put(rem);
 	}
 
 done:
+	of_node_put(endpoint);
 	pdata->asd_sizes[0] = i;
 	pdata->subdev_count = i;
 	pdata->card_name = "DA850/OMAP-L138 Video Capture";
@@ -1606,6 +1602,8 @@ done:
 	return pdata;
 
 err_cleanup:
+	of_node_put(rem);
+	of_node_put(endpoint);
 	v4l2_async_notifier_cleanup(&vpif_obj.notifier);
 
 	return NULL;

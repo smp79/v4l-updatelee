@@ -16,8 +16,6 @@
 #include "hantro.h"
 #include "hantro_g1_regs.h"
 
-#define DEC_8190_ALIGN_MASK	0x07U
-
 /* DCT partition base address regs */
 static const struct hantro_reg vp8_dec_dct_base[8] = {
 	{ G1_REG_ADDR_STR, 0, 0xffffffff },
@@ -129,21 +127,6 @@ static const struct hantro_reg vp8_dec_pred_bc_tap[8][4] = {
 		{ G1_REG_BD_REF_PIC(3), 22, 0x3ff },
 		{ G1_REG_BD_REF_PIC(3), 12, 0x3ff },
 	},
-};
-
-/*
- * filter taps taken to 7-bit precision,
- * reference RFC6386#Page-16, filters[8][6]
- */
-static const u32 vp8_dec_mc_filter[8][6] = {
-	{ 0, 0, 128, 0, 0, 0 },
-	{ 0, -6, 123, 12, -1, 0 },
-	{ 2, -11, 108, 36, -8, 1 },
-	{ 0, -9, 93, 50, -6, 0 },
-	{ 3, -16, 77, 77, -16, 3 },
-	{ 0, -6, 50, 93, -9, 0 },
-	{ 1, -8, 36, 108, -11, 2 },
-	{ 0, -1, 12, 123, -6, 0 }
 };
 
 /*
@@ -260,7 +243,7 @@ static void cfg_parts(struct hantro_ctx *ctx,
 	u32 count = 0;
 	unsigned int i;
 
-	vb2_src = v4l2_m2m_next_src_buf(ctx->fh.m2m_ctx);
+	vb2_src = hantro_get_src_buf(ctx);
 	src_dma = vb2_dma_contig_plane_dma_addr(&vb2_src->vb2_buf, 0);
 
 	/*
@@ -359,11 +342,12 @@ static void cfg_tap(struct hantro_ctx *ctx,
 		return; /* Tap filter not used. */
 
 	for (i = 0; i < 8; i++) {
-		val = (vp8_dec_mc_filter[i][0] << 2) | vp8_dec_mc_filter[i][5];
+		val = (hantro_vp8_dec_mc_filter[i][0] << 2) |
+		       hantro_vp8_dec_mc_filter[i][5];
 
 		for (j = 0; j < 4; j++)
 			hantro_reg_write(vpu, &vp8_dec_pred_bc_tap[i][j],
-					 vp8_dec_mc_filter[i][j + 1]);
+					 hantro_vp8_dec_mc_filter[i][j + 1]);
 
 		switch (i) {
 		case 2:
@@ -391,7 +375,7 @@ static void cfg_ref(struct hantro_ctx *ctx,
 	struct vb2_v4l2_buffer *vb2_dst;
 	dma_addr_t ref;
 
-	vb2_dst = v4l2_m2m_next_dst_buf(ctx->fh.m2m_ctx);
+	vb2_dst = hantro_get_dst_buf(ctx);
 
 	ref = hantro_get_ref(cap_q, hdr->last_frame_ts);
 	if (!ref)
@@ -424,7 +408,7 @@ static void cfg_buffers(struct hantro_ctx *ctx,
 	dma_addr_t dst_dma;
 	u32 reg;
 
-	vb2_dst = v4l2_m2m_next_dst_buf(ctx->fh.m2m_ctx);
+	vb2_dst = hantro_get_dst_buf(ctx);
 
 	/* Set probability table buffer address */
 	vdpu_write_relaxed(vpu, ctx->vp8_dec.prob_tbl.dma,
@@ -449,13 +433,10 @@ void hantro_g1_vp8_dec_run(struct hantro_ctx *ctx)
 	struct hantro_dev *vpu = ctx->dev;
 	size_t height = ctx->dst_fmt.height;
 	size_t width = ctx->dst_fmt.width;
-	struct vb2_v4l2_buffer *vb2_src;
 	u32 mb_width, mb_height;
 	u32 reg;
 
-	vb2_src = v4l2_m2m_next_src_buf(ctx->fh.m2m_ctx);
-	v4l2_ctrl_request_setup(vb2_src->vb2_buf.req_obj.req,
-				&ctx->ctrl_handler);
+	hantro_prepare_run(ctx);
 
 	hdr = hantro_get_ctrl(ctx, V4L2_CID_MPEG_VIDEO_VP8_FRAME_HEADER);
 	if (WARN_ON(!hdr))
@@ -516,11 +497,7 @@ void hantro_g1_vp8_dec_run(struct hantro_ctx *ctx)
 	cfg_ref(ctx, hdr);
 	cfg_buffers(ctx, hdr);
 
-	/* Controls no longer in-use, we can complete them */
-	v4l2_ctrl_request_complete(vb2_src->vb2_buf.req_obj.req,
-				   &ctx->ctrl_handler);
-
-	schedule_delayed_work(&vpu->watchdog_work, msecs_to_jiffies(2000));
+	hantro_finish_run(ctx);
 
 	vdpu_write(vpu, G1_REG_INTERRUPT_DEC_E, G1_REG_INTERRUPT);
 }
