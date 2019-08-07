@@ -916,13 +916,16 @@ static int ir_remove(struct i2c_client *client)
 {
 	struct IR_i2c *ir = i2c_get_clientdata(client);
 
+	/* kill outstanding polls */
 	cancel_delayed_work_sync(&ir->work);
 
 	if (ir->tx_c)
 		i2c_unregister_device(ir->tx_c);
 
+	/* unregister device */
 	rc_unregister_device(ir->rc);
 
+	/* free memory */
 	return 0;
 }
 
