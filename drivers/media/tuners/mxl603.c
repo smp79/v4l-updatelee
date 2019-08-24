@@ -586,8 +586,10 @@ static int mxl603_probe(struct i2c_client *client,
 	pr_info("chip id = 0x%x \n",utemp);
 	
 	if(utemp!=0x1){
-		ret = -ENODEV;
-		goto err_kfree;
+		if(utemp!=0x2){
+			ret = -ENODEV;
+			goto err_kfree;
+		}
 	}
 	ret = reg_write(dev->client,0x10,0x99);
 
