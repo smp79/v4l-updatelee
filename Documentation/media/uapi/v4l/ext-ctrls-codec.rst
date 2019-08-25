@@ -1748,6 +1748,14 @@ enum v4l2_mpeg_video_h264_hierarchical_coding_type -
       - ``size``
       -
     * - __u32
+      - ``start_byte_offset``
+        Offset (in bytes) from the beginning of the OUTPUT buffer to the start
+        of the slice. If the slice starts with a start code, then this is the
+        offset to such start code. When operating in slice-based decoding mode
+        (see :c:type:`v4l2_mpeg_video_h264_decode_mode`), this field should
+        be set to 0. When operating in frame-based decoding mode, this field
+        should be 0 for the first slice.
+    * - __u32
       - ``header_bit_size``
       -
     * - __u16
@@ -1930,19 +1938,13 @@ enum v4l2_mpeg_video_h264_hierarchical_coding_type -
       -
     * - __u16
       - ``num_slices``
-      - Number of slices needed to decode the current frame
+      - Number of slices needed to decode the current frame/field. When
+        operating in slice-based decoding mode (see
+        :c:type:`v4l2_mpeg_video_h264_decode_mode`), this field
+        should always be set to one.
     * - __u16
       - ``nal_ref_idc``
       - NAL reference ID value coming from the NAL Unit header
-    * - __u8
-      - ``ref_pic_list_p0[32]``
-      - Backward reference list used by P-frames in the original bitstream order
-    * - __u8
-      - ``ref_pic_list_b0[32]``
-      - Backward reference list used by B-frames in the original bitstream order
-    * - __u8
-      - ``ref_pic_list_b1[32]``
-      - Forward reference list used by B-frames in the original bitstream order
     * - __s32
       - ``top_field_order_cnt``
       - Picture Order Count for the coded top field
@@ -2020,6 +2022,83 @@ enum v4l2_mpeg_video_h264_hierarchical_coding_type -
     * - ``V4L2_H264_DPB_ENTRY_FLAG_LONG_TERM``
       - 0x00000004
       - The DPB entry is a long term reference frame
+
+``V4L2_CID_MPEG_VIDEO_H264_DECODE_MODE (enum)``
+    Specifies the decoding mode to use. Currently exposes slice-based and
+    frame-based decoding but new modes might be added later on.
+    This control is used as a modifier for V4L2_PIX_FMT_H264_SLICE
+    pixel format. Applications that support V4L2_PIX_FMT_H264_SLICE
+    are required to set this control in order to specify the decoding mode
+    that is expected for the buffer.
+    Drivers may expose a single or multiple decoding modes, depending
+    on what they can support.
+
+    .. note::
+
+       This menu control is not yet part of the public kernel API and
+       it is expected to change.
+
+.. c:type:: v4l2_mpeg_video_h264_decode_mode
+
+.. cssclass:: longtable
+
+.. flat-table::
+    :header-rows:  0
+    :stub-columns: 0
+    :widths:       1 1 2
+
+    * - ``V4L2_MPEG_VIDEO_H264_DECODE_MODE_SLICE_BASED``
+      - 0
+      - Decoding is done at the slice granularity.
+        In this mode, ``num_slices`` field in struct
+        :c:type:`v4l2_ctrl_h264_decode_params` should be set to 1,
+        and ``start_byte_offset`` in struct
+        :c:type:`v4l2_ctrl_h264_slice_params` should be set to 0.
+        The OUTPUT buffer must contain a single slice.
+    * - ``V4L2_MPEG_VIDEO_H264_DECODE_MODE_FRAME_BASED``
+      - 1
+      - Decoding is done at the frame granularity.
+        In this mode, ``num_slices`` field in struct
+        :c:type:`v4l2_ctrl_h264_decode_params` should be set to the number
+        of slices in the frame, and ``start_byte_offset`` in struct
+        :c:type:`v4l2_ctrl_h264_slice_params` should be set accordingly
+        for each slice. For the first slice, ``start_byte_offset`` should
+        be zero.
+        The OUTPUT buffer must contain all slices needed to decode the
+        frame. The OUTPUT buffer must also contain both fields.
+
+``V4L2_CID_MPEG_VIDEO_H264_START_CODE (enum)``
+    Specifies the H264 slice start code expected for each slice.
+    This control is used as a modifier for V4L2_PIX_FMT_H264_SLICE
+    pixel format. Applications that support V4L2_PIX_FMT_H264_SLICE
+    are required to set this control in order to specify the start code
+    that is expected for the buffer.
+    Drivers may expose a single or multiple start codes, depending
+    on what they can support.
+
+    .. note::
+
+       This menu control is not yet part of the public kernel API and
+       it is expected to change.
+
+.. c:type:: v4l2_mpeg_video_h264_start_code
+
+.. cssclass:: longtable
+
+.. flat-table::
+    :header-rows:  0
+    :stub-columns: 0
+    :widths:       1 1 2
+
+    * - ``V4L2_MPEG_VIDEO_H264_START_CODE_NONE``
+      - 0
+      - Selecting this value specifies that H264 slices are passed
+        to the driver without any start code.
+    * - ``V4L2_MPEG_VIDEO_H264_START_CODE_ANNEX_B``
+      - 1
+      - Selecting this value specifies that H264 slices are expected
+        to be prefixed by Annex B start codes. According to :ref:`h264`
+        valid start codes can be 3-bytes 0x000001 or 4-bytes 0x00000001.
 
 .. _v4l2-mpeg-mpeg2:
 

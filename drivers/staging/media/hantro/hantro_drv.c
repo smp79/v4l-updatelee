@@ -111,8 +111,6 @@ static void hantro_job_finish(struct hantro_dev *vpu,
 	src->sequence = ctx->sequence_out++;
 	dst->sequence = ctx->sequence_cap++;
 
-	v4l2_m2m_buf_copy_metadata(src, dst, true);
-
 	ret = ctx->buf_finish(ctx, &dst->vb2_buf, bytesused);
 	if (ret)
 		result = VB2_BUF_STATE_ERROR;
@@ -178,7 +176,11 @@ void hantro_finish_run(struct hantro_ctx *ctx)
 static void device_run(void *priv)
 {
 	struct hantro_ctx *ctx = priv;
+	struct vb2_v4l2_buffer *src, *dst;
 	int ret;
+
+	src = hantro_get_src_buf(ctx);
+	dst = hantro_get_dst_buf(ctx);
 
 	ret = clk_bulk_enable(ctx->dev->variant->num_clocks, ctx->dev->clocks);
 	if (ret)
@@ -186,6 +188,8 @@ static void device_run(void *priv)
 	ret = pm_runtime_get_sync(ctx->dev->dev);
 	if (ret < 0)
 		goto err_cancel_job;
+
+	v4l2_m2m_buf_copy_metadata(src, dst, true);
 
 	ctx->codec_ops->run(ctx);
 	return;
@@ -310,6 +314,48 @@ static const struct hantro_ctrl controls[] = {
 		.cfg = {
 			.id = V4L2_CID_MPEG_VIDEO_VP8_FRAME_HEADER,
 		},
+	}, {
+		.codec = HANTRO_H264_DECODER,
+		.cfg = {
+			.id = V4L2_CID_MPEG_VIDEO_H264_DECODE_PARAMS,
+		},
+	}, {
+		.codec = HANTRO_H264_DECODER,
+		.cfg = {
+			.id = V4L2_CID_MPEG_VIDEO_H264_SLICE_PARAMS,
+		},
+	}, {
+		.codec = HANTRO_H264_DECODER,
+		.cfg = {
+			.id = V4L2_CID_MPEG_VIDEO_H264_SPS,
+		},
+	}, {
+		.codec = HANTRO_H264_DECODER,
+		.cfg = {
+			.id = V4L2_CID_MPEG_VIDEO_H264_PPS,
+		},
+	}, {
+		.codec = HANTRO_H264_DECODER,
+		.cfg = {
+			.id = V4L2_CID_MPEG_VIDEO_H264_SCALING_MATRIX,
+		},
+	}, {
+		.codec = HANTRO_H264_DECODER,
+		.cfg = {
+			.id = V4L2_CID_MPEG_VIDEO_H264_DECODE_MODE,
+			.min = V4L2_MPEG_VIDEO_H264_DECODE_MODE_FRAME_BASED,
+			.def = V4L2_MPEG_VIDEO_H264_DECODE_MODE_FRAME_BASED,
+			.max = V4L2_MPEG_VIDEO_H264_DECODE_MODE_FRAME_BASED,
+		},
+	}, {
+		.codec = HANTRO_H264_DECODER,
+		.cfg = {
+			.id = V4L2_CID_MPEG_VIDEO_H264_START_CODE,
+			.min = V4L2_MPEG_VIDEO_H264_START_CODE_ANNEX_B,
+			.def = V4L2_MPEG_VIDEO_H264_START_CODE_ANNEX_B,
+			.max = V4L2_MPEG_VIDEO_H264_START_CODE_ANNEX_B,
+		},
+	}, {
 	},
 };
 
