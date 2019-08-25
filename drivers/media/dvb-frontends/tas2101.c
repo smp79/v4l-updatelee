@@ -736,7 +736,7 @@ static int tas2101_tune(struct dvb_frontend *fe, bool re_tune, unsigned int mode
 	return tas2101_read_status(fe, status);
 }
 
-static int tas2101_get_algo(struct dvb_frontend *fe)
+static enum dvbfe_algo tas2101_get_algo(struct dvb_frontend *fe)
 {
 	struct tas2101_priv *priv = fe->demodulator_priv;
 
