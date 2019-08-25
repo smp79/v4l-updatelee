@@ -1106,7 +1106,7 @@ static int si2183_dtv_tune(struct dvb_frontend *fe)
 	return 0;
 }
 
-static int si2183_search(struct dvb_frontend *fe)
+static enum dvbfe_search si2183_search(struct dvb_frontend *fe)
 {
 	struct dtv_frontend_properties *c = &fe->dtv_property_cache;
 	struct i2c_client *client = fe->demodulator_priv;
