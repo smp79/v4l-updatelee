@@ -533,7 +533,7 @@ err:
 	return ret;
 }
 
-static int si2168_search(struct dvb_frontend *fe)
+static enum dvbfe_search si2168_search(struct dvb_frontend *fe)
 {
 	struct i2c_client *client = fe->demodulator_priv;
 	struct si2168_dev *dev = i2c_get_clientdata(client);
