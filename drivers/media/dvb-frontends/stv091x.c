@@ -1048,7 +1048,7 @@ static int stv091x_set_parameters(struct dvb_frontend *fe)
 	return stv091x_start(state, p);
 }
 
-static int stv091x_get_frontend_algo(struct dvb_frontend *fe)
+static enum dvbfe_algo stv091x_get_frontend_algo(struct dvb_frontend *fe)
 {
 	struct stv091x_state *state = fe->demodulator_priv;
 
