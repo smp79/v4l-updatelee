@@ -1082,7 +1082,7 @@ static int si2183_tune(struct dvb_frontend *fe, bool re_tune,
 	return si2183_read_status(fe, status);
 }
 
-static dvbfe_algo si2183_get_frontend_algo(struct dvb_frontend *fe)
+static enum dvbfe_algo si2183_get_frontend_algo(struct dvb_frontend *fe)
 {
 	struct i2c_client *client = fe->demodulator_priv;
 	struct si2183_config *config = client->dev.platform_data;
