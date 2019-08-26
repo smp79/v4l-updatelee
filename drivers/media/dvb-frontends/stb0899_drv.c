@@ -1945,7 +1945,7 @@ static int stb0899_get_spectrum_scan(struct dvb_frontend *fe, struct dvb_fe_spec
 }
 
 static const struct dvb_frontend_ops stb0899_ops = {
-	.delsys = { SYS_DVBS, SYS_DVBS2, SYS_DSS },
+	.delsys = { SYS_DSS, SYS_DVBS, SYS_DVBS2 },
 	.info = {
 		.name			= "STB0899 Multistandard",
 		.frequency_min_hz	=  950 * MHz,
