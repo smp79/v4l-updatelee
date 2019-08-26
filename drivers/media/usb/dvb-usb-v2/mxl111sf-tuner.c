@@ -312,7 +312,6 @@ fail:
 #if 1
 static int mxl111sf_tuner_init(struct dvb_frontend *fe)
 {
-	struct mxl111sf_tuner_state *state = fe->tuner_priv;
 	struct dtv_frontend_properties *c = &fe->dtv_property_cache;
 	int ret = 0;
 
