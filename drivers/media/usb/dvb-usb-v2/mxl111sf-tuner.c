@@ -324,7 +324,6 @@ static int mxl111sf_tuner_init(struct dvb_frontend *fe)
 
 static int mxl111sf_tuner_sleep(struct dvb_frontend *fe)
 {
-	struct mxl111sf_tuner_state *state = fe->tuner_priv;
 	int ret = 0;
 
 	/* enter standby mode handled by usb driver */
