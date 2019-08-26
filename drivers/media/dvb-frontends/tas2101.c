@@ -756,7 +756,7 @@ static int tas2101_dtv_tune(struct dvb_frontend *fe)
 	return 0;
 }
 
-static int tas2101_search(struct dvb_frontend *fe)
+static enum dvbfe_search tas2101_search(struct dvb_frontend *fe)
 {
 	struct tas2101_priv *priv = fe->demodulator_priv;
 	enum fe_status status = 0;
