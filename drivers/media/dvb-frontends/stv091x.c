@@ -666,11 +666,23 @@ static int stv091x_i2c_gate_ctrl(struct dvb_frontend *fe, int enable)
 static int stv091x_init(struct dvb_frontend *fe)
 {
 	struct stv091x_state *state = fe->demodulator_priv;
+	struct dtv_frontend_properties *p = &fe->dtv_property_cache;
 
 //	fprintk("demod: %d", state->nr);
 
 	state->algo = STV091X_NOTUNE;
 
+        /* init stats here in order to signal app which stats are supported */
+	p->strength.len = 2;
+	p->strength.stat[0].scale = FE_SCALE_NOT_AVAILABLE;
+	p->strength.stat[1].scale = FE_SCALE_NOT_AVAILABLE;
+	p->cnr.len = 2;
+	p->cnr.stat[0].scale = FE_SCALE_NOT_AVAILABLE;
+	p->cnr.stat[1].scale = FE_SCALE_NOT_AVAILABLE;
+	p->post_bit_error.len = 1;
+	p->post_bit_error.stat[0].scale = FE_SCALE_NOT_AVAILABLE;
+	p->block_error.len = 1;
+	p->block_error.stat[0].scale = FE_SCALE_NOT_AVAILABLE;
 	return 0;
 }
 
@@ -1282,9 +1294,16 @@ static int stv091x_get_stats(struct dvb_frontend *fe)
 	default:
 		break;
 	}
+	p->cnr.stat[1].scale = FE_SCALE_RELATIVE;
+	p->cnr.stat[1].uvalue = p->cnr.stat[0].svalue / 100 * 328;
+	if (p->cnr.stat[1].uvalue > 0xffff) {
+		p->cnr.stat[1].uvalue = 0xffff;
+	}
 	p->strength.stat[0].scale  = FE_SCALE_DECIBEL;
 	stv091x_read_dbm(fe, &dbm);
 	p->strength.stat[0].svalue = dbm * 10;
+	p->strength.stat[1].scale = FE_SCALE_RELATIVE;
+	p->strength.stat[1].uvalue = (100 + p->strength.stat[0].svalue/1000) * 656;
 	p->block_error.stat[0].scale = FE_SCALE_COUNTER;
 	stv091x_read_ucblocks(fe, &ber);
 	p->block_error.stat[0].uvalue = ber;
