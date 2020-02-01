@@ -838,7 +838,7 @@ start:
 	STV091X_WRITE_REG(state, SFRLOW0, 0x30);
 
 	/* Set the Init Symbol rate*/
-	SFR = ((u64)p->symbol_rate << 16) / (u64)state->base->mclk;
+	SFR = div64_u64(p->symbol_rate << 16, state->base->mclk);
 	STV091X_WRITE_REG(state, SFRINIT1, (SFR >> 8) & 0x7F);
 	STV091X_WRITE_REG(state, SFRINIT0, SFR & 0xFF);
 
@@ -1295,7 +1295,7 @@ static int stv091x_get_stats(struct dvb_frontend *fe)
 		break;
 	}
 	p->cnr.stat[1].scale = FE_SCALE_RELATIVE;
-	p->cnr.stat[1].uvalue = p->cnr.stat[0].svalue / 100 * 328;
+	p->cnr.stat[1].uvalue = div_u64(p->cnr.stat[0].svalue, 100) * 328;
 	if (p->cnr.stat[1].uvalue > 0xffff) {
 		p->cnr.stat[1].uvalue = 0xffff;
 	}
@@ -1303,7 +1303,7 @@ static int stv091x_get_stats(struct dvb_frontend *fe)
 	stv091x_read_dbm(fe, &dbm);
 	p->strength.stat[0].svalue = dbm * 10;
 	p->strength.stat[1].scale = FE_SCALE_RELATIVE;
-	p->strength.stat[1].uvalue = (100 + p->strength.stat[0].svalue/1000) * 656;
+	p->strength.stat[1].uvalue = (100 + (div_u64(p->strength.stat[0].svalue, 1000)) * 656);
 	p->block_error.stat[0].scale = FE_SCALE_COUNTER;
 	stv091x_read_ucblocks(fe, &ber);
 	p->block_error.stat[0].uvalue = ber;
