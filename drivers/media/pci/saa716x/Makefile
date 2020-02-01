@@ -24,4 +24,9 @@ obj-$(CONFIG_DVB_SAA716X_HYBRID)  += saa716x_hybrid.o
 obj-$(CONFIG_DVB_SAA716X_FF)	  += saa716x_ff.o
 saa716x_tbs-dvb-objs += saa716x_budget.o tbsci-i2c.o tbs-ci.o
 
-EXTRA_CFLAGS = -Idrivers/media/dvb/dvb-core/ -Idrivers/media/dvb/frontends/ -Idrivers/media/dvb-core/ -Idrivers/media/dvb-frontends/ -Idrivers/media/tuners/
+//+ccflags-y += -I$(srctree)/drivers/media/dvb/dvb-core/
+//+ccflags-y += -I$(srctree)/drivers/media/dvb-core/
+//+ccflags-y += -I$(srctree)/drivers/media/dvb/frontends/
+//+ccflags-y += -I$(srctree)/drivers/media/dvb-frontends/
+//+ccflags-y += -I$(srctree)/drivers/media/tuners/
+EXTRA_CFLAGS = -I$(srctree)/drivers/media/dvb/dvb-core/ -I$(srctree)/drivers/media/dvb/frontends/ -I$(srctree)/drivers/media/dvb-core/ -I$(srctree)/drivers/media/dvb-frontends/ -I$(srctree)/drivers/media/tuners/
