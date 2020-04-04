@@ -1,16 +1,9 @@
-# This file implements the GNOME Build API:
-# http://people.gnome.org/~walters/docs/build-api.txt
+# SPDX-License-Identifier: GPL-2.0
+# Makefile for the Linux firmware loader
 
-FIRMWAREDIR = /lib/firmware
+obj-$(CONFIG_FW_LOADER_USER_HELPER) += fallback_table.o
+obj-$(CONFIG_FW_LOADER)	+= firmware_class.o
+firmware_class-objs := main.o
+firmware_class-$(CONFIG_FW_LOADER_USER_HELPER) += fallback.o
 
-all:
-
-check:
-	./check_whence.py
-
-install:
-	mkdir -p $(DESTDIR)$(FIRMWAREDIR)
-	cp -rv * $(DESTDIR)$(FIRMWAREDIR)
-	rm -rf $(DESTDIR)$(FIRMWAREDIR)/usbdux
-	find $(DESTDIR)$(FIRMWAREDIR) \( -name 'WHENCE' -or -name 'LICENSE.*' -or \
-		-name 'LICENCE.*' \) -exec rm -- {} \;
+obj-y += builtin/
