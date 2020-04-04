@@ -4,7 +4,7 @@
 #
 # 
 
-# This will set you up with Linux 5.4.0-rc1
+# This will set you up with Linux 5.4.30
 
 # Download any dependancies that you might need
 
@@ -74,6 +74,7 @@
 # Prof 7301, 7500, 8000
 # TBS 6925, 5922, 5925, 5980, 6908, 6903, 5520SE
 # Skystar 2 eXpress HD
+# Omicom S2 PCI
 # Genpix Skywalker-1
 # Hauppauge 950Q, 955Q, Aero-m, Wintv DualHD
 # Mygica (Mohu) A681
