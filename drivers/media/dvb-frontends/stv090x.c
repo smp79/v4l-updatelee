@@ -3926,7 +3926,7 @@ static int stv090x_get_stats(struct dvb_frontend *fe, enum fe_status stat)
 	c->strength.stat[0].scale = FE_SCALE_DECIBEL;
 	c->strength.stat[0].svalue = stv090x_read_dbm(fe);
 	c->strength.stat[1].scale = FE_SCALE_RELATIVE;
-	c->strength.stat[1].uvalue = (100 + (div_u64(c->strength.stat[0].svalue, 1000)) * 656);
+	c->strength.stat[1].uvalue = (100 + ((s32)c->strength.stat[0].svalue / 1000)) * 656;
 	c->block_error.stat[0].scale = FE_SCALE_COUNTER;
 	c->block_error.stat[0].uvalue = stv090x_read_ucb(fe);
 	c->post_bit_error.stat[0].scale = FE_SCALE_COUNTER;

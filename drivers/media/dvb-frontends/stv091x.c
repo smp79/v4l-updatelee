@@ -1303,7 +1303,7 @@ static int stv091x_get_stats(struct dvb_frontend *fe)
 	stv091x_read_dbm(fe, &dbm);
 	p->strength.stat[0].svalue = dbm * 10;
 	p->strength.stat[1].scale = FE_SCALE_RELATIVE;
-	p->strength.stat[1].uvalue = (100 + (div_u64(p->strength.stat[0].svalue, 1000)) * 656);
+	p->strength.stat[1].uvalue = (100 + ((s32)p->strength.stat[0].svalue / 1000)) * 656;
 	p->block_error.stat[0].scale = FE_SCALE_COUNTER;
 	stv091x_read_ucblocks(fe, &ber);
 	p->block_error.stat[0].uvalue = ber;
