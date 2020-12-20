@@ -1435,7 +1435,7 @@ static int cxusb_mygica_a681_frontend_attach(struct dvb_usb_adapter *adap)
 	info.addr = 0x18;
 	info.platform_data = &mn88436_config;
 	request_module(info.type);
-	client_demod = i2c_new_device(&d->i2c_adap, &info);
+	client_demod = i2c_new_client_device(&d->i2c_adap, &info);
 
 	if (client_demod == NULL || client_demod->dev.driver == NULL)
 		return -ENODEV;
@@ -1461,7 +1461,7 @@ static int cxusb_mygica_a681_frontend_attach(struct dvb_usb_adapter *adap)
 	info.addr = 0x60;
 	info.platform_data = &mxl603_config;
 	request_module(info.type);
-	client_tuner = i2c_new_device(&d->i2c_adap, &info);
+	client_tuner = i2c_new_client_device(&d->i2c_adap, &info);
 	if (client_tuner == NULL || client_tuner->dev.driver == NULL) {
 		return -ENODEV;
 	}
@@ -1488,8 +1488,8 @@ static int cxusb_mygica_a681_frontend_attach(struct dvb_usb_adapter *adap)
  * not, and forget a match if it turns out we selected the wrong device.
  */
 static int bluebird_fx2_identify_state(struct usb_device *udev,
-				       struct dvb_usb_device_properties *props,
-				       struct dvb_usb_device_description **desc,
+				       const struct dvb_usb_device_properties *props,
+				       const struct dvb_usb_device_description **desc,
 				       int *cold)
 {
 	int wascold = *cold;

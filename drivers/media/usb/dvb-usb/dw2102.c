@@ -958,8 +958,8 @@ static int su3000_read_mac_address(struct dvb_usb_device *d, u8 mac[6])
 }
 
 static int su3000_identify_state(struct usb_device *udev,
-				 struct dvb_usb_device_properties *props,
-				 struct dvb_usb_device_description **desc,
+				 const struct dvb_usb_device_properties *props,
+				 const struct dvb_usb_device_description **desc,
 				 int *cold)
 {
 	info("%s", __func__);
@@ -1580,7 +1580,7 @@ attach2:
 	board_info.addr = 0x68;
 	board_info.platform_data = &m88ds3103_pdata;
 	request_module("m88ds3103");
-	client = i2c_new_device(&d->i2c_adap, &board_info);
+	client = i2c_new_client_device(&d->i2c_adap, &board_info);
 	if (client == NULL || client->dev.driver == NULL)
 		return -ENODEV;
 	if (!try_module_get(client->dev.driver->owner)) {
@@ -1599,7 +1599,7 @@ attach2:
 	board_info.addr = 0x60;
 	board_info.platform_data = &ts2020_config;
 	request_module("ts2020");
-	client = i2c_new_device(i2c_adapter, &board_info);
+	client = i2c_new_client_device(i2c_adapter, &board_info);
 
 	if (client == NULL || client->dev.driver == NULL) {
 		dvb_frontend_detach(adap->fe_adap[0].fe);

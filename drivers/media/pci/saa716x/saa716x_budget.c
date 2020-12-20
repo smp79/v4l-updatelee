@@ -754,7 +754,7 @@ static int saa716x_tbs6284_frontend_attach(struct saa716x_adapter *adapter, int 
 	board_info.addr = (count & 1) ? 0x63 : 0x60;
 	tda18212_config[count & 1].fe = adapter->fe;
 	request_module("tda18212");
-	client = i2c_new_device(i2cadapter, &board_info);
+	client = i2c_new_client_device(i2cadapter, &board_info);
 	if (client == NULL || client->dev.driver == NULL) {
 		dvb_frontend_detach(adapter->fe);
 		goto err2;
@@ -862,7 +862,7 @@ static int saa716x_tbs6280_frontend_attach(struct saa716x_adapter *adapter, int 
 	board_info.addr = (count & 1) ? 0x63 : 0x60;
 	tda18212_config[count & 1].fe = adapter->fe;
 	request_module("tda18212");
-	client = i2c_new_device(i2cadapter, &board_info);
+	client = i2c_new_client_device(i2cadapter, &board_info);
 	if (client == NULL || client->dev.driver == NULL) {
 		dvb_frontend_detach(adapter->fe);
 		goto err2;
@@ -949,7 +949,7 @@ static int saa716x_tbs6221_frontend_attach(struct saa716x_adapter *adapter, int 
 	info.addr = 0x64;
 	info.platform_data = &si2168_config;
 	request_module(info.type);
-	client = i2c_new_device(&i2c->i2c_adapter, &info);
+	client = i2c_new_client_device(&i2c->i2c_adapter, &info);
 	if (client == NULL || client->dev.driver == NULL) {
 		goto err;
 	}
@@ -968,7 +968,7 @@ static int saa716x_tbs6221_frontend_attach(struct saa716x_adapter *adapter, int 
 	info.addr = 0x60;
 	info.platform_data = &si2157_config;
 	request_module(info.type);
-	client = i2c_new_device(i2cadapter, &info);
+	client = i2c_new_client_device(i2cadapter, &info);
 	if (client == NULL || client->dev.driver == NULL) {
 		module_put(adapter->i2c_client_demod->dev.driver->owner);
 		i2c_unregister_device(adapter->i2c_client_demod);
@@ -1071,7 +1071,7 @@ static int saa716x_tbs6281_frontend_attach(struct saa716x_adapter *adapter, int 
 	info.addr = 0x64;
 	info.platform_data = &si2168_config;
 	request_module(info.type);
-	client = i2c_new_device(&dev->i2c[1 - count].i2c_adapter, &info);
+	client = i2c_new_client_device(&dev->i2c[1 - count].i2c_adapter, &info);
 	if (client == NULL || client->dev.driver == NULL) {
 		goto err;
 	}
@@ -1090,7 +1090,7 @@ static int saa716x_tbs6281_frontend_attach(struct saa716x_adapter *adapter, int 
 	info.addr = 0x60;
 	info.platform_data = &si2157_config;
 	request_module(info.type);
-	client = i2c_new_device(i2cadapter, &info);
+	client = i2c_new_client_device(i2cadapter, &info);
 	if (client == NULL || client->dev.driver == NULL) {
 		module_put(adapter->i2c_client_demod->dev.driver->owner);
 		i2c_unregister_device(adapter->i2c_client_demod);
@@ -1174,7 +1174,7 @@ static int saa716x_tbs6285_frontend_attach(struct saa716x_adapter *adapter, int 
 	info.addr = ((count == 0) || (count == 2)) ? 0x64 : 0x66;
 	info.platform_data = &si2168_config;
 	request_module(info.type);
-	client = i2c_new_device( ((count == 0) || (count == 1)) ? 
+	client = i2c_new_client_device( ((count == 0) || (count == 1)) ? 
 		&dev->i2c[1].i2c_adapter : &dev->i2c[0].i2c_adapter,
 		&info);
 	if (client == NULL || client->dev.driver == NULL) {
@@ -1196,7 +1196,7 @@ static int saa716x_tbs6285_frontend_attach(struct saa716x_adapter *adapter, int 
 	info.addr = ((count == 0) || (count == 2)) ? 0x62 : 0x60;
 	info.platform_data = &si2157_config;
 	request_module(info.type);
-	client = i2c_new_device(i2cadapter, &info);
+	client = i2c_new_client_device(i2cadapter, &info);
 	if (client == NULL || client->dev.driver == NULL) {
 		module_put(adapter->i2c_client_demod->dev.driver->owner);
 		i2c_unregister_device(adapter->i2c_client_demod);
@@ -1293,7 +1293,7 @@ static int saa716x_tbs6220_frontend_attach(struct saa716x_adapter *adapter, int 
 	/* attach tuner */
 	tda18212_config[0].fe = adapter->fe;
 	request_module("tda18212");
-	client = i2c_new_device(i2cadapter, &board_info);
+	client = i2c_new_client_device(i2cadapter, &board_info);
 	if (client == NULL || client->dev.driver == NULL) {
 		dvb_frontend_detach(adapter->fe);
 		goto err2;
@@ -2832,7 +2832,7 @@ static int saa716x_tbs6290_frontend_attach(struct saa716x_adapter *adapter, int 
 	info.addr = 0x64;
 	info.platform_data = &si2168_config;
 	request_module(info.type);
-	client = i2c_new_device(&dev->i2c[1 - count].i2c_adapter, &info);
+	client = i2c_new_client_device(&dev->i2c[1 - count].i2c_adapter, &info);
 	if (client == NULL || client->dev.driver == NULL) {
 		goto err;
 	}
@@ -2851,7 +2851,7 @@ static int saa716x_tbs6290_frontend_attach(struct saa716x_adapter *adapter, int 
 	info.addr = 0x60;
 	info.platform_data = &si2157_config;
 	request_module(info.type);
-	client = i2c_new_device(i2cadapter, &info);
+	client = i2c_new_client_device(i2cadapter, &info);
 	if (client == NULL || client->dev.driver == NULL) {
 		module_put(adapter->i2c_client_demod->dev.driver->owner);
 		i2c_unregister_device(adapter->i2c_client_demod);

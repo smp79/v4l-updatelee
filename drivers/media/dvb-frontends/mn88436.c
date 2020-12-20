@@ -1563,14 +1563,13 @@ static int mn88436_probe(struct i2c_client *client ,
 		goto err_regmap_0_regmap_exit;
 
 	/*chip has two IIC address for different register bank, 0x18 and 0x10,so we need register a dummy clients */
-	dev->client[1] = i2c_new_dummy(client->adapter,0x10);
-	if(!dev->client[1]){
-		ret = -ENODEV;
+	dev->client[1] = i2c_new_dummy_device(client->adapter,0x10);
+	if (IS_ERR(dev->client[1])) {
+		ret = PTR_ERR(dev->client[1]);
 		dev_err(&client->dev,"I2C registeration failed\n");
 		if(ret)
 			goto err_regmap_0_regmap_exit;
 	}
-
 
 	dev->regmap[1] = regmap_init_i2c(dev->client[1],&regmap_config);
 	if(IS_ERR(dev->regmap[1])){

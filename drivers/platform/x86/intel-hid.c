@@ -20,8 +20,10 @@ MODULE_AUTHOR("Alex Hung");
 
 static const struct acpi_device_id intel_hid_ids[] = {
 	{"INT33D5", 0},
+	{"INTC1051", 0},
 	{"", 0},
 };
+MODULE_DEVICE_TABLE(acpi, intel_hid_ids);
 
 /* In theory, these are HID usages. */
 static const struct key_entry intel_hid_keymap[] = {
@@ -547,7 +549,6 @@ static struct platform_driver intel_hid_pl_driver = {
 	.probe = intel_hid_probe,
 	.remove = intel_hid_remove,
 };
-MODULE_DEVICE_TABLE(acpi, intel_hid_ids);
 
 /*
  * Unfortunately, some laptops provide a _HID="INT33D5" device with
@@ -570,7 +571,7 @@ check_acpi_dev(acpi_handle handle, u32 lvl, void *context, void **rv)
 		return AE_OK;
 
 	if (acpi_match_device_ids(dev, ids) == 0)
-		if (acpi_create_platform_device(dev, NULL))
+		if (!IS_ERR_OR_NULL(acpi_create_platform_device(dev, NULL)))
 			dev_info(&dev->dev,
 				 "intel-hid: created platform device\n");
 

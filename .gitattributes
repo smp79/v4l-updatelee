@@ -1,5 +1,4 @@
 *.c   diff=cpp
 *.h   diff=cpp
-drivers/hid/hid-logitech-dj.c merge=ours
-drivers/media/dvb-frontends/stv090x.c merge=ours
-drivers/media/dvb-frontends/stv090x.h merge=ours
+*.dtsi diff=dts
+*.dts  diff=dts
