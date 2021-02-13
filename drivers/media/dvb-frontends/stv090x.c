@@ -945,7 +945,7 @@ static u32 stv090x_car_width(u32 srate, enum stv090x_rolloff rolloff)
 		break;
 	}
 
-	return srate + (srate * ro) / 100;
+	return srate * 2;
 }
 
 static int stv090x_set_vit_thacq(struct stv090x_state *state)
@@ -3666,6 +3666,7 @@ static enum dvbfe_search stv090x_search(struct dvb_frontend *fe)
 		dprintk("modulation      = %d, %d", props->modulation, state->modulation);
 		dprintk("inversion       = %d", props->inversion);
 		dprintk("delivery_system = %d, %d", props->delivery_system, state->delsys);
+		dprintk("matype          = %02x", props->matype);
 
 		if (frontend_ops->set_frame_ops) {
 			if (props->delivery_system == SYS_DSS) {
