@@ -16,8 +16,8 @@ static int debug;
 module_param(debug, int, 0644);
 MODULE_PARM_DESC(debug, "Enable verbose debug messages");
 
-//#define dprintk	if (debug) printk
-#define dprintk	printk
+#define dprintk	if (debug) printk
+//#define dprintk	printk
 
 static u8 DMD_REG_ATSC[]={
 0		,0x0		,0x50		,
@@ -1202,8 +1202,9 @@ static int mn88436_read_status(struct dvb_frontend *fe,enum fe_status *status)
 	s32	cnr;
 	int i =0;
 	*status = 0;
-	for (i=0; i<5; i++) {
+	for (i=0; i<6; i++) {
 		ret = regmap_read(dev->regmap[0],DMD_MAIN_STSMON1,&utemp);
+		msleep(500);
 		if (utemp & 0x1) {
 			*status = FE_HAS_SIGNAL | FE_HAS_CARRIER | FE_HAS_VITERBI | FE_HAS_SYNC | FE_HAS_LOCK;
 			break;
@@ -1216,6 +1217,7 @@ static int mn88436_read_status(struct dvb_frontend *fe,enum fe_status *status)
 	}
 	if (fe->ops.tuner_ops.get_rf_strength) {
 		ret= fe->ops.tuner_ops.get_rf_strength(fe,&strength);
+		dev_dbg(&client->dev,"strength=%u\n",strength);
 	}
 	/* CNR */
 	if (*status & FE_HAS_VITERBI) {
@@ -1237,6 +1239,7 @@ static int mn88436_read_status(struct dvb_frontend *fe,enum fe_status *status)
 				cnr = 0;
 			}
 		}
+	dev_dbg(&client->dev, "cnr=%d x=%u y = %u\n", cnr, x, y);
 	c->cnr.stat[0].svalue = cnr * 100;
 	c->cnr.stat[0].scale = FE_SCALE_DECIBEL;
 	} else {
