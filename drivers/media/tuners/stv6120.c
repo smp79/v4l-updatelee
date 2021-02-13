@@ -337,12 +337,12 @@ static int stv6120_set_bandwidth(struct dvb_frontend *fe, u32 bandwidth)
 	u8 lpf;
 	s32 i;
 
-	if ((bandwidth/2) > 36000000) /* F[4:0] BW/2 max =31+5=36 mhz for F=31 */
+	if ((bandwidth) > 36000000) /* F[4:0] BW/2 max =31+5=36 mhz for F=31 */
 		lpf = 31;
-	else if ((bandwidth/2) < 5000000) /* BW/2 min = 5Mhz for F=0 */
+	else if ((bandwidth) < 5000000) /* BW/2 min = 5Mhz for F=0 */
 		lpf = 0;
 	else /* if 5 < BW/2 < 36 */
-		lpf = (bandwidth/2)/1000000 - 5;
+		lpf = (bandwidth)/1000000 - 5;
 
 	pr_info("%s: tuner: %d, bw: %d, lpf: %d\n", __func__, state->tuner, bandwidth, lpf);
 
