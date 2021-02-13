@@ -635,6 +635,7 @@ static int stv091x_get_signal_parameters(struct stv091x_state *state)
 		break;
 	}
 
+	fprintk("MATYPE: %02x", p->matype);
 //	fprintk("MATYPE: %02x", MAKEWORD16(STV091X_READ_REG(state, MATSTR1), STV091X_READ_REG(state, MATSTR0)));
 //	fprintk("UPLSTR: %02x", MAKEWORD16(STV091X_READ_REG(state, UPLSTR1), STV091X_READ_REG(state, UPLSTR0)));
 //	fprintk("DFLSTR: %02x", MAKEWORD16(STV091X_READ_REG(state, DFLSTR1), STV091X_READ_REG(state, DFLSTR0)));
@@ -919,7 +920,8 @@ start:
 			break;
 		}
 
-		bandwidth_hz = (p->symbol_rate * rolloff) / 100;
+		bandwidth_hz = 2 * (p->symbol_rate);
+		//bandwidth_hz = (p->symbol_rate * rolloff) / 100;
 
 		if (offset > 1000 || offset < -1000) {
 			fprintk("corrected frequency: %d RESTARTING", p->frequency);

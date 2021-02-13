@@ -1718,6 +1718,25 @@
 #define STV090x_OFFST_Px_TUN_IQSWAP_FIELD	7
 #define STV090x_WIDTH_Px_TUN_IQSWAP_FIELD	1
 
+#define STV090x_P1_TNRRF1                      STV090x_Px_TNRRF1(1)
+#define STV090x_P2_TNRRF1                      STV090x_Px_TNRRF1(2)
+#define STV090x_OFFST_Px_TUN_RFFREQ2_FIELD     0
+#define STV090x_WIDTH_Px_TUN_RFFREQ2_FIELD     8
+
+#define STV090x_Px_TNRRF0(__x)                 (0xf4ea - (__x - 1) * 0x200)
+#define STV090x_P1_TNRRF0                      STV090x_Px_TNRRF0(1)
+#define STV090x_P2_TNRRF0                      STV090x_Px_TNRRF0(2)
+#define STV090x_OFFST_Px_TUN_RFFREQ1_FIELD     0
+#define STV090x_WIDTH_Px_TUN_RFFREQ1_FIELD     8
+
+#define STV090x_Px_TNRBW(__x)                  (0xf4eb - (__x - 1) * 0x200)
+#define STV090x_P1_TNRBW                       STV090x_Px_TNRBW(1)
+#define STV090x_P2_TNRBW                       STV090x_Px_TNRBW(2)
+#define STV090x_OFFST_Px_TUN_RFFREQ0_FIELD     6
+#define STV090x_WIDTH_Px_TUN_RFFREQ0_FIELD     2
+#define STV090x_OFFST_Px_TUN_BW_FIELD          0
+#define STV090x_WIDTH_Px_TUN_BW_FIELD          6
+
 #define STV090x_Px_VITSCALE(__x)		(0xf532 - (__x - 1) * 0x200)
 #define STV090x_P1_VITSCALE			STV090x_Px_VITSCALE(1)
 #define STV090x_P2_VITSCALE			STV090x_Px_VITSCALE(2)

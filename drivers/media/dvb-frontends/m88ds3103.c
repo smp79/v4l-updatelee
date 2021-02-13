@@ -1314,6 +1314,7 @@ static int m88ds3103_get_frontend(struct dvb_frontend *fe,
 			c->inversion = INVERSION_ON;
 			break;
 		}
+		dev->matype = buf[2];
 
 		switch ((buf[2] >> 0) & 0x03) {
 		case 0:
@@ -1662,6 +1663,94 @@ static int m88ds3103_select(struct i2c_mux_core *muxc, u32 chan)
 	return 0;
 }
 
+static int m88ds3103_dtv_tune(struct dvb_frontend *fe)
+{
+	struct m88ds3103_dev *dev = fe->demodulator_priv;
+
+        dev->algo = M88DS3103_TUNE;
+
+        return 0;
+}
+
+static enum dvbfe_algo m88ds3103_get_frontend_algo(struct dvb_frontend *fe)
+{
+        struct m88ds3103_dev *dev = fe->demodulator_priv;
+
+        if (dev->algo == M88DS3103_NOTUNE) {
+                return DVBFE_ALGO_NOTUNE;
+        } else {
+                return DVBFE_ALGO_CUSTOM;
+        }
+}
+
+static enum dvbfe_search m88ds3103_search(struct dvb_frontend *fe)
+{
+	struct m88ds3103_dev *dev = fe->demodulator_priv;
+	struct i2c_client *client = dev->client;
+	struct dtv_frontend_properties *c = &fe->dtv_property_cache;
+	enum fe_status status = 0;
+
+	int ret, i, j;
+
+	//fprintk("");
+	dev->algo = M88DS3103_TUNE;
+
+	for (j = SYS_DVBS2; j >= SYS_DVBS; j--) {
+		/* set frontend */
+		c->delivery_system = j;
+		switch (c->delivery_system) {
+		case SYS_DVBS:
+			dev_dbg(&client->dev, "Searching DVB-S\n");
+			break;
+		case SYS_DVBS2:
+			dev_dbg(&client->dev, "Searching DVB-S2\n");
+			break;
+		default:
+			dev_dbg(&client->dev, "Unsupported Delivery System (%d)\n",
+				c->delivery_system);
+		return -EOPNOTSUPP;
+		}
+		ret = m88ds3103_set_frontend(fe);
+		msleep(10);
+		if (ret)
+			goto error;
+
+		/* wait frontend lock */
+		for (i = 0; i < 50; i++) {
+			dev_dbg(&client->dev, "inner loop = %d\n", i);
+			// msleep() required
+			m88ds3103_read_status(fe, &status);
+			msleep(10);
+			if (dev->fe_status & FE_HAS_LOCK) {
+				dev_dbg(&client->dev, "inner loop has_lock=%01x\n", status);
+				break;
+			}
+			if (status & FE_TIMEDOUT) {
+				dev->algo =M88DS3103_NOTUNE;
+				return DVBFE_ALGO_SEARCH_FAILED;
+			}
+		} /* end of inner loop */
+		if (dev->fe_status & FE_HAS_LOCK) {
+			dev_dbg(&client->dev, "outer loop has_lock=%01x\n", status);
+			break;
+		}
+	} /* end of outer loop */
+
+	/* check if we have a valid signal */
+	if (status & FE_HAS_LOCK) {
+		return DVBFE_ALGO_SEARCH_SUCCESS;
+	} else {
+		dev->algo = M88DS3103_NOTUNE;
+		return DVBFE_ALGO_SEARCH_FAILED;
+	}
+
+
+error:
+        fprintk("failed (%d)", ret);
+        dev->algo = M88DS3103_NOTUNE;
+        return DVBFE_ALGO_SEARCH_ERROR;
+}
+
 static int m88ds3103_get_spectrum_scan(struct dvb_frontend *fe, struct dvb_fe_spectrum_scan *s)
 {
 	struct m88ds3103_dev *dev = fe->demodulator_priv;
@@ -1760,7 +1849,8 @@ static const struct dvb_frontend_ops m88ds3103_ops = {
 			FE_HAS_EXTENDED_CAPS
 	},
 	.extended_info = {
-		.extended_caps          = FE_CAN_SPECTRUMSCAN
+		.extended_caps          = FE_CAN_SPECTRUMSCAN |
+			FE_CAN_BLINDSEARCH
 	},
 
 	.release = m88ds3103_release,
@@ -1783,6 +1873,9 @@ static const struct dvb_frontend_ops m88ds3103_ops = {
 	.set_tone = m88ds3103_set_tone,
 	.set_voltage = m88ds3103_set_voltage,
 
+	.dtv_tune = m88ds3103_dtv_tune,
+	.get_frontend_algo = m88ds3103_get_frontend_algo,
+	.search = m88ds3103_search,
 	.get_spectrum_scan = m88ds3103_get_spectrum_scan,
 };
 
