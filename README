@@ -8,8 +8,8 @@
 
 # Download any dependancies that you might need
 
-	sudo apt-get install git build-essential linux-headers-generic \
-	ncurses-dev libproc-processtable-perl fakeroot libelf-dev libssl-dev \
+	sudo apt-get install git build-essential ncurses-dev \
+    libproc-processtable-perl fakeroot libelf-dev libssl-dev \
 	bison flex pigz pkg-config
 
 # Download deb's from https://drive.google.com/open?id=1CXn1Z6Xwy3pTHuLYuwirXy4K4vQaVZcU
@@ -31,7 +31,8 @@
 # Then compile, -j[number of cores in your processor], this will take around 20min on my 
 # computer, so depending on your system it may take even longer.
 
-	sudo make -j9 deb-pkg
+    make -j9 x86_64-udl_defconfig
+	make -j9 deb-pkg
 
 # Install the kernel
 
