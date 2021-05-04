@@ -1,84 +1,82 @@
-#
-#
-# Updatelee's repository based off of V4L media_tree and powARman's saa716x work.
-#
-# 
+Updatelee's repository based off of V4L media_tree and powARman's saa716x work.
 
-# This will set you up with Linux 5.4.30
+This will set you up with Linux 5.10.33
 
-# Download any dependancies that you might need
+# Pre-built debs For Debian based OS's can be found here:
+
+https://drive.google.com/file/d/1KzFSCn1DRw-WT3dMb8W1ZjOI3tDPMU1T/view?usp=sharing
+
+# If you desire to compile your own kernel
+# install any dependancies that you might need
 
 	sudo apt-get install git build-essential ncurses-dev \
-    libproc-processtable-perl fakeroot libelf-dev libssl-dev \
-	bison flex pigz pkg-config
+	libproc-processtable-perl fakeroot libelf-dev libssl-dev \
+	bison flex pigz pkg-config bc
 
-# Download deb's from https://drive.google.com/open?id=1CXn1Z6Xwy3pTHuLYuwirXy4K4vQaVZcU
-
-# Or
-
-# Then download the repository, aprox 1.9Gb
+# Option 1: clone the full repository (@1.9Gb)
 
 	git clone https://gitlab.com/updatelee/v4l-updatelee.git
 	cd v4l-updatelee
 
-# If you don't need the entire repo history, to conserve bandwidth downloading, please use
+# Option 2: Or if you don't need the entire repo history
+# to conserve bandwidth downloading, please use
 
 	git clone --depth 1 https://gitlab.com/updatelee/v4l-updatelee.git
 	cd v4l-updatelee
 
-# To compile and install first select any additional media drivers you want compiled.
+# Optional: Select any additional media drivers you want compiled with:
 
-# Then compile, -j[number of cores in your processor], this will take around 20min on my 
-# computer, so depending on your system it may take even longer.
+make menuconfig
 
-    make -j9 x86_64-udl_defconfig
+# Then compile, -j[number of cores in your processor], this will take around
+# 20 min on my computer, so depending on your system it may take even longer.
+
+	make -j9 x86_64-udl_defconfig
 	make -j9 deb-pkg
 
 # Install the kernel
 
 	sudo dpkg -i ../linux-*deb
 
-# Install the firmware
+# Install the firmware and reboot into new kernel
 
-	cd drivers/base/firmware_loader/builtin
+	cd firmware
 	sudo make install
-
-# reboot
-
-# Good to go, in the future if you need to upgrade 
-# pull the latest changes and recompile the modules
-
-	cd v4l-updatelee
-	git pull
-	make modules
-	
-# and install modules
-
-	sudo make modules_install
-
-# unload/reload your modules or reboot
-
 	sudo reboot
 
-# To update just the include headers
+# Good to go, in the future if you need to upgrade 
+# pull the latest changes, build new deb packages,
+# install them and reboot
 
-	sudo make headers_install INSTALL_HDR_PATH=/usr
+	cd v4l-updatelee
+	rm ../linux-*
+	make distclean
+	git pull
+	make -j9 x86_64-udl_defconfig
+	make -j9 deb-pkg
+	sudo dpkg -i ../linux-*deb
+	sudo reboot
 
 # If you have crazy slow boot times it might be related to urandom
 
 	sudo apt-get install haveged
 	sudo systemctl enable haveged 
+	sudo systemctl start haveged
 
-#
-# Tested with
-#
-# Prof 7301, 7500, 8000
-# TBS 6925, 5922, 5925, 5980, 6908, 6903, 5520SE
-# Skystar 2 eXpress HD
-# Omicom S2 PCI
-# Genpix Skywalker-1
-# Hauppauge 950Q, 955Q, Aero-m, Wintv DualHD
-# Mygica (Mohu) A681
+# Tested with:
+
+Prof 7301, 7500, 8000
+TBS 6925, 5922, 5925, 5980, 6908, 6903, 5520SE
+Skystar 2 eXpress HD
+Omicom S2 PCI
+Genpix Skywalker-1
+Hauppauge 950Q, 955Q, Aero-m, Wintv DualHD
+Mygica (Mohu) A681
+
 # Others are reported working as well, but havent personally tested them
-#
-# If you have further questions you can find me on Rick Caylor's forum
+
+# If you have further questions you can ask on Rick Caylor's forum
+# under the "Computer and USB Satellite Receivers and Recording"
+# Catagory
+
+https://rickcaylor.websitetoolbox.com/categories
