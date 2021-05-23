@@ -1,10 +1,13 @@
 Updatelee's repository based off of V4L media_tree and powARman's saa716x work.
 
-This will set you up with Linux 5.10.33
+This will set you up with Linux 5.10.39
 
 # Pre-built debs For Debian based OS's can be found here:
+# md5sum: 50e527ea48dd85d53251f39ec707c6af
 
-https://drive.google.com/file/d/1KzFSCn1DRw-WT3dMb8W1ZjOI3tDPMU1T/view?usp=sharing
+
+
+https://drive.google.com/file/d/1r45_F0pxb2y_i4cXxaSTbw2bnLUD8uKf/view?usp=sharing
 
 # If you desire to compile your own kernel
 # install any dependancies that you might need
@@ -24,15 +27,12 @@ https://drive.google.com/file/d/1KzFSCn1DRw-WT3dMb8W1ZjOI3tDPMU1T/view?usp=shari
 	git clone --depth 1 https://gitlab.com/updatelee/v4l-updatelee.git
 	cd v4l-updatelee
 
-# Optional: Select any additional media drivers you want compiled with:
-
-make menuconfig
-
 # Then compile, -j[number of cores in your processor], this will take around
 # 20 min on my computer, so depending on your system it may take even longer.
 
-	make -j9 x86_64-udl_defconfig
-	make -j9 deb-pkg
+	make -j8 x86_64-udl_defconfig
+	make menuconfig		# Select any additional media drivers you want compiled
+	make -j8 deb-pkg	# Adjust -j to number of cpu cores you may have
 
 # Install the kernel
 
@@ -52,8 +52,9 @@ make menuconfig
 	rm ../linux-*
 	make distclean
 	git pull
-	make -j9 x86_64-udl_defconfig
-	make -j9 deb-pkg
+	make x86_64-udl_defconfig
+	make menuconfig		# Select any additional media drivers you want compiled
+	make -j8 deb-pkg	# Adjust -j to number of cpu cores you may have
 	sudo dpkg -i ../linux-*deb
 	sudo reboot
 
