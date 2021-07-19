@@ -1,12 +1,12 @@
 Updatelee's repository based off of V4L media_tree and powARman's saa716x work.
 
-This will set you up with Linux 5.10.46
+This will set you up with Linux 5.10.51
 
 # Pre-built kernel debs For Debian based OS's can be found here:
 # md5sum:
-# 291a7c38b75de4782575314200aebec2  kernel-5.10.46-debs.tar
+d42b64a5d586c239365b4a5d77522e52  kernel-5.10.51-debs.tar
 
-https://drive.google.com/file/d/1mqj8rIg5CvfnvsTbqRzRTI5-LCUhIZBz/view?usp=sharing
+https://drive.google.com/file/d/1SnquYNlEiK-0JNl_A48c4SkpALZqF8Fm/view?usp=sharing
 
 # If you desire to compile your own kernel
 # install any dependancies that you might need
