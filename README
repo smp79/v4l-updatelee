@@ -1,12 +1,12 @@
 Updatelee's repository based off of V4L media_tree and powARman's saa716x work.
 
-This will set you up with Linux 5.10.74
+This will set you up with Linux 5.10.84
 
 # Pre-built kernel debs For Debian based OS's can be found here:
 # md5sum:
-6ba30e5aab46b5f97b5075bc4e75c5eb  kernel-5.10.74-debs.tar
+20232c8bb995f3dfaddd96220696fd50  kernel-5.10.84-debs.tar
 
-https://drive.google.com/file/d/1C1v8TUP9_WfgAaFJRCo_7tSu9SFphPaH/view?usp=sharing
+https://drive.google.com/file/d/1ThSHYwhiMmp4WVzmvy36C22PyRQm-epy/view?usp=sharing
 
 # If you desire to compile your own kernel
 # install any dependancies that you might need
