@@ -134,4 +134,4 @@ obj-$(CONFIG_DVB_USB_TBS5590) += dvb-usb-tbs5590.o
 ccflags-y += -I$(srctree)/drivers/media/dvb-frontends/
 # due to tuner-xc3028
 ccflags-y += -I$(srctree)/drivers/media/tuners
-ccflags-y += -I$(srctree)/drivers/media/pci/ttpci
+ccflags-y += -I$(srctree)/drivers/media/common

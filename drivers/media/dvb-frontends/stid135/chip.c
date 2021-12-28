@@ -47,10 +47,10 @@ typedef enum
 }PMAP_STATE;
 
 
-typedef struct node 
+typedef struct stnode 
 {
 	STCHIP_Handle_t hChip;
-	struct node *pNextNode;
+	struct stnode *pNextNode;
 }NODE;
 
 /* ------------------------------------------------------------------------- */ 
@@ -318,12 +318,12 @@ STCHIP_Handle_t ChipOpen(STCHIP_Info_t *hChipOpenParams)
 STCHIP_Error_t	ChipClose(STCHIP_Handle_t hChip)
 {
 	STCHIP_Error_t error = CHIPERR_NO_ERROR;
-	NODE *node = NULL;
+	NODE *stnode = NULL;
 	
 	if(hChip != NULL)
 	{
-		node = ChipFindNode(hChip);
-		DeleteNode(node);
+		stnode = ChipFindNode(hChip);
+		DeleteNode(stnode);
 		free(hChip->pRegMapImage);
 		free(hChip->pFieldMapImage);
 		free(hChip);

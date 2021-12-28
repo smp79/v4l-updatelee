@@ -5,8 +5,11 @@ FIRMWAREDIR = /lib/firmware
 
 all:
 
-check:
-	./check_whence.py
+FWNAME    = $(patsubst $(obj)/%.gen.S,%,$@)
+FWSTR     = $(subst $(comma),_,$(subst /,_,$(subst .,_,$(subst -,_,$(FWNAME)))))
+ASM_WORD  = $(if $(CONFIG_64BIT),.quad,.long)
+ASM_ALIGN = $(if $(CONFIG_64BIT),3,2)
+PROGBITS  = $(if $(CONFIG_ARM),%,@)progbits
 
 install:
 	mkdir -p $(DESTDIR)$(FIRMWAREDIR)

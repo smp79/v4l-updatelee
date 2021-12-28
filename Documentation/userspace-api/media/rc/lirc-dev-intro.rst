@@ -1,4 +1,4 @@
-.. SPDX-License-Identifier: GFDL-1.1-no-invariants-or-later
+.. SPDX-License-Identifier: GPL-2.0 OR GFDL-1.1-no-invariants-or-later
 
 .. _lirc_dev_intro:
 
@@ -44,13 +44,14 @@ on the following table.
 
     This mode is for both sending and receiving IR.
 
-    For transmitting (aka sending), create a ``struct lirc_scancode`` with
+    For transmitting (aka sending), create a struct lirc_scancode with
     the desired scancode set in the ``scancode`` member, :c:type:`rc_proto`
     set the IR protocol, and all other members set to 0. Write this struct to
     the lirc device.
 
-    For receiving, you read ``struct lirc_scancode`` from the lirc device,
-    with ``scancode`` set to the received scancode and the IR protocol
+    For receiving, you read struct lirc_scancode from the LIRC device.
+    The ``scancode`` field is set to the received scancode and the
+    :ref:`IR protocol <Remote_controllers_Protocols>` is set in
     :c:type:`rc_proto`. If the scancode maps to a valid key code, this is set
     in the ``keycode`` field, else it is set to ``KEY_RESERVED``.
 
@@ -122,12 +123,36 @@ on the following table.
 
     This mode is used only for IR send.
 
-
-**************************
-Remote Controller protocol
-**************************
-
-An enum :c:type:`rc_proto` in the :ref:`lirc_header` lists all the
-supported IR protocols:
+*************************************
+Data types used by LIRC_MODE_SCANCODE
+*************************************
 
 .. kernel-doc:: include/uapi/linux/lirc.h
+    :identifiers: lirc_scancode rc_proto
+
+********************
+BPF based IR decoder
+********************
+
+The kernel has support for decoding the most common
+:ref:`IR protocols <Remote_controllers_Protocols>`, but there
+are many protocols which are not supported. To support these, it is possible
+to load an BPF program which does the decoding. This can only be done on
+LIRC devices which support reading raw IR.
+
+First, using the `bpf(2)`_ syscall with the ``BPF_LOAD_PROG`` argument,
+program must be loaded of type ``BPF_PROG_TYPE_LIRC_MODE2``. Once attached
+to the LIRC device, this program will be called for each pulse, space or
+timeout event on the LIRC device. The context for the BPF program is a
+pointer to a unsigned int, which is a :ref:`LIRC_MODE_MODE2 <lirc-mode-mode2>`
+value. When the program has decoded the scancode, it can be submitted using
+the BPF functions ``bpf_rc_keydown()`` or ``bpf_rc_repeat()``. Mouse or pointer
+movements can be reported using ``bpf_rc_pointer_rel()``.
+
+Once you have the file descriptor for the ``BPF_PROG_TYPE_LIRC_MODE2`` BPF
+program, it can be attached to the LIRC device using the `bpf(2)`_ syscall.
+The target must be the file descriptor for the LIRC device, and the
+attach type must be ``BPF_LIRC_MODE2``. No more than 64 BPF programs can be
+attached to a single LIRC device at a time.
+
+.. _bpf(2): http://man7.org/linux/man-pages/man2/bpf.2.html
