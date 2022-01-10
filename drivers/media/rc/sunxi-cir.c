@@ -39,11 +39,11 @@
 
 /* Rx Interrupt Enable */
 #define SUNXI_IR_RXINT_REG    0x2C
-/* Rx FIFO Overflow */
+/* Rx FIFO Overflow Interrupt Enable */
 #define REG_RXINT_ROI_EN		BIT(0)
-/* Rx Packet End */
+/* Rx Packet End Interrupt Enable */
 #define REG_RXINT_RPEI_EN		BIT(1)
-/* Rx FIFO Data Available */
+/* Rx FIFO Data Available Interrupt Enable */
 #define REG_RXINT_RAI_EN		BIT(4)
 
 /* Rx FIFO available byte level */
@@ -51,6 +51,12 @@
 
 /* Rx Interrupt Status */
 #define SUNXI_IR_RXSTA_REG    0x30
+/* Rx FIFO Overflow */
+#define REG_RXSTA_ROI			REG_RXINT_ROI_EN
+/* Rx Packet End */
+#define REG_RXSTA_RPE			REG_RXINT_RPEI_EN
+/* Rx FIFO Data Available */
+#define REG_RXSTA_RA			REG_RXINT_RAI_EN
 /* RX FIFO Get Available Counter */
 #define REG_RXSTA_GET_AC(val) (((val) >> 8) & (ir->fifo_size * 2 - 1))
 /* Clear all interrupt status value */
@@ -67,6 +73,17 @@
 #define SUNXI_IR_BASE_CLK     8000000
 /* Noise threshold in samples  */
 #define SUNXI_IR_RXNOISE      1
+
+/**
+ * struct sunxi_ir_quirks - Differences between SoC variants.
+ *
+ * @has_reset: SoC needs reset deasserted.
+ * @fifo_size: size of the fifo.
+ */
+struct sunxi_ir_quirks {
+	bool		has_reset;
+	int		fifo_size;
+};
 
 struct sunxi_ir {
 	struct rc_dev   *rc;
@@ -92,7 +109,7 @@ static irqreturn_t sunxi_ir_irq(int irqno, void *dev_id)
 	/* clean all pending statuses */
 	writel(status | REG_RXSTA_CLEARALL, ir->base + SUNXI_IR_RXSTA_REG);
 
-	if (status & (REG_RXINT_RAI_EN | REG_RXINT_RPEI_EN)) {
+	if (status & (REG_RXSTA_RA | REG_RXSTA_RPE)) {
 		/* How many messages in fifo */
 		rc  = REG_RXSTA_GET_AC(status);
 		/* Sanity check */
@@ -108,9 +125,9 @@ static irqreturn_t sunxi_ir_irq(int irqno, void *dev_id)
 		}
 	}
 
-	if (status & REG_RXINT_ROI_EN) {
+	if (status & REG_RXSTA_ROI) {
 		ir_raw_event_reset(ir->rc);
-	} else if (status & REG_RXINT_RPEI_EN) {
+	} else if (status & REG_RXSTA_RPE) {
 		ir_raw_event_set_idle(ir->rc, true);
 		ir_raw_event_handle(ir->rc);
 	} else {
@@ -237,6 +254,7 @@ static int sunxi_ir_probe(struct platform_device *pdev)
 
 	struct device *dev = &pdev->dev;
 	struct device_node *dn = dev->of_node;
+	const struct sunxi_ir_quirks *quirks;
 	struct resource *res;
 	struct sunxi_ir *ir;
 	u32 b_clk_freq = SUNXI_IR_BASE_CLK;
@@ -379,9 +397,19 @@ static const struct sunxi_ir_quirks sun6i_a31_ir_quirks = {
 };
 
 static const struct of_device_id sunxi_ir_match[] = {
-	{ .compatible = "allwinner,sun4i-a10-ir", },
-	{ .compatible = "allwinner,sun5i-a13-ir", },
-	{},
+	{
+		.compatible = "allwinner,sun4i-a10-ir",
+		.data = &sun4i_a10_ir_quirks,
+	},
+	{
+		.compatible = "allwinner,sun5i-a13-ir",
+		.data = &sun5i_a13_ir_quirks,
+	},
+	{
+		.compatible = "allwinner,sun6i-a31-ir",
+		.data = &sun6i_a31_ir_quirks,
+	},
+	{}
 };
 MODULE_DEVICE_TABLE(of, sunxi_ir_match);
 
