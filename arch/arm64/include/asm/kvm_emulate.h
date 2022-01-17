@@ -472,4 +472,3 @@ static inline bool vcpu_has_feature(struct kvm_vcpu *vcpu, int feature)
 }
 
 #endif /* __ARM64_KVM_EMULATE_H__ */
-

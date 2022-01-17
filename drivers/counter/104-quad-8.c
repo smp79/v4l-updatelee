@@ -135,8 +135,6 @@ static int quad8_count_read(struct counter_device *counter,
 
 	mutex_lock(&priv->lock);
 
-	mutex_lock(&priv->lock);
-
 	/* Reset Byte Pointer; transfer Counter to Output Latch */
 	outb(QUAD8_CTR_RLD | QUAD8_RLD_RESET_BP | QUAD8_RLD_CNTR_OUT,
 	     base_offset + 1);

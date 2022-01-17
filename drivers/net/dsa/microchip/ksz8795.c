@@ -1219,7 +1219,6 @@ static int ksz8_port_vlan_del(struct dsa_switch *ds, int port,
 	struct ksz_device *dev = ds->priv;
 	u16 data, pvid;
 	u8 fid, member, valid;
-	bool del_pvid = false;
 
 	if (ksz_is_ksz88x3(dev))
 		return -ENOTSUPP;
@@ -1759,16 +1758,6 @@ static int ksz8_switch_init(struct ksz_device *dev)
 
 	/* set the real number of ports */
 	dev->ds->num_ports = dev->port_cnt;
-
-	/* We rely on software untagging on the CPU port, so that we
-	 * can support both tagged and untagged VLANs
-	 */
-	dev->ds->untag_bridge_pvid = true;
-
-	/* VLAN filtering is partly controlled by the global VLAN
-	 * Enable flag
-	 */
-	dev->ds->vlan_filtering_is_global = true;
 
 	/* We rely on software untagging on the CPU port, so that we
 	 * can support both tagged and untagged VLANs

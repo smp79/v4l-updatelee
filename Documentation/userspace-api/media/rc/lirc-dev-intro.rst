@@ -13,6 +13,9 @@ data between userspace and kernelspace. Fundamentally, it is just a chardev
 file_operations defined on it. With respect to transporting raw IR and
 decoded scancodes to and fro, the essential fops are read, write and ioctl.
 
+It is also possible to attach a BPF program to a LIRC device for decoding
+raw IR into scancodes.
+
 Example dmesg output upon a driver registering w/LIRC:
 
 .. code-block:: none
@@ -26,6 +29,16 @@ What you should see for a chardev:
 
     $ ls -l /dev/lirc*
     crw-rw---- 1 root root 248, 0 Jul 2 22:20 /dev/lirc0
+
+Note that the package `v4l-utils <https://git.linuxtv.org/v4l-utils.git/>`_
+contains tools for working with LIRC devices:
+
+ - ir-ctl: can receive raw IR and transmit IR, as well as query LIRC
+   device features.
+
+ - ir-keytable: can load keymaps; allows you to set IR kernel protocols; load
+   BPF IR decoders and test IR decoding. Some BPF IR decoders are also
+   provided.
 
 .. _lirc_modes:
 
@@ -46,8 +59,8 @@ on the following table.
 
     For transmitting (aka sending), create a struct lirc_scancode with
     the desired scancode set in the ``scancode`` member, :c:type:`rc_proto`
-    set the IR protocol, and all other members set to 0. Write this struct to
-    the lirc device.
+    set to the :ref:`IR protocol <Remote_controllers_Protocols>`, and all other
+    members set to 0. Write this struct to the lirc device.
 
     For receiving, you read struct lirc_scancode from the LIRC device.
     The ``scancode`` field is set to the received scancode and the

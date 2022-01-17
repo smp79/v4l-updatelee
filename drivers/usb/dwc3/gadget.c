@@ -2010,8 +2010,6 @@ static int dwc3_gadget_ep_dequeue(struct usb_ep *ep,
 
 			dep->flags &= ~DWC3_EP_WAIT_TRANSFER_COMPLETE;
 
-			dep->flags &= ~DWC3_EP_WAIT_TRANSFER_COMPLETE;
-
 			goto out;
 		}
 	}

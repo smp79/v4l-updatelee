@@ -38,9 +38,6 @@ struct idxd_dev {
 	enum idxd_dev_type type;
 };
 
-struct idxd_device;
-struct idxd_wq;
-
 #define IDXD_REG_TIMEOUT	50
 #define IDXD_DRAIN_TIMEOUT	5000
 
@@ -157,11 +154,6 @@ enum idxd_complete_type {
 	IDXD_COMPLETE_NORMAL = 0,
 	IDXD_COMPLETE_ABORT,
 	IDXD_COMPLETE_DEV_FAIL,
-};
-
-struct idxd_dma_chan {
-	struct dma_chan chan;
-	struct idxd_wq *wq;
 };
 
 struct idxd_dma_chan {

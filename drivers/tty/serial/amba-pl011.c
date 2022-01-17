@@ -2762,7 +2762,6 @@ static int pl011_setup_port(struct device *dev, struct uart_amba_port *uap,
 	uap->port.has_sysrq = IS_ENABLED(CONFIG_SERIAL_AMBA_PL011_CONSOLE);
 	uap->port.flags = UPF_BOOT_AUTOCONF;
 	uap->port.line = index;
-	spin_lock_init(&uap->port.lock);
 
 	ret = pl011_get_rs485_mode(uap);
 	if (ret)

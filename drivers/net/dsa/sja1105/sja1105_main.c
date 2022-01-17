@@ -3324,10 +3324,8 @@ static int sja1105_probe(struct spi_device *spi)
 		priv->cbs = devm_kcalloc(dev, priv->info->num_cbs_shapers,
 					 sizeof(struct sja1105_cbs_entry),
 					 GFP_KERNEL);
-		if (!priv->cbs) {
-			rc = -ENOMEM;
-			goto out_unregister_switch;
-		}
+		if (!priv->cbs)
+			return -ENOMEM;
 	}
 
 	return dsa_register_switch(priv->ds);

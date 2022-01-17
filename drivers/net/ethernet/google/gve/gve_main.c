@@ -1293,11 +1293,6 @@ void gve_handle_report_stats(struct gve_priv *priv)
 				.value = cpu_to_be64(priv->tx[idx].queue_timeout),
 				.queue_id = cpu_to_be32(idx),
 			};
-			stats[stats_idx++] = (struct stats) {
-				.stat_name = cpu_to_be32(TX_TIMEOUT_CNT),
-				.value = cpu_to_be64(priv->tx[idx].queue_timeout),
-				.queue_id = cpu_to_be32(idx),
-			};
 		}
 	}
 	/* rx stats */

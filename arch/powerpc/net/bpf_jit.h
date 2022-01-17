@@ -12,7 +12,6 @@
 
 #include <asm/types.h>
 #include <asm/ppc-opcode.h>
-#include <asm/code-patching.h>
 
 #ifdef PPC64_ELF_ABI_v1
 #define FUNCTION_DESCR_SIZE	24
