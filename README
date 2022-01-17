@@ -4,9 +4,9 @@ This will set you up with Linux 5.15.15
 
 # Pre-built kernel debs (tarball) for Debian based OS's can be found here:
 # md5sum kernel-5.15.15-debs.tar 
-9f14bf5af2e307d8f91e649d6c42dc6d  kernel-5.15.15-debs.tar
+c7f767a00394ff2464f8aa0af73e6b74  kernel-5.15.15-debs.tar
 
-https://drive.google.com/file/d/1m60oLgvjauE8Qu0mXNQ0E0HQYzSgpAOh/view?usp=sharing
+https://drive.google.com/file/d/14Vrqef-26ZyL4vxsSedXy_VvDrKuhiiY/view?usp=sharing
 
 # If you desire to compile your own kernel
 # install any dependancies that you might need
