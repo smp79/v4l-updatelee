@@ -29,9 +29,9 @@
 static unsigned int verbose;
 module_param(verbose, int, 0644);
 
-static unsigned int ts_nosync=1;
+static unsigned int ts_nosync;
 module_param(ts_nosync, int, 0644);
-MODULE_PARM_DESC(ts_nosync, "TS FIFO Minimum latence mode (default:on)");
+MODULE_PARM_DESC(ts_nosync, "TS FIFO Minimum latence mode (default:off)");
 
 /* internal params node */
 struct stv090x_dev {
@@ -1944,95 +1944,72 @@ static int stv090x_blind_search(struct stv090x_state *state)
 	k_max = 130;
 	k_min = 10;
 
-	agc2 = stv090x_get_agc2_min_level(state);
+        agc2 = stv090x_get_agc2_min_level(state);
 
-	if (agc2 > STV090x_SEARCH_AGC2_TH(state->internal->dev_ver)) {
-		lock = 0;
-	} else {
-		if (STV090x_WRITE_DEMOD(state, CARHDR, 0x20) < 0)
-			goto err;
+        if (agc2 > STV090x_SEARCH_AGC2_TH(state->internal->dev_ver)) {
+                lock = 0;
+        } else {
 
-		if (state->internal->dev_ver <= 0x20) {
-			if (STV090x_WRITE_DEMOD(state, CARCFG, 0xc4) < 0)
-				goto err;
-		} else {
-			/* > Cut 3 */
-			if (STV090x_WRITE_DEMOD(state, CARCFG, 0x06) < 0)
-				goto err;
-		}
+                if (state->internal->dev_ver <= 0x20) {
+                        if (STV090x_WRITE_DEMOD(state, CARCFG, 0xc4) < 0)
+                                goto err;
+                } else {
+                        /* > Cut 3 */
+                        if (STV090x_WRITE_DEMOD(state, CARCFG, 0x06) < 0)
+                                goto err;
+                }
 
-		if (STV090x_WRITE_DEMOD(state, RTCS2, 0x44) < 0)
-			goto err;
+                if (STV090x_WRITE_DEMOD(state, RTCS2, 0x44) < 0)
+                        goto err;
 
-		if (state->internal->dev_ver >= 0x30) {
-			if (STV090x_WRITE_DEMOD(state, KTTMG, 0x55) < 0)
-				goto err;
+                if (state->internal->dev_ver >= 0x20) {
+                        if (STV090x_WRITE_DEMOD(state, EQUALCFG, 0x41) < 0)
+                                goto err;
+                        if (STV090x_WRITE_DEMOD(state, FFECFG, 0x41) < 0)
+                                goto err;
+                        if (STV090x_WRITE_DEMOD(state, VITSCALE, 0x82) < 0)
+                                goto err;
+                        if (STV090x_WRITE_DEMOD(state, VAVSRVIT, 0x00) < 0) /* set viterbi hysteresis */
+                                goto err;
+                }
 
-			if (state->srate < 10000000) {
-				if (STV090x_WRITE_DEMOD(state, AGC2O, 0x5b) < 0)
-					goto err;
-			} else {
-				if (STV090x_WRITE_DEMOD(state, AGC2O, 0x5f) < 0)
-					goto err;
-			}
-		}
+                k_ref = k_max;
+                do {
+                        if (STV090x_WRITE_DEMOD(state, KREFTMG, k_ref) < 0)
+                                goto err;
+                        if (stv090x_srate_srch_coarse(state) != 0) {
+                                srate_coarse = stv090x_srate_srch_fine(state);
+                                if (srate_coarse != 0) {
+                                        stv090x_get_lock_tmg(state);
+                                        lock = stv090x_get_dmdlock(state,
+                                                        state->DemodTimeout);
+                                } else {
+                                        lock = 0;
+                                }
+                        } else {
+                                cpt_fail = 0;
+                                agc2_ovflw = 0;
+                                for (i = 0; i < 10; i++) {
+                                        agc2 += (STV090x_READ_DEMOD(state, AGC2I1) << 8) |
+                                                STV090x_READ_DEMOD(state, AGC2I0);
+                                        if (agc2 >= 0xff00)
+                                                agc2_ovflw++;
+                                        reg = STV090x_READ_DEMOD(state, DSTATUS2);
+                                        if ((STV090x_GETFIELD_Px(reg, CFR_OVERFLOW_FIELD) == 0x01) &&
+                                            (STV090x_GETFIELD_Px(reg, DEMOD_DELOCK_FIELD) == 0x01))
 
-		if (state->internal->dev_ver >= 0x20) {
-			if (STV090x_WRITE_DEMOD(state, EQUALCFG, 0x41) < 0)
-				goto err;
-			if (STV090x_WRITE_DEMOD(state, FFECFG, 0x41) < 0)
-				goto err;
-			if (STV090x_WRITE_DEMOD(state, VITSCALE, 0x82) < 0)
-				goto err;
-			if (STV090x_WRITE_DEMOD(state, VAVSRVIT, 0x00) < 0) /* set viterbi hysteresis */
-				goto err;
-		}
+                                                cpt_fail++;
+                                }
+                                if ((cpt_fail > 7) || (agc2_ovflw > 7))
+                                        coarse_fail = 1;
 
-		k_ref = k_max;
-		do {
-			k_ref -= 20;
-			dprintk("k_ref = %d, k_min = %d", k_ref, k_min);
+                                lock = 0;
+                        }
+                        k_ref -= 20;
+                } while ((k_ref >= k_min) && (!lock) && (!coarse_fail));
+        }
 
-			if (STV090x_WRITE_DEMOD(state, KREFTMG, k_ref) < 0)
-				goto err;
-			if (stv090x_srate_srch_coarse(state) != 0) {
-				srate_coarse = stv090x_srate_srch_fine(state);
-				if (srate_coarse != 0) {
-					stv090x_get_lock_tmg(state);
-					lock = stv090x_get_dmdlock(state,
-							state->DemodTimeout);
-				} else {
-					lock = 0;
-				}
-			} else {
-				cpt_fail = 0;
-				agc2_ovflw = 0;
-				for (i = 0; i < 10; i++) {
-					agc2 += (STV090x_READ_DEMOD(state, AGC2I1) << 8) |
-						STV090x_READ_DEMOD(state, AGC2I0);
-					if (agc2 >= 0xff00)
-						agc2_ovflw++;
-					reg = STV090x_READ_DEMOD(state, DSTATUS2);
-					if ((STV090x_GETFIELD_Px(reg, CFR_OVERFLOW_FIELD) == 0x01) &&
-					    (STV090x_GETFIELD_Px(reg, DEMOD_DELOCK_FIELD) == 0x01))
-
-						cpt_fail++;
-				}
-				if ((cpt_fail > 7) || (agc2_ovflw > 7))
-					coarse_fail = 1;
-
-				lock = 0;
-			}
-			dprintk("lock = %d", lock);
-		} while ((k_ref > k_min) && (!lock) && (!coarse_fail));
-	}
-
-	if (state->internal->dev_ver >= 0x30) {
-		if (STV090x_WRITE_DEMOD(state, AGC2O, 0x5b) < 0)
-			goto err;
-	}
-
-	return lock;
+        return lock;
 
 err:
 	dprintk("I/O error");
