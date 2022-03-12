@@ -110,7 +110,7 @@ static const struct stb6100_regmask stb6100_template[] = {
 /*
  * Currently unused. Some boards might need it in the future
  */
-static inline void stb6100_normalise_regs(u8 regs[])
+static __always_unused inline void stb6100_normalise_regs(u8 regs[])
 {
 	int i;
 
@@ -443,6 +443,8 @@ static int stb6100_set_frequency(struct dvb_frontend *fe, u32 frequency)
 	if (rc < 0)
 		return rc;
 
+	msleep(2);
+
 	/* Bring up tuner according to LLA 3.7 3.4.1, step 3 */
 	regs[STB6100_VCO] &= ~STB6100_VCO_OCK;		/* VCO fast search		*/
 	rc = stb6100_write_reg(state, STB6100_VCO, regs[STB6100_VCO]);
@@ -461,6 +463,8 @@ static int stb6100_set_frequency(struct dvb_frontend *fe, u32 frequency)
 	if (rc < 0)
 		return rc;  /* Stop LPF calibration */
 
+	msleep(10);  /*  This is dangerous as another (related) thread may start */
+		     /* wait for stabilisation, (should not be necessary)		*/
 	return 0;
 }
 
