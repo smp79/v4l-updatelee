@@ -378,7 +378,7 @@ static int si2183_read_status(struct dvb_frontend *fe, enum fe_status *status)
 			c->rolloff = ROLLOFF_5;
 			break;
 		default:
-			fprintk("Unknown rolloff");
+			fprintk("ROLLOFF_AUTO");
 			break;
 		}
 		c->matype = (cmd.args[10]>>5) &0x03;
@@ -455,6 +455,48 @@ static int si2183_read_status(struct dvb_frontend *fe, enum fe_status *status)
 			break;
 		case 0x0d:
 			c->fec_inner = FEC_3_5;
+			break;
+		case 0x10:
+			c->fec_inner = FEC_13_45;
+			break;
+		case 0x11:
+			c->fec_inner = FEC_9_20;
+			break;
+		case 0x12:
+			c->fec_inner = FEC_8_15;
+			break;
+		case 0x13:
+			c->fec_inner = FEC_11_20;
+			break;
+		case 0x14:
+			c->fec_inner = FEC_5_9;
+			break;
+		case 0x15:
+			c->fec_inner = FEC_26_45;
+			break;
+		case 0x16:
+			c->fec_inner = FEC_28_45;
+			break;
+		case 0x17:
+			c->fec_inner = FEC_23_36;
+			break;
+		case 0x18:
+			c->fec_inner = FEC_25_36;
+			break;
+		case 0x19:
+			c->fec_inner = FEC_32_45;
+			break;
+		case 0x1a:
+			c->fec_inner = FEC_13_18;
+			break;
+		case 0x1b:
+			c->fec_inner = FEC_11_15;
+			break;
+		case 0x1c:
+			c->fec_inner = FEC_7_9;
+			break;
+		case 0x1d:
+			c->fec_inner = FEC_77_90;
 			break;
 		default:
 			fprintk("Unkown FEC");

@@ -163,6 +163,9 @@ ignore symbol ROLLOFF_35
 ignore symbol ROLLOFF_20
 ignore symbol ROLLOFF_25
 ignore symbol ROLLOFF_AUTO
+ignore symbol ROLLOFF_15
+ignore symbol ROLLOFF_10
+ignore symbol ROLLOFF_5
 
 ignore symbol INVERSION_ON
 ignore symbol INVERSION_OFF

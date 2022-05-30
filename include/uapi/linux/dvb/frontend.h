@@ -308,6 +308,23 @@ enum fe_spectral_inversion {
  * @FEC_3_5:  Forward Error Correction Code 3/5
  * @FEC_9_10: Forward Error Correction Code 9/10
  * @FEC_2_5:  Forward Error Correction Code 2/5
+ * @FEC_5_11:  Forward Error Correction Code 5/11
+ * @FEC_1_4:  Forward Error Correction Code 1/4
+ * @FEC_1_3:  Forward Error Correction Code 1/3
+ * @FEC_13_45:  Forward Error Correction Code 13/45
+ * @FEC_9_20:  Forward Error Correction Code 9/20
+ * @FEC_8_15:  Forward Error Correction Code 8/15
+ * @FEC_11_20:  Forward Error Correction Code 11/20
+ * @FEC_5_9:  Forward Error Correction Code 5/9
+ * @FEC_26_45:  Forward Error Correction Code 26/45
+ * @FEC_28_45:  Forward Error Correction Code 28/45
+ * @FEC_23_36:  Forward Error Correction Code 23/36
+ * @FEC_25_36:  Forward Error Correction Code 25/36
+ * @FEC_32_45:  Forward Error Correction Code 32/45
+ * @FEC_13_18:  Forward Error Correction Code 13/18
+ * @FEC_11_15:  Forward Error Correction Code 11/15
+ * @FEC_7_9:  Forward Error Correction Code 7/9
+ * @FEC_77_90:  Forward Error Correction Code 77/90
  *
  * Please note that not all FEC types are supported by a given standard.
  */
@@ -328,6 +345,20 @@ enum fe_code_rate {
 	FEC_5_11,
 	FEC_1_4,
 	FEC_1_3,
+	FEC_13_45,
+	FEC_9_20,
+	FEC_8_15,
+	FEC_11_20,
+	FEC_5_9,
+	FEC_26_45,
+	FEC_28_45,
+	FEC_23_36,
+	FEC_25_36,
+	FEC_32_45,
+	FEC_13_18,
+	FEC_11_15,
+	FEC_7_9,
+	FEC_77_90,
 };
 
 /**
@@ -603,10 +634,13 @@ enum fe_pilot {
 
 /**
  * enum fe_rolloff - Rolloff factor
- * @ROLLOFF_35:		Roloff factor: α=35%
- * @ROLLOFF_20:		Roloff factor: α=20%
- * @ROLLOFF_25:		Roloff factor: α=25%
- * @ROLLOFF_AUTO:	Auto-detect the roloff factor.
+ * @ROLLOFF_35:                Rolloff factor: α=35%
+ * @ROLLOFF_20:                Rolloff factor: α=20%
+ * @ROLLOFF_25:                Rolloff factor: α=25%
+ * @ROLLOFF_AUTO:      Auto-detect the rolloff factor.
+ * @ROLLOFF_15:                Rolloff factor: α=15%
+ * @ROLLOFF_10:                Rolloff factor: α=10%
+ * @ROLLOFF_5:         Rolloff factor: α=5%
  *
  * .. note:
  *
