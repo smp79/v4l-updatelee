@@ -1,15 +1,15 @@
 Updatelee's repository based off of V4L media_tree and powARman's saa716x work.
 
-This will set you up with Linux 5.15.48
+This will set you up with Linux 5.15.49
 
 # Pre-built kernel debs (tarball) for Debian based OS's can be found here:
 # md5sum:
 
-7c124759937dc5ad99ff73c88c8e3a7e  kernel-5.15.48-debs.tar
+174fa15f98af02b1f15cf12805fb4264  kernel-5.15.49-debs.tar
 
 # These debs are compressed with zstd so install "zstd" before installing the debs
 
-https://drive.google.com/file/d/1mXUEMh81geH6dSbBYqgPYHKT8_WzeE8q/view?usp=sharing
+https://drive.google.com/file/d/1eUzM0bDosQH1kqc7KvGDj3VjknOaMHd5/view?usp=sharing
 
 # If you desire to compile your own kernel
 # install any dependancies that you might need:
